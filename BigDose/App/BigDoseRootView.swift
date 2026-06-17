@@ -1,0 +1,56 @@
+import SwiftData
+import SwiftUI
+
+struct BigDoseRootView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var profiles: [UserProfile]
+    @State private var appState = BigDoseAppState()
+
+    private var profile: UserProfile? {
+        profiles.first
+    }
+
+    var body: some View {
+        TabView(selection: $appState.selectedTab) {
+            Tab(AppTab.home.title, systemImage: AppTab.home.symbolName, value: .home) {
+                HomeView(profile: profile)
+            }
+
+            Tab(AppTab.history.title, systemImage: AppTab.history.symbolName, value: .history) {
+                HistoryView()
+            }
+
+            Tab(AppTab.progress.title, systemImage: AppTab.progress.symbolName, value: .progress) {
+                ProgressDashboardView(profile: profile)
+            }
+
+            Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
+                ProfileView(profile: profile)
+            }
+        }
+        .tint(.solarGold)
+        .task {
+            await ensureProfileExists()
+        }
+        .fullScreenCover(isPresented: $appState.isShowingOnboarding) {
+            OnboardingView(profile: profile)
+        }
+    }
+
+    private func ensureProfileExists() async {
+        guard profiles.isEmpty else {
+            appState.isShowingOnboarding = profiles.first?.isOnboardingComplete == false
+            return
+        }
+
+        let profile = UserProfile()
+        modelContext.insert(profile)
+        try? modelContext.save()
+        appState.isShowingOnboarding = true
+    }
+}
+
+#Preview {
+    BigDoseRootView()
+        .modelContainer(BigDoseModelContainerFactory.preview)
+}
