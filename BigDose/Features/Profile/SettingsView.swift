@@ -16,6 +16,8 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     onboardingCard
+                    notificationsCard
+                    manageDataCard
                     medicalCard
                 }
                 .padding(.horizontal, 18)
@@ -102,6 +104,28 @@ struct SettingsView: View {
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.5))
                 }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var notificationsCard: some View {
+        NavigationLink {
+            NotificationSettingsView(profile: profile)
+        } label: {
+            GlassCard {
+                ProfileLinkRow(title: "Notifications", detail: "Alert categories, reminders, and quiet hours", systemImage: "bell.badge.fill")
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var manageDataCard: some View {
+        NavigationLink {
+            ManageDataView(profile: profile)
+        } label: {
+            GlassCard {
+                ProfileLinkRow(title: "Manage Data", detail: "Export, restore, iCloud, and Apple Health", systemImage: "externaldrive.fill")
             }
         }
         .buttonStyle(.plain)

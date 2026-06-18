@@ -9,7 +9,7 @@ enum AppConstants {
 
     static var copyrightString: String {
         let year = Calendar.current.component(.year, from: .now)
-        return "Copyright © \(year) - Cre8vPlanet Studios, LLC. - All rights reserved."
+        return "Copyright © \(year)\nCre8vPlanet Studios, LLC."
     }
 
     static var legalFooter: String {

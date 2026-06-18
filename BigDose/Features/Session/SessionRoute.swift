@@ -3,6 +3,7 @@ import Foundation
 enum SessionRoute: Identifiable {
     case typePicker
     case sunPlanner
+    case supplementDose
     case activeSunSession(SunSessionPlan)
     case completion(SunSessionResult)
 
@@ -12,6 +13,8 @@ enum SessionRoute: Identifiable {
             "typePicker"
         case .sunPlanner:
             "sunPlanner"
+        case .supplementDose:
+            "supplementDose"
         case .activeSunSession:
             "activeSunSession"
         case .completion:

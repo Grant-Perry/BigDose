@@ -10,11 +10,17 @@ enum BigDoseModelContainerFactory {
             SupplementDose.self,
             FoodVitaminDEntry.self,
             LabResult.self,
+            HealthImportBatch.self,
+            HealthImportItem.self,
             BadgeAward.self,
             DailyProgressSummary.self
         ])
 
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        let configuration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: inMemory,
+            cloudKitDatabase: .none
+        )
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 

@@ -5,6 +5,7 @@ struct SunArcMeter: View {
     var quality: SunWindowQuality
     var title: String
     var subtitle: String
+    var showsQualityBadge = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animatedProgress = 0.0
@@ -31,8 +32,9 @@ struct SunArcMeter: View {
                     )
                     .shadow(color: Color.gpHiOrange.opacity(glow ? 0.75 : 0.35), radius: glow ? 20 : 10)
 
-                sun
-                    .offset(positionOffset(for: animatedProgress))
+                ArcOrbitingSun(progress: animatedProgress) {
+                    sun
+                }
 
                 VStack(spacing: 2) {
                     Text(title)
@@ -48,13 +50,15 @@ struct SunArcMeter: View {
             }
             .frame(height: 190)
 
-            Text(quality.title.uppercased())
-                .font(.caption.weight(.black))
-                .tracking(1.6)
-                .foregroundStyle(.solarGold)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(.solarGold.opacity(0.15), in: .capsule)
+            if showsQualityBadge {
+                Text(quality.title.uppercased())
+                    .font(.caption.weight(.black))
+                    .tracking(1.6)
+                    .foregroundStyle(.solarGold)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(.solarGold.opacity(0.15), in: .capsule)
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Vitamin D meter, \(title), \(subtitle), \(quality.title)")
@@ -105,11 +109,6 @@ struct SunArcMeter: View {
         }
     }
 
-    private func positionOffset(for progress: Double) -> CGSize {
-        let angle = Angle.degrees(200 + 140 * progress).radians
-        let radius: CGFloat = 132
-        return CGSize(width: cos(angle) * radius, height: sin(angle) * radius + 68)
-    }
 }
 
 private struct ArcShape: Shape {
@@ -118,9 +117,53 @@ private struct ArcShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let center = CGPoint(x: rect.midX, y: rect.maxY - 12)
-        let radius = min(rect.width, rect.height * 1.55) / 2
+        let center = ArcMeterGeometry.center(in: rect)
+        let radius = ArcMeterGeometry.radius(in: rect)
         path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
         return path
+    }
+}
+
+private struct ArcOrbitingSun<Content: View>: View, Animatable {
+    var progress: Double
+    @ViewBuilder var content: () -> Content
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let rect = CGRect(origin: .zero, size: proxy.size)
+            content()
+                .position(ArcMeterGeometry.point(for: progress, in: rect))
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private enum ArcMeterGeometry {
+    static let startDegrees = 200.0
+    static let sweepDegrees = 140.0
+
+    static func center(in rect: CGRect) -> CGPoint {
+        CGPoint(x: rect.midX, y: rect.maxY - 12)
+    }
+
+    static func radius(in rect: CGRect) -> CGFloat {
+        min(rect.width, rect.height * 1.55) / 2
+    }
+
+    static func point(for progress: Double, in rect: CGRect) -> CGPoint {
+        let clampedProgress = min(max(progress, 0), 1)
+        let angle = Angle.degrees(startDegrees + sweepDegrees * clampedProgress).radians
+        let center = center(in: rect)
+        let radius = radius(in: rect)
+
+        return CGPoint(
+            x: center.x + cos(angle) * radius,
+            y: center.y + sin(angle) * radius
+        )
     }
 }

@@ -18,6 +18,10 @@ final class ExposureSession {
     var locationLabel: String?
     var latitude: Double?
     var longitude: Double?
+    var externalIdentifier: String?
+    var importBatchImportedAt: Date?
+    var confidence: Double
+    var note: String
 
     init(
         startedAt: Date = .now,
@@ -32,7 +36,11 @@ final class ExposureSession {
         quality: SunWindowQuality = .low,
         locationLabel: String? = nil,
         latitude: Double? = nil,
-        longitude: Double? = nil
+        longitude: Double? = nil,
+        externalIdentifier: String? = nil,
+        importBatchImportedAt: Date? = nil,
+        confidence: Double = 1,
+        note: String = ""
     ) {
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -47,5 +55,9 @@ final class ExposureSession {
         self.locationLabel = locationLabel
         self.latitude = latitude
         self.longitude = longitude
+        self.externalIdentifier = externalIdentifier
+        self.importBatchImportedAt = importBatchImportedAt
+        self.confidence = confidence
+        self.note = note
     }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \LabResult.measuredAt, order: .reverse) private var labResults: [LabResult]
     @FocusState private var focusedField: OnboardingField?
     var profile: UserProfile?
 
@@ -13,14 +14,29 @@ struct OnboardingView: View {
     @State private var heightFeetText = ""
     @State private var heightInchesText = ""
     @State private var weightPoundsText = ""
+    @State private var levelKnowledge: VitaminDLevelKnowledge = .willAddLater
+    @State private var baselineNanogramsText = ""
+    @State private var baselineMeasuredAt = Date()
     @State private var goalNanogramsPerMilliliter = 50.0
     @State private var exposedBodySurfaceArea = 0.25
+    @State private var incidentalSunMinutesPerWeek = 30.0
     @State private var usuallyUsesSunscreen = false
+    @State private var defaultSupplementIUText = "1000"
+    @State private var wantsSolarWindowAlerts = true
+    @State private var wantsRiskAlerts = true
+    @State private var wantsSupplementReminders = false
+    @State private var wantsLabReminders = true
+    @State private var wantsWeeklyProgressAlerts = true
     @State private var selectedSkinType: FitzpatrickSkinType = .typeII
     @State private var acceptedDisclaimer = false
     @State private var page = 0
+    @State private var isAutofillingFromHealth = false
+    @State private var healthAutofillMessage: String?
+    @State private var healthAutofillTitle = "Apple Health Autofill"
+    @State private var isShowingHealthAutofillResult = false
+    @State private var healthKitImportService = HealthKitImportService()
 
-    private let lastPage = 6
+    private let lastPage = 9
 
     var body: some View {
         ZStack {
@@ -50,14 +66,23 @@ struct OnboardingView: View {
                     bodyPage
                         .tag(3)
 
-                    skinTypePage
+                    levelPage
                         .tag(4)
 
-                    exposurePage
+                    supplementPage
                         .tag(5)
 
-                    firstResultPage
+                    skinTypePage
                         .tag(6)
+
+                    exposurePage
+                        .tag(7)
+
+                    alertsPage
+                        .tag(8)
+
+                    firstResultPage
+                        .tag(9)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
 
@@ -78,11 +103,25 @@ struct OnboardingView: View {
             heightFeetText = heightInches > 0 ? String(heightInches / 12) : ""
             heightInchesText = heightInches > 0 ? String(heightInches % 12) : ""
             weightPoundsText = profile?.weightKilograms.map { String(Int(($0 * 2.20462).rounded())) } ?? ""
+            levelKnowledge = profile?.levelKnowledge ?? .willAddLater
+            baselineNanogramsText = profile?.baselineNanogramsPerMilliliter.map { String(Int($0.rounded())) } ?? ""
             goalNanogramsPerMilliliter = profile?.goalNanogramsPerMilliliter ?? 50
             exposedBodySurfaceArea = profile?.typicalExposedBodySurfaceArea ?? 0.25
+            incidentalSunMinutesPerWeek = Double(profile?.incidentalSunMinutesPerWeek ?? 30)
             usuallyUsesSunscreen = profile?.usuallyUsesSunscreen ?? false
+            defaultSupplementIUText = String(profile?.defaultSupplementIU ?? 1_000)
+            wantsSolarWindowAlerts = profile?.wantsSolarWindowAlerts ?? true
+            wantsRiskAlerts = profile?.wantsRiskAlerts ?? true
+            wantsSupplementReminders = profile?.wantsSupplementReminders ?? false
+            wantsLabReminders = profile?.wantsLabReminders ?? true
+            wantsWeeklyProgressAlerts = profile?.wantsWeeklyProgressAlerts ?? true
             selectedSkinType = profile?.skinType ?? .typeII
             acceptedDisclaimer = profile?.hasAcceptedWellnessDisclaimer ?? false
+        }
+        .alert(healthAutofillTitle, isPresented: $isShowingHealthAutofillResult) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(healthAutofillMessage ?? "")
         }
     }
 
@@ -117,6 +156,26 @@ struct OnboardingView: View {
                         }
                         .pickerStyle(.segmented)
                     }
+                }
+
+                Button {
+                    Task {
+                        await autofillFromHealth()
+                    }
+                } label: {
+                    Label(isAutofillingFromHealth ? "Checking Apple Health" : "Autofill from Apple Health", systemImage: "heart.fill")
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.bordered)
+                .tint(.solarGold)
+                .disabled(isAutofillingFromHealth)
+
+                if let healthAutofillMessage {
+                    Text(healthAutofillMessage)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.68))
                 }
 
                 Text("Age and biological sex can affect vitamin D metabolism. We keep this local in SwiftData.")
@@ -224,12 +283,114 @@ struct OnboardingView: View {
         }
     }
 
+    private var levelPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "testtube.2",
+                    eyebrow: "Starting Level",
+                    title: "Do you have a recent 25(OH)D result?"
+                )
+
+                VStack(spacing: 10) {
+                    ForEach(VitaminDLevelKnowledge.allCases) { option in
+                        Button {
+                            withAnimation(.smooth) {
+                                levelKnowledge = option
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: levelKnowledge == option ? "checkmark.circle.fill" : "circle")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(levelKnowledge == option ? .solarGold : .white.opacity(0.42))
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(option.title)
+                                        .font(.headline.weight(.semibold))
+                                    Text(option.detail)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white.opacity(0.62))
+                                }
+
+                                Spacer()
+                            }
+                            .foregroundStyle(.white)
+                            .padding(14)
+                            .bigDoseGlass(cornerRadius: 20)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if levelKnowledge == .knowsRecentResult {
+                    GlassCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            OnboardingTextField(
+                                title: "25(OH)D Result",
+                                text: $baselineNanogramsText,
+                                placeholder: "ng/mL",
+                                keyboardType: .decimalPad,
+                                focusedField: $focusedField,
+                                field: .baselineLevel
+                            )
+
+                            DatePicker("Measured", selection: $baselineMeasuredAt, displayedComponents: .date)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .tint(.solarGold)
+                        }
+                    }
+                }
+
+                Text("A lab result anchors the estimate. If you do not have one, BigDose starts conservatively and makes that clear everywhere.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
+    }
+
+    private var supplementPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "pills.fill",
+                    eyebrow: "Daily Intake",
+                    title: "Do supplements belong in your baseline?"
+                )
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 16) {
+                        OnboardingTextField(
+                            title: "Default Supplement",
+                            text: $defaultSupplementIUText,
+                            placeholder: "IU per dose",
+                            keyboardType: .numberPad,
+                            focusedField: $focusedField,
+                            field: .defaultSupplement
+                        )
+
+                        Toggle("Remind me to log it", isOn: $wantsSupplementReminders)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .tint(.solarGold)
+                    }
+                }
+
+                Text("You can log one-off doses or use this value for a quick daily entry from Home.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
+    }
+
     private var exposurePage: some View {
         VStack(alignment: .leading, spacing: 18) {
             OnboardingHeader(
                 symbolName: "sun.horizon.fill",
                 eyebrow: "Sun Habit",
-                title: "How much skin usually sees sun?"
+                title: "What does ordinary sun look like?"
             )
 
             GlassCard {
@@ -250,6 +411,22 @@ struct OnboardingView: View {
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(.white)
                         .tint(.solarGold)
+
+                    Divider()
+                        .overlay(.white.opacity(0.12))
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("\(Int(incidentalSunMinutesPerWeek)) minutes per week")
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.solarGold)
+
+                        Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
+                            .tint(.solarGold)
+
+                        Text("Incidental outdoor time means casual exposure: walking, errands, yard work, or lunch outside.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
                 }
             }
 
@@ -258,6 +435,36 @@ struct OnboardingView: View {
                 .foregroundStyle(.white.opacity(0.62))
         }
         .padding(22)
+    }
+
+    private var alertsPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "bell.badge.fill",
+                    eyebrow: "Guidance",
+                    title: "Choose what BigDose can remind you about."
+                )
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Toggle("Useful sunlight timing", isOn: $wantsSolarWindowAlerts)
+                        Toggle("Skin-limit safety guidance", isOn: $wantsRiskAlerts)
+                        Toggle("Supplement logging", isOn: $wantsSupplementReminders)
+                        Toggle("Lab retest cadence", isOn: $wantsLabReminders)
+                        Toggle("Weekly progress", isOn: $wantsWeeklyProgressAlerts)
+                    }
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .tint(.solarGold)
+                }
+
+                Text("You can change these later. BigDose keeps reminder categories separate so one noisy category does not flood the rest.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
     }
 
     private var firstResultPage: some View {
@@ -270,10 +477,10 @@ struct OnboardingView: View {
 
             GlassCard {
                 SunArcMeter(
-                    progress: 0.68,
-                    quality: .prime,
-                    title: "14m",
-                    subtitle: "demo target"
+                    progress: min(Double(defaultSupplementIU) / Double(max(defaultSupplementIU, 1_000)), 1),
+                    quality: defaultSupplementIU > 0 ? .prime : .low,
+                    title: "\(defaultSupplementIU)",
+                    subtitle: "IU supplement baseline"
                 )
             }
 
@@ -330,9 +537,20 @@ struct OnboardingView: View {
         activeProfile.biologicalSex = biologicalSex
         activeProfile.heightCentimeters = heightCentimeters
         activeProfile.weightKilograms = weightKilograms
+        activeProfile.levelKnowledge = levelKnowledge
+        activeProfile.baselineNanogramsPerMilliliter = baselineNanogramsPerMilliliter
         activeProfile.goalNanogramsPerMilliliter = goalNanogramsPerMilliliter
         activeProfile.typicalExposedBodySurfaceArea = exposedBodySurfaceArea
+        activeProfile.incidentalSunMinutesPerWeek = Int(incidentalSunMinutesPerWeek)
         activeProfile.usuallyUsesSunscreen = usuallyUsesSunscreen
+        activeProfile.defaultSupplementIU = defaultSupplementIU
+        activeProfile.preferredDailyIU = max(defaultSupplementIU, 1_000)
+        activeProfile.wantsWindowReminders = wantsSolarWindowAlerts
+        activeProfile.wantsSolarWindowAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsRiskAlerts = wantsRiskAlerts
+        activeProfile.wantsSupplementReminders = wantsSupplementReminders
+        activeProfile.wantsLabReminders = wantsLabReminders
+        activeProfile.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
         activeProfile.skinType = selectedSkinType
         activeProfile.hasAcceptedWellnessDisclaimer = acceptedDisclaimer
         activeProfile.isOnboardingComplete = true
@@ -342,6 +560,7 @@ struct OnboardingView: View {
             modelContext.insert(activeProfile)
         }
 
+        saveBaselineLabIfNeeded()
         try? modelContext.save()
         dismiss()
     }
@@ -360,6 +579,87 @@ struct OnboardingView: View {
         }
 
         return pounds / 2.20462
+    }
+
+    private func autofillFromHealth() async {
+        isAutofillingFromHealth = true
+        defer { isAutofillingFromHealth = false }
+
+        do {
+            let autofill = try await healthKitImportService.fetchProfileAutofill()
+            apply(autofill)
+
+            if autofill.filledFields.isEmpty {
+                healthAutofillTitle = "Nothing to Autofill"
+                healthAutofillMessage = "Apple Health did not return profile fields for BigDose to fill. You can keep entering them manually."
+            } else {
+                healthAutofillTitle = "Autofill Complete"
+                var message = "Filled \(autofill.filledFields.joined(separator: ", ")) from Apple Health. Review before continuing."
+                if !autofill.missingFields.isEmpty {
+                    message += "\n\nNot found or not shared: \(autofill.missingFields.joined(separator: ", "))."
+                }
+                if autofill.heightCentimeters != nil || autofill.weightKilograms != nil {
+                    message += "\n\nContinue to Body Context to review height and weight."
+                }
+                healthAutofillMessage = message
+            }
+            isShowingHealthAutofillResult = true
+        } catch {
+            healthAutofillTitle = "Apple Health Unavailable"
+            healthAutofillMessage = "Apple Health autofill was not available: \(error.localizedDescription)"
+            isShowingHealthAutofillResult = true
+        }
+    }
+
+    private func apply(_ autofill: HealthProfileAutofill) {
+        if let dateOfBirth = autofill.dateOfBirth {
+            self.dateOfBirth = dateOfBirth
+        }
+
+        if let biologicalSex = autofill.biologicalSex {
+            self.biologicalSex = biologicalSex
+        }
+
+        if let heightCentimeters = autofill.heightCentimeters {
+            let inches = Int((heightCentimeters / 2.54).rounded())
+            heightFeetText = String(inches / 12)
+            heightInchesText = String(inches % 12)
+        }
+
+        if let weightKilograms = autofill.weightKilograms {
+            weightPoundsText = String(Int((weightKilograms * 2.20462).rounded()))
+        }
+    }
+
+    private var baselineNanogramsPerMilliliter: Double? {
+        guard levelKnowledge == .knowsRecentResult else {
+            return nil
+        }
+
+        return Double(baselineNanogramsText)
+    }
+
+    private var defaultSupplementIU: Int {
+        max(Int(defaultSupplementIUText) ?? 0, 0)
+    }
+
+    private func saveBaselineLabIfNeeded() {
+        guard let baselineNanogramsPerMilliliter else { return }
+
+        let alreadySaved = labResults.contains { result in
+            Calendar.current.isDate(result.measuredAt, inSameDayAs: baselineMeasuredAt)
+                && abs(result.nanogramsPerMilliliter - baselineNanogramsPerMilliliter) < 0.1
+        }
+
+        guard !alreadySaved else { return }
+
+        modelContext.insert(
+            LabResult(
+                measuredAt: baselineMeasuredAt,
+                nanogramsPerMilliliter: baselineNanogramsPerMilliliter,
+                note: "Added during setup"
+            )
+        )
     }
 }
 
@@ -406,6 +706,10 @@ private struct OnboardingHeader: View {
                 .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .minimumScaleFactor(0.82)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
         }
     }
 }
@@ -449,6 +753,8 @@ private enum OnboardingField: Hashable {
     case heightFeet
     case heightInches
     case weight
+    case baselineLevel
+    case defaultSupplement
 }
 
 #Preview {

@@ -5,9 +5,10 @@ import Observation
 @Observable
 @MainActor
 final class HomeViewModel {
-    var weather = BigDoseWeatherSnapshot.demo
+    var weather: BigDoseWeatherSnapshot?
+    var dailyPlan: DailySunPlan?
     var isLoading = false
-    var statusMessage = "Using demo UV until location and WeatherKit respond."
+    var statusMessage = "Loading current location and Apple Weather."
 
     private let locationService = BigDoseLocationService()
 
@@ -20,21 +21,47 @@ final class HomeViewModel {
         do {
             location = try await locationService.requestCurrentLocation()
         } catch {
-            weather = .demo
-            statusMessage = "Demo weather: CoreLocation - \(friendlyMessage(for: error))"
+            weather = nil
+            dailyPlan = nil
+            statusMessage = "Weather unavailable: \(friendlyMessage(for: error))"
             return
         }
 
         do {
             weather = try await BigDoseWeatherService.weather(for: location)
+            dailyPlan = nil
             statusMessage = "Live WeatherKit data"
         } catch {
-            weather = .demo
-            statusMessage = "Demo weather: WeatherKit - \(friendlyMessage(for: error))"
+            weather = nil
+            dailyPlan = nil
+            statusMessage = "Weather unavailable: \(friendlyMessage(for: error))"
+        }
+    }
+
+    func refresh(profile: UserProfile) async {
+        await refresh()
+
+        if dailyPlan == nil, let weather {
+            do {
+                let location = try await locationService.requestCurrentLocation()
+                dailyPlan = DailySunPlanService.makePlan(profile: profile, weather: weather, location: location)
+            } catch {
+                dailyPlan = nil
+                statusMessage = "Solar guidance unavailable: \(friendlyMessage(for: error))"
+            }
         }
     }
 
     func estimate(for profile: UserProfile, durationSeconds: TimeInterval = 12 * 60) -> VitaminDExposureEstimate {
+        guard let weather else {
+            return VitaminDExposureEstimate(
+                estimatedIU: 0,
+                targetDurationSeconds: 0,
+                erythemaRiskFraction: 0,
+                quality: .noD
+            )
+        }
+
         let plan = SunSessionPlanInput(
             startDate: .now,
             durationSeconds: durationSeconds,

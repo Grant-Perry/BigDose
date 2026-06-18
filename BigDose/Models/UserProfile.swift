@@ -19,6 +19,24 @@ final class UserProfile {
     var usuallyUsesSunscreen: Bool
     var wantsWindowReminders: Bool
     var wantsRiskAlerts: Bool
+    var levelKnowledge: VitaminDLevelKnowledge
+    var incidentalSunMinutesPerWeek: Int
+    var defaultSupplementIU: Int
+    var wantsSolarWindowAlerts: Bool
+    var wantsSupplementReminders: Bool
+    var wantsLabReminders: Bool
+    var wantsWeeklyProgressAlerts: Bool
+    var wantsLevelTrendAlerts: Bool
+    var wantsMilestoneAlerts: Bool
+    var wantsWeatherBreakAlerts: Bool
+    var quietHoursEnabled: Bool
+    var quietHoursStartHour: Int
+    var quietHoursEndHour: Int
+    var supplementReminderHour: Int
+    var supplementReminderMinute: Int
+    var labReminderIntervalDays: Int
+    var lastHealthKitImportAt: Date?
+    var healthKitImportStatus: HealthImportStatus
     var hasAcceptedWellnessDisclaimer: Bool
 
     init(
@@ -38,6 +56,24 @@ final class UserProfile {
         usuallyUsesSunscreen: Bool = false,
         wantsWindowReminders: Bool = true,
         wantsRiskAlerts: Bool = true,
+        levelKnowledge: VitaminDLevelKnowledge = .willAddLater,
+        incidentalSunMinutesPerWeek: Int = 30,
+        defaultSupplementIU: Int = 1_000,
+        wantsSolarWindowAlerts: Bool = true,
+        wantsSupplementReminders: Bool = false,
+        wantsLabReminders: Bool = true,
+        wantsWeeklyProgressAlerts: Bool = true,
+        wantsLevelTrendAlerts: Bool = true,
+        wantsMilestoneAlerts: Bool = true,
+        wantsWeatherBreakAlerts: Bool = false,
+        quietHoursEnabled: Bool = false,
+        quietHoursStartHour: Int = 22,
+        quietHoursEndHour: Int = 7,
+        supplementReminderHour: Int = 9,
+        supplementReminderMinute: Int = 0,
+        labReminderIntervalDays: Int = 90,
+        lastHealthKitImportAt: Date? = nil,
+        healthKitImportStatus: HealthImportStatus = .neverImported,
         hasAcceptedWellnessDisclaimer: Bool = false
     ) {
         self.createdAt = createdAt
@@ -56,6 +92,24 @@ final class UserProfile {
         self.usuallyUsesSunscreen = usuallyUsesSunscreen
         self.wantsWindowReminders = wantsWindowReminders
         self.wantsRiskAlerts = wantsRiskAlerts
+        self.levelKnowledge = levelKnowledge
+        self.incidentalSunMinutesPerWeek = incidentalSunMinutesPerWeek
+        self.defaultSupplementIU = defaultSupplementIU
+        self.wantsSolarWindowAlerts = wantsSolarWindowAlerts
+        self.wantsSupplementReminders = wantsSupplementReminders
+        self.wantsLabReminders = wantsLabReminders
+        self.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
+        self.wantsLevelTrendAlerts = wantsLevelTrendAlerts
+        self.wantsMilestoneAlerts = wantsMilestoneAlerts
+        self.wantsWeatherBreakAlerts = wantsWeatherBreakAlerts
+        self.quietHoursEnabled = quietHoursEnabled
+        self.quietHoursStartHour = quietHoursStartHour
+        self.quietHoursEndHour = quietHoursEndHour
+        self.supplementReminderHour = supplementReminderHour
+        self.supplementReminderMinute = supplementReminderMinute
+        self.labReminderIntervalDays = labReminderIntervalDays
+        self.lastHealthKitImportAt = lastHealthKitImportAt
+        self.healthKitImportStatus = healthKitImportStatus
         self.hasAcceptedWellnessDisclaimer = hasAcceptedWellnessDisclaimer
     }
 }

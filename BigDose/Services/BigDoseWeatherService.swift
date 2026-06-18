@@ -7,6 +7,7 @@ enum BigDoseWeatherService {
     static func weather(for location: CLLocation) async throws -> BigDoseWeatherSnapshot {
         let service = WeatherService()
         let weather = try await service.weather(for: location)
+        let attribution = try? await service.attribution
         let current = weather.currentWeather
         let today = weather.dailyForecast.first
         let locationName = await locationName(for: location) ?? "Current Location"
@@ -28,15 +29,31 @@ enum BigDoseWeatherService {
             hourlyUV: weather.hourlyForecast.prefix(12).map {
                 HourlyUVSnapshot(date: $0.date, uvIndex: Double($0.uvIndex.value))
             },
+            attributionText: attribution?.legalAttributionText ?? "Weather data provided by Apple Weather.",
+            attributionURL: attribution?.legalPageURL ?? URL(string: "https://weatherkit.apple.com/legal-attribution.html"),
+            combinedMarkLightURL: attribution?.combinedMarkLightURL,
+            combinedMarkDarkURL: attribution?.combinedMarkDarkURL,
             isLive: true
         )
     }
 
     private static func locationName(for location: CLLocation) async -> String? {
-        guard let request = MKReverseGeocodingRequest(location: location) else {
+        guard let request = MKReverseGeocodingRequest(location: location),
+              let address = try? await request.mapItems.first?.address,
+              let shortAddress = address.shortAddress,
+              !shortAddress.isEmpty else {
             return nil
         }
 
-        return try? await request.mapItems.first?.address?.shortAddress
+        let components = shortAddress
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if let city = components.last {
+            return city
+        }
+
+        return shortAddress
     }
 }

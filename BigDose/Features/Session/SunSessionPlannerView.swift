@@ -226,6 +226,3 @@ struct SunSessionPlannerView: View {
     }
 }
 
-#Preview {
-    SunSessionPlannerView(profile: .preview, weather: .demo, onCancel: { }, onStart: { _ in })
-}

@@ -1,6 +1,11 @@
+import SwiftData
 import SwiftUI
 
 struct ProgressDashboardView: View {
+    @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
+    @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
+    @Query(sort: \FoodVitaminDEntry.loggedAt, order: .reverse) private var foods: [FoodVitaminDEntry]
+    @Query(sort: \LabResult.measuredAt, order: .reverse) private var labs: [LabResult]
     var profile: UserProfile?
 
     private var activeProfile: UserProfile {
@@ -8,11 +13,21 @@ struct ProgressDashboardView: View {
     }
 
     private var estimatedLevel: Double {
-        activeProfile.baselineNanogramsPerMilliliter ?? 25
+        snapshot.estimatedLevel
     }
 
     private var levelProgress: Double {
         min(estimatedLevel / activeProfile.goalNanogramsPerMilliliter, 1)
+    }
+
+    private var snapshot: BigDoseProgressSnapshot {
+        ProgressAggregationService.snapshot(
+            profile: activeProfile,
+            sessions: sessions,
+            supplements: supplements,
+            foods: foods,
+            labs: labs
+        )
     }
 
     var body: some View {
@@ -25,6 +40,7 @@ struct ProgressDashboardView: View {
                         header
                         bloodLevelCard
                         weeklyCard
+                        sourceSplitCard
                         badgesCard
                     }
                     .padding(.horizontal, 18)
@@ -55,11 +71,11 @@ struct ProgressDashboardView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Estimated D Blood Level")
+                        Text("Today's Estimated D Level")
                             .font(.title3.weight(.black))
                             .foregroundStyle(.white)
 
-                        Text("Trend estimate. Labs are truth.")
+                        Text(snapshot.confidence)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
                     }
@@ -79,7 +95,7 @@ struct ProgressDashboardView: View {
                     progress: levelProgress,
                     quality: estimatedLevel >= 30 ? .prime : .low,
                     title: "\(Int(levelProgress * 100))%",
-                    subtitle: "of goal"
+                    subtitle: "of today's goal"
                 )
             }
         }
@@ -93,7 +109,7 @@ struct ProgressDashboardView: View {
                         .font(.title3.weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("Your weekly IU chart will land here with sun, food, and supplements split cleanly.")
+                    Text("Sun, supplements, and food counted against your current daily target.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
                 }
@@ -101,11 +117,32 @@ struct ProgressDashboardView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text("5.5K")
+                    Text(compactIU(snapshot.totalIU))
                         .font(.system(size: 38, weight: .black))
                         .foregroundStyle(.solarGold)
-                    Text("of 7K IU")
+                    Text("of \(compactIU(snapshot.targetIU)) IU")
                         .font(.headline.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.66))
+                }
+            }
+        }
+    }
+
+    private var sourceSplitCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Source Split")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+
+                ProgressSourceRow(title: "Sun", value: snapshot.sunIU, systemImage: "sun.max.fill")
+                ProgressSourceRow(title: "Supplements", value: snapshot.supplementIU, systemImage: "pills.fill")
+                ProgressSourceRow(title: "Food", value: snapshot.foodIU, systemImage: "fork.knife")
+
+                if let latestLab = snapshot.latestLab {
+                    Divider().overlay(.white.opacity(0.12))
+                    Text("Latest lab: \(Int(latestLab.nanogramsPerMilliliter.rounded())) ng/mL on \(latestLab.measuredAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.66))
                 }
             }
@@ -131,8 +168,37 @@ struct ProgressDashboardView: View {
             }
         }
     }
+
+    private func compactIU(_ value: Double) -> String {
+        if value >= 1_000 {
+            return String(format: "%.1fK", value / 1_000)
+        }
+
+        return "\(Int(value.rounded()))"
+    }
+}
+
+private struct ProgressSourceRow: View {
+    var title: String
+    var value: Double
+    var systemImage: String
+
+    var body: some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Text("\(Int(value.rounded())) IU")
+                .font(.headline.weight(.black))
+                .foregroundStyle(.solarGold)
+        }
+    }
 }
 
 #Preview {
     ProgressDashboardView(profile: .preview)
+        .modelContainer(BigDoseModelContainerFactory.preview)
 }

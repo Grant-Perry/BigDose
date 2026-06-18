@@ -257,17 +257,3 @@ private enum SunSessionSafetyAlert: Identifiable {
     }
 }
 
-#Preview {
-    ActiveSunSessionView(plan: SunSessionPlan(
-        startedAt: .now,
-        durationSeconds: 15 * 60,
-        exposedBodySurfaceArea: 0.25,
-        cloudCover: .clear,
-        sunscreenTransmission: 1,
-        uvIndex: 6.4,
-        currentTemperatureFahrenheit: 82,
-        skinType: .typeII,
-        locationName: "Newport News",
-        targetIU: 1_000
-    ), onCancel: { }, onComplete: { _ in })
-}

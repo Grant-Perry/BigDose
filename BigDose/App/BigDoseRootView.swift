@@ -11,24 +11,30 @@ struct BigDoseRootView: View {
     }
 
     var body: some View {
-        TabView(selection: $appState.selectedTab) {
-            Tab(AppTab.home.title, systemImage: AppTab.home.symbolName, value: .home) {
-                HomeView(profile: profile)
-            }
+        Group {
+            if let profile {
+                TabView(selection: $appState.selectedTab) {
+                    Tab(AppTab.home.title, systemImage: AppTab.home.symbolName, value: .home) {
+                        HomeView(profile: profile)
+                    }
 
-            Tab(AppTab.history.title, systemImage: AppTab.history.symbolName, value: .history) {
-                HistoryView()
-            }
+                    Tab(AppTab.history.title, systemImage: AppTab.history.symbolName, value: .history) {
+                        HistoryView()
+                    }
 
-            Tab(AppTab.progress.title, systemImage: AppTab.progress.symbolName, value: .progress) {
-                ProgressDashboardView(profile: profile)
-            }
+                    Tab(AppTab.progress.title, systemImage: AppTab.progress.symbolName, value: .progress) {
+                        ProgressDashboardView(profile: profile)
+                    }
 
-            Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
-                ProfileView(profile: profile)
+                    Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
+                        ProfileView(profile: profile)
+                    }
+                }
+                .tint(.solarGold)
+            } else {
+                BigDoseLaunchLoadingView()
             }
         }
-        .tint(.solarGold)
         .task {
             await ensureProfileExists()
         }
@@ -47,6 +53,19 @@ struct BigDoseRootView: View {
         modelContext.insert(profile)
         try? modelContext.save()
         appState.isShowingOnboarding = true
+    }
+}
+
+private struct BigDoseLaunchLoadingView: View {
+    var body: some View {
+        ZStack {
+            BigDoseGradientBackground()
+
+            ProgressView("Preparing BigDose")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .tint(.solarGold)
+        }
     }
 }
 

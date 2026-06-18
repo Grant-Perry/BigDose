@@ -122,22 +122,3 @@ struct SunSessionCompleteView: View {
     }
 }
 
-#Preview {
-    SunSessionCompleteView(result: SunSessionResult(
-        plan: SunSessionPlan(
-            startedAt: .now,
-            durationSeconds: 15 * 60,
-            exposedBodySurfaceArea: 0.25,
-            cloudCover: .clear,
-            sunscreenTransmission: 1,
-            uvIndex: 6.4,
-            currentTemperatureFahrenheit: 82,
-            skinType: .typeII,
-            locationName: "Newport News",
-            targetIU: 1_000
-        ),
-        endedAt: .now,
-        elapsedSeconds: 960,
-        estimatedIU: 700
-    ), onDone: { })
-}

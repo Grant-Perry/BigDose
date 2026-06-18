@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct ProfileView: View {
@@ -17,6 +18,7 @@ struct ProfileView: View {
                         title
                         profileCard
                         goalsCard
+                        dataLinksCard
                         educationLink
                     }
                     .padding(.horizontal, 18)
@@ -59,6 +61,7 @@ struct ProfileView: View {
                 ProfileRow(title: "Skin Type", value: "\(activeProfile.skinType.title) - \(activeProfile.skinType.subtitle)", systemImage: "person.crop.square")
                 ProfileRow(title: "Biological Sex", value: activeProfile.biologicalSex.title, systemImage: "figure.stand")
                 ProfileRow(title: "Typical Skin Exposed", value: "\(Int(activeProfile.typicalExposedBodySurfaceArea * 100))%", systemImage: "sun.max")
+                ProfileRow(title: "Incidental Sun", value: "\(activeProfile.incidentalSunMinutesPerWeek) min/wk", systemImage: "figure.walk")
                 ProfileRow(title: "Sunscreen", value: activeProfile.usuallyUsesSunscreen ? "Usually" : "Not usually", systemImage: "shield")
             }
         }
@@ -86,6 +89,34 @@ struct ProfileView: View {
                 Text("ng/mL")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.white.opacity(0.7))
+            }
+        }
+    }
+
+    private var dataLinksCard: some View {
+        GlassCard {
+            VStack(spacing: 14) {
+                NavigationLink {
+                    LabResultsView()
+                } label: {
+                    ProfileLinkRow(title: "Lab Results", detail: "Record 25(OH)D values", systemImage: "testtube.2")
+                }
+
+                Divider().overlay(.white.opacity(0.12))
+
+                NavigationLink {
+                    SupplementLogView(profile: profile)
+                } label: {
+                    ProfileLinkRow(title: "Supplements", detail: "Log daily or one-off IU", systemImage: "pills.fill")
+                }
+
+                Divider().overlay(.white.opacity(0.12))
+
+                NavigationLink {
+                    RiskProfileView(profile: profile)
+                } label: {
+                    ProfileLinkRow(title: "Risk Snapshot", detail: "See current guidance inputs", systemImage: "shield.lefthalf.filled")
+                }
             }
         }
     }
@@ -130,6 +161,38 @@ private struct ProfileRow: View {
     }
 }
 
+struct ProfileLinkRow: View {
+    var title: String
+    var detail: String
+    var systemImage: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.solarGold)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+
+                Text(detail)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.42))
+        }
+    }
+}
+
 #Preview {
     ProfileView(profile: .preview)
+        .modelContainer(BigDoseModelContainerFactory.preview)
 }

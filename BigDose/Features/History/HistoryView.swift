@@ -3,6 +3,9 @@ import SwiftUI
 
 struct HistoryView: View {
     @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
+    @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
+    @Query(sort: \LabResult.measuredAt, order: .reverse) private var labs: [LabResult]
+    @Query(sort: \HealthImportBatch.importedAt, order: .reverse) private var importBatches: [HealthImportBatch]
 
     var body: some View {
         NavigationStack {
@@ -14,11 +17,27 @@ struct HistoryView: View {
                         header
                         summaryCard
 
-                        if sessions.isEmpty {
+                        if sessions.isEmpty && supplements.isEmpty && labs.isEmpty && importBatches.isEmpty {
                             emptyState
                         } else {
+                            sectionTitle("Sun")
                             ForEach(sessions) { session in
                                 sessionRow(session)
+                            }
+
+                            sectionTitle("Supplements")
+                            ForEach(supplements) { dose in
+                                supplementRow(dose)
+                            }
+
+                            sectionTitle("Labs")
+                            ForEach(labs) { result in
+                                labRow(result)
+                            }
+
+                            sectionTitle("Imports")
+                            ForEach(importBatches) { batch in
+                                importRow(batch)
                             }
                         }
                     }
@@ -53,7 +72,7 @@ struct HistoryView: View {
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("\(sessions.count) sun sessions")
+                    Text("\(sessions.count) sun sessions • \(supplements.count) supplement doses • \(labs.count) labs")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
                 }
@@ -91,7 +110,15 @@ struct HistoryView: View {
     }
 
     private var totalIU: Double {
-        sessions.reduce(0) { $0 + $1.estimatedIU }
+        sessions.reduce(0) { $0 + $1.estimatedIU } + supplements.reduce(0) { $0 + Double($1.internationalUnits) }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption.weight(.black))
+            .tracking(1.6)
+            .foregroundStyle(.white.opacity(0.5))
+            .padding(.top, 4)
     }
 
     private func sessionRow(_ session: ExposureSession) -> some View {
@@ -118,6 +145,92 @@ struct HistoryView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("IU")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+        }
+    }
+
+    private func supplementRow(_ dose: SupplementDose) -> some View {
+        GlassCard(cornerRadius: 24) {
+            HStack {
+                Image(systemName: "pills.fill")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.solarGold)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Supplement")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+
+                    Text(dose.takenAt, style: .date)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                }
+
+                Spacer()
+
+                Text("\(dose.internationalUnits)")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.solarGold)
+
+                Text("IU")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+        }
+    }
+
+    private func labRow(_ result: LabResult) -> some View {
+        GlassCard(cornerRadius: 24) {
+            HStack {
+                Image(systemName: "testtube.2")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.solarGold)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("25(OH)D Result")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+
+                    Text(result.measuredAt, style: .date)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                }
+
+                Spacer()
+
+                Text("\(Int(result.nanogramsPerMilliliter.rounded()))")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.solarGold)
+
+                Text("ng/mL")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+        }
+    }
+
+    private func importRow(_ batch: HealthImportBatch) -> some View {
+        GlassCard(cornerRadius: 24) {
+            HStack {
+                Image(systemName: "heart.fill")
+                    .font(.title2.weight(.black))
+                    .foregroundStyle(.red)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Apple Health Import")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+
+                    Text("\(batch.workoutCount) workouts • \(batch.acceptedExposureCount) accepted")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                }
+
+                Spacer()
+
+                Text(batch.importedAt, style: .date)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.62))
             }

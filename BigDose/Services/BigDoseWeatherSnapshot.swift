@@ -15,34 +15,15 @@ struct BigDoseWeatherSnapshot: Equatable {
     var uvIndex: Double
     var observedAt: Date
     var hourlyUV: [HourlyUVSnapshot]
+    var attributionText: String
+    var attributionURL: URL?
+    var combinedMarkLightURL: URL?
+    var combinedMarkDarkURL: URL?
     var isLive: Bool
 
     var sourceTitle: String {
-        isLive ? "WeatherKit" : "Demo"
+        isLive ? "WeatherKit" : "Unavailable"
     }
-
-    static let demo = BigDoseWeatherSnapshot(
-        locationName: "Newport News",
-        temperatureFahrenheit: 82,
-        feelsLikeFahrenheit: 85,
-        lowTemperatureFahrenheit: 72,
-        highTemperatureFahrenheit: 89,
-        conditionText: "Mostly Sunny",
-        symbolName: "sun.max.fill",
-        windMilesPerHour: 8,
-        humidityPercent: 58,
-        dewPointFahrenheit: 62,
-        pressureInchesMercury: 29.84,
-        uvIndex: 6.4,
-        observedAt: .now,
-        hourlyUV: [
-            HourlyUVSnapshot(date: .now, uvIndex: 6.4),
-            HourlyUVSnapshot(date: .now.addingTimeInterval(3_600), uvIndex: 7.1),
-            HourlyUVSnapshot(date: .now.addingTimeInterval(7_200), uvIndex: 6.7),
-            HourlyUVSnapshot(date: .now.addingTimeInterval(10_800), uvIndex: 4.8)
-        ],
-        isLive: false
-    )
 }
 
 struct HourlyUVSnapshot: Identifiable, Equatable {
@@ -50,3 +31,4 @@ struct HourlyUVSnapshot: Identifiable, Equatable {
     var date: Date
     var uvIndex: Double
 }
+
