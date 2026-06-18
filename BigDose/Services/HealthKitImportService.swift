@@ -7,6 +7,7 @@ struct HealthWorkoutImportCandidate: Identifiable, Sendable {
     var startedAt: Date
     var endedAt: Date
     var activityName: String
+    var sourceAppName: String?
     var durationSeconds: TimeInterval
     var confidence: Double
     var shouldImport: Bool
@@ -14,6 +15,7 @@ struct HealthWorkoutImportCandidate: Identifiable, Sendable {
 }
 
 struct HealthImportResult: Sendable {
+    var importedAt: Date
     var workoutCount: Int
     var acceptedCount: Int
     var skippedCount: Int
@@ -214,9 +216,10 @@ final class HealthKitImportService {
                     sunscreenFactor: profile.usuallyUsesSunscreen ? 0.35 : 1,
                     source: .healthKit,
                     quality: estimate.quality,
-                    locationLabel: "Apple Health workout",
+                    locationLabel: candidate.activityName,
                     externalIdentifier: candidate.id,
                     importBatchImportedAt: now,
+                    sourceAppName: candidate.sourceAppName,
                     confidence: candidate.confidence,
                     note: candidate.note
                 )
@@ -227,7 +230,12 @@ final class HealthKitImportService {
         profile.healthKitImportStatus = .imported
         try? modelContext.save()
 
-        return HealthImportResult(workoutCount: candidates.count, acceptedCount: accepted.count, skippedCount: skipped)
+        return HealthImportResult(
+            importedAt: now,
+            workoutCount: candidates.count,
+            acceptedCount: accepted.count,
+            skippedCount: skipped
+        )
     }
 
     private nonisolated static func candidate(from workout: HKWorkout, existingIDs: Set<String>) -> HealthWorkoutImportCandidate {
@@ -254,11 +262,18 @@ final class HealthKitImportService {
             startedAt: workout.startDate,
             endedAt: workout.endDate,
             activityName: workout.workoutActivityType.bigDoseTitle,
+            sourceAppName: Self.sourceAppName(from: workout),
             durationSeconds: workout.duration,
             confidence: confidence,
             shouldImport: shouldImport,
             note: note
         )
+    }
+
+    private nonisolated static func sourceAppName(from workout: HKWorkout) -> String? {
+        let name = workout.sourceRevision.source.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return nil }
+        return name
     }
 
     private func conservativeEstimate(profile: UserProfile, durationSeconds: TimeInterval, confidence: Double) -> VitaminDExposureEstimate {

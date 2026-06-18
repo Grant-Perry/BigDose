@@ -5,10 +5,10 @@ import SwiftData
 final class SkinAssessment {
     #Index<SkinAssessment>([\.createdAt])
 
-    var createdAt: Date
-    var selectedType: FitzpatrickSkinType
-    var confidence: Double
-    var source: String
+    var createdAt: Date = Date.now
+    var selectedType: FitzpatrickSkinType = FitzpatrickSkinType.typeII
+    var confidence: Double = 1
+    var source: String = "manual"
 
     init(
         createdAt: Date = .now,

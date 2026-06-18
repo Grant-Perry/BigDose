@@ -6,6 +6,8 @@ struct BigDoseApp: App {
     let modelContainer: ModelContainer
 
     init() {
+        BigDoseNotifications.configure()
+
         do {
             modelContainer = try BigDoseModelContainerFactory.make()
         } catch {

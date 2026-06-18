@@ -5,10 +5,10 @@ import SwiftData
 final class SupplementDose {
     #Index<SupplementDose>([\.takenAt])
 
-    var takenAt: Date
-    var internationalUnits: Int
-    var note: String
-    var source: DataRecordSource
+    var takenAt: Date = Date.now
+    var internationalUnits: Int = 1_000
+    var note: String = ""
+    var source: DataRecordSource = DataRecordSource.manual
     var externalIdentifier: String?
 
     init(

@@ -76,7 +76,7 @@ struct HomeView: View {
             return "BigDose needs current location and Apple Weather to calculate today’s strongest sunlight window."
         }
 
-        let strongestTime = plan.bestWindowStart ?? plan.solarNoon
+        let strongestTime = DailySunPlanService.displayBestSunlightTime(for: plan)
         return "Today looks strongest around \(formattedTime(strongestTime)). Short, clean exposure beats chasing a burn."
     }
 
@@ -85,24 +85,7 @@ struct HomeView: View {
         if let weather = homeViewModel.weather {
             GlassCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(weather.locationName)
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(.white)
-
-                            Text(weather.conditionText)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.62))
-                        }
-
-                        Spacer()
-
-                        Image(systemName: weather.symbolName)
-                            .font(.system(size: 38, weight: .semibold))
-                            .foregroundStyle(.solarGold)
-                            .symbolEffect(.pulse, options: .repeating, value: homeViewModel.isLoading)
-                    }
+                    weatherSummaryHeader(weather)
 
                     LazyVGrid(columns: weatherColumns, spacing: 9) {
                         WeatherTemperatureCard(
@@ -132,9 +115,7 @@ struct HomeView: View {
                     }
 
                     Button {
-                        withAnimation(.smooth) {
-                            isShowingMoreWeather.toggle()
-                        }
+                        isShowingMoreWeather.toggle()
                     } label: {
                         HStack {
                             Text(isShowingMoreWeather ? "Hide Weather Details" : "More Weather")
@@ -150,28 +131,7 @@ struct HomeView: View {
                     .buttonStyle(.plain)
 
                     if isShowingMoreWeather {
-                        LazyVGrid(columns: weatherColumns, spacing: 9) {
-                            WeatherRingMetricCard(
-                                icon: "barometer",
-                                title: "Pressure",
-                                value: weather.pressureInchesMercury.formatted(.number.precision(.fractionLength(2))),
-                                subtitle: "inHg",
-                                progress: min(max((weather.pressureInchesMercury - 28.5) / 2.5, 0), 1),
-                                accent: .gpSpineLavender
-                            )
-
-                            WeatherWindCard(speed: weather.windMilesPerHour)
-
-                            WeatherRingMetricCard(
-                                icon: "drop.fill",
-                                title: "Dew Point",
-                                value: "\(Int(weather.dewPointFahrenheit.rounded()))°",
-                                subtitle: "air feel",
-                                progress: min(max(weather.dewPointFahrenheit / 80, 0), 1),
-                                accent: .gpActivePlanGlow
-                            )
-                        }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        weatherExpandedDetails(weather)
                     }
 
                     Text(homeViewModel.statusMessage)
@@ -180,12 +140,15 @@ struct HomeView: View {
 
                     BigDoseWeatherAttributionView(weather: weather)
                 }
+                .animation(.smooth(duration: 0.32), value: isShowingMoreWeather)
+                .clipped()
             }
         } else {
             unavailableCard(
                 title: "Weather unavailable",
                 detail: homeViewModel.statusMessage,
-                systemImage: "cloud.slash.fill"
+                systemImage: "cloud",
+                showsUnavailableSlash: true
             )
             .task {
                 if homeViewModel.weather == nil && !homeViewModel.isLoading {
@@ -197,6 +160,68 @@ struct HomeView: View {
 
     private var weatherColumns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 9), count: 3)
+    }
+
+    private var weatherTwoColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 9), count: 2)
+    }
+
+    private func weatherSummaryHeader(_ weather: BigDoseWeatherSnapshot) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(weather.locationName)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+
+                Text(weather.displayConditionSummary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+
+            Spacer()
+
+            Image(systemName: weather.symbolName)
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundStyle(.solarGold)
+                .symbolEffect(.pulse, options: .repeating, value: homeViewModel.isLoading)
+        }
+    }
+
+    @ViewBuilder
+    private func weatherExpandedDetails(_ weather: BigDoseWeatherSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: weatherTwoColumns, spacing: 9) {
+                WeatherRingMetricCard(
+                    icon: "barometer",
+                    title: "Pressure",
+                    value: weather.pressureInchesMercury.formatted(.number.precision(.fractionLength(2))),
+                    subtitle: "inHg",
+                    progress: min(max((weather.pressureInchesMercury - 28.5) / 2.5, 0), 1),
+                    accent: .gpSpineLavender
+                )
+
+                WeatherWindCard(speed: weather.windMilesPerHour)
+            }
+
+            if !weather.nextSixHourlyForecast.isEmpty {
+                WeatherNextSixHoursPrecipPanel(
+                    hourlyForecast: weather.nextSixHourlyForecast,
+                    totalRainInches: weather.totalRainNextSixHoursInches
+                )
+            }
+
+            if !weather.hourlyForecast.isEmpty {
+                BigDoseHourlyForecastStrip(forecast: weather.hourlyForecast)
+            }
+
+            if !weather.dailyForecast.isEmpty {
+                BigDoseThreeDayForecastRow(
+                    forecast: weather.dailyForecast,
+                    hourlyForecast: weather.hourlyForecast
+                )
+            }
+        }
+        .transition(.opacity)
     }
 
     @ViewBuilder
@@ -502,6 +527,7 @@ struct HomeView: View {
         case .activeSunSession(let plan):
             ActiveSunSessionView(
                 plan: plan,
+                wantsSessionSafetyAlerts: activeProfile.wantsRiskAlerts,
                 onCancel: { sessionRoute = .sunPlanner },
                 onComplete: { result in sessionRoute = .completion(result) }
             )
@@ -510,6 +536,7 @@ struct HomeView: View {
             SunSessionCompleteView(result: result) {
                 save(result)
                 sessionRoute = nil
+                Task { await refreshHome() }
             }
         }
     }
@@ -533,16 +560,16 @@ struct HomeView: View {
     }
 
     private var currentPlan: DailySunPlan? {
-        if let dailyPlan = homeViewModel.dailyPlan {
-            return dailyPlan
-        }
-
-        return dailyPlans.first { Calendar.current.isDateInToday($0.date) }
+        homeViewModel.dailyPlan ?? dailyPlans.first { Calendar.current.isDateInToday($0.date) }
     }
 
     private func refreshHome() async {
         await homeViewModel.refresh(profile: activeProfile)
         persistDailyPlanIfNeeded()
+        await BigDoseNotificationCoordinator.refreshManagedAlerts(
+            profile: activeProfile,
+            modelContext: modelContext
+        )
     }
 
     private func persistDailyPlanIfNeeded() {
@@ -583,7 +610,7 @@ struct HomeView: View {
     }
 
     private func bestSunlightTime(for plan: DailySunPlan) -> Date? {
-        plan.bestWindowStart ?? plan.solarNoon
+        DailySunPlanService.displayBestSunlightTime(for: plan)
     }
 
     private func logDefaultSupplement() {
@@ -626,10 +653,15 @@ struct HomeView: View {
         .background(.white.opacity(0.06), in: .rect(cornerRadius: 16))
     }
 
-    private func unavailableCard(title: String, detail: String, systemImage: String) -> some View {
+    private func unavailableCard(
+        title: String,
+        detail: String,
+        systemImage: String,
+        showsUnavailableSlash: Bool = false
+    ) -> some View {
         GlassCard {
             HStack(alignment: .top, spacing: 14) {
-                Image(systemName: systemImage)
+                unavailableSymbol(systemImage, showsUnavailableSlash: showsUnavailableSlash)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.solarGold)
 
@@ -647,6 +679,16 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+
+    @ViewBuilder
+    private func unavailableSymbol(_ systemImage: String, showsUnavailableSlash: Bool) -> some View {
+        if showsUnavailableSlash {
+            Image(systemName: systemImage)
+                .symbolVariant(.slash)
+        } else {
+            Image(systemName: systemImage)
+        }
+    }
 }
 
 private struct HomeUnavailableSheet: View {
@@ -659,7 +701,8 @@ private struct HomeUnavailableSheet: View {
             BigDoseGradientBackground()
 
             VStack(spacing: 18) {
-                Image(systemName: "cloud.slash.fill")
+                Image(systemName: "cloud")
+                    .symbolVariant(.slash)
                     .font(.system(size: 52, weight: .semibold))
                     .foregroundStyle(.solarGold)
 
@@ -736,123 +779,6 @@ private struct SupplementLogActionButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Log \(iu) IU supplement")
-    }
-}
-
-private struct StartSunSessionActionButton: View {
-    enum Size {
-        case compact
-        case regular
-
-        var diameter: CGFloat {
-            switch self {
-            case .compact:
-                54
-            case .regular:
-                76
-            }
-        }
-
-        var iconSize: CGFloat {
-            switch self {
-            case .compact:
-                22
-            case .regular:
-                30
-            }
-        }
-    }
-
-    var isEnabled: Bool
-    var size: Size
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            content
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .accessibilityLabel("Start sun session")
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        switch size {
-        case .compact:
-            VStack(spacing: 6) {
-                sunCircle
-                Text("Start")
-                    .font(.caption.weight(.black))
-                    .foregroundStyle(isEnabled ? .white : .white.opacity(0.48))
-            }
-            .frame(maxWidth: .infinity)
-
-        case .regular:
-            HStack(spacing: 14) {
-                sunCircle
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Start Sun Session")
-                        .font(.headline.weight(.black))
-                        .foregroundStyle(isEnabled ? .white : .white.opacity(0.48))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-
-                    Text("Use current UV")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(isEnabled ? 0.64 : 0.38))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.headline.weight(.black))
-                    .foregroundStyle(.white.opacity(isEnabled ? 0.58 : 0.28))
-            }
-            .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-            .padding(12)
-            .background(
-                LinearGradient(
-                    colors: isEnabled
-                        ? [.gpGreen.opacity(0.38), .gpFlatGreen.opacity(0.26), .solarGold.opacity(0.10)]
-                        : [.white.opacity(0.06), .white.opacity(0.04)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: .rect(cornerRadius: 26)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 26)
-                    .stroke(Color.gpGreen.opacity(isEnabled ? 0.32 : 0.1), lineWidth: 1)
-            )
-        }
-    }
-
-    private var sunCircle: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: isEnabled
-                            ? [.gpGreen, .gpHiGreen.opacity(0.82), .solarGold.opacity(0.78)]
-                            : [.white.opacity(0.14), .white.opacity(0.06)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size.diameter, height: size.diameter)
-                .shadow(color: .gpGreen.opacity(isEnabled ? 0.72 : 0), radius: isEnabled ? 18 : 0)
-                .overlay(
-                    Circle()
-                        .stroke(.white.opacity(isEnabled ? 0.24 : 0.1), lineWidth: 1)
-                )
-
-            Image(systemName: "sun.max.fill")
-                .font(.system(size: size.iconSize, weight: .black))
-                .foregroundStyle(isEnabled ? .white : .white.opacity(0.42))
-                .shadow(color: .deepSpace.opacity(0.35), radius: 3, y: 1)
-        }
     }
 }
 

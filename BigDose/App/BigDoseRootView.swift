@@ -27,7 +27,7 @@ struct BigDoseRootView: View {
                     }
 
                     Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
-                        ProfileView(profile: profile)
+                        ProfileView()
                     }
                 }
                 .tint(.solarGold)
@@ -37,6 +37,13 @@ struct BigDoseRootView: View {
         }
         .task {
             await ensureProfileExists()
+        }
+        .task(id: profile?.persistentModelID) {
+            guard let profile, profile.isOnboardingComplete else { return }
+            await BigDoseNotificationCoordinator.refreshManagedAlerts(
+                profile: profile,
+                modelContext: modelContext
+            )
         }
         .fullScreenCover(isPresented: $appState.isShowingOnboarding) {
             OnboardingView(profile: profile)

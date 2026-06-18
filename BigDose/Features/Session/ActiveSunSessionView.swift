@@ -2,26 +2,41 @@ import Combine
 import SwiftUI
 
 struct ActiveSunSessionView: View {
-    var plan: SunSessionPlan
+    var wantsSessionSafetyAlerts: Bool
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
 
+    @State private var plan: SunSessionPlan
     @State private var elapsedSeconds: TimeInterval = 0
     @State private var isPaused = false
     @State private var activeAlert: SunSessionSafetyAlert?
     @State private var didShowTurnOverAlert = false
     @State private var didShowMedWarningAlert = false
+    @State private var didShowPrepareExitAlert = false
     @State private var didShowStopAlert = false
+    @State private var isShowingSkinCoverage = false
+    @State private var isShowingGoalPicker = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    private var estimatedIU: Double {
-        min(elapsedSeconds * plan.iuPerMinute / 60, plan.estimate.estimatedIU)
+    init(
+        plan: SunSessionPlan,
+        wantsSessionSafetyAlerts: Bool,
+        onCancel: @escaping () -> Void,
+        onComplete: @escaping (SunSessionResult) -> Void
+    ) {
+        _plan = State(initialValue: plan)
+        self.wantsSessionSafetyAlerts = wantsSessionSafetyAlerts
+        self.onCancel = onCancel
+        self.onComplete = onComplete
     }
 
-    private var progress: Double {
-        guard plan.durationSeconds > 0 else { return 0 }
-        return min(elapsedSeconds / plan.durationSeconds, 1)
+    private var estimatedIU: Double {
+        plan.estimatedIU(at: elapsedSeconds)
+    }
+
+    private var goalProgress: Double {
+        plan.goalProgress(at: elapsedSeconds)
     }
 
     var body: some View {
@@ -41,12 +56,21 @@ struct ActiveSunSessionView: View {
             guard !isPaused else { return }
             elapsedSeconds += 1
             evaluateSafetyAlerts()
-            if elapsedSeconds >= plan.durationSeconds {
+            if plan.hasReachedGoal(at: elapsedSeconds) || elapsedSeconds >= plan.durationSeconds {
                 complete()
             }
         }
         .task {
-            await SessionSafetyNotificationService.schedule(for: plan)
+            await refreshSessionSafetyNotifications()
+        }
+        .onChange(of: plan.exposedBodySurfaceArea) { _, _ in
+            Task { await refreshSessionSafetyNotifications() }
+        }
+        .onChange(of: plan.cloudCover) { _, _ in
+            Task { await refreshSessionSafetyNotifications() }
+        }
+        .onChange(of: plan.targetIU) { _, _ in
+            Task { await refreshSessionSafetyNotifications() }
         }
         .alert(item: $activeAlert) { alert in
             switch alert {
@@ -62,6 +86,12 @@ struct ActiveSunSessionView: View {
                     message: Text("You are around 75% of the estimated MED window for your skin type and current UV. Consider wrapping up soon."),
                     dismissButton: .default(Text("OK"))
                 )
+            case .prepareExit(let countdown):
+                Alert(
+                    title: Text("Get ready to exit sun"),
+                    message: Text("Start getting ready to head inside. You're approaching your exit in \(countdown)."),
+                    dismissButton: .default(Text("Got it"))
+                )
             case .stop:
                 Alert(
                     title: Text("Stop or cover up"),
@@ -75,8 +105,20 @@ struct ActiveSunSessionView: View {
                 )
             }
         }
+        .onChange(of: activeAlert) { _, alert in
+            guard let alert else { return }
+            BigDoseAlertFeedback.present(kind: alert.feedbackKind)
+        }
         .onDisappear {
             SessionSafetyNotificationService.cancelSessionNotifications()
+        }
+        .sheet(isPresented: $isShowingSkinCoverage) {
+            SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $isShowingGoalPicker) {
+            SessionGoalPickerView(targetIU: $plan.targetIU)
+                .presentationDetents([.medium])
         }
     }
 
@@ -108,13 +150,14 @@ struct ActiveSunSessionView: View {
                     .stroke(.white.opacity(0.12), lineWidth: 18)
 
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: goalProgress)
                     .stroke(
                         LinearGradient(colors: [.solarOrange, .solarGold], startPoint: .bottomLeading, endPoint: .topTrailing),
                         style: StrokeStyle(lineWidth: 18, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
                     .shadow(color: .solarGold.opacity(0.35), radius: 16)
+                    .animation(.smooth, value: goalProgress)
 
                 VStack(spacing: 8) {
                     Text(durationText(elapsedSeconds))
@@ -125,18 +168,28 @@ struct ActiveSunSessionView: View {
                         .font(.system(size: 52, weight: .semibold))
                         .foregroundStyle(.white)
 
-                    Text("\(Int(plan.iuPerMinute.rounded())) IU/min")
+                    Text("\(Int(plan.liveIUProductionRatePerMinute.rounded())) IU/min")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(.green)
 
-                    Text("\(Int(progress * 100))%")
+                    if let minutesToGoal = plan.minutesToGoal(at: elapsedSeconds) {
+                        Text("~\(minutesToGoal) min to goal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    } else if goalProgress >= 1 {
+                        Text("Goal reached")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.solarGold)
+                    }
+
+                    Text("\(Int(goalProgress * 100))% of goal")
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(.solarGold)
                 }
             }
             .frame(height: 330)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Sun session timer, \(Int(estimatedIU.rounded())) IU, \(Int(progress * 100)) percent complete")
+            .accessibilityLabel("Sun session timer, \(Int(estimatedIU.rounded())) of \(Int(plan.targetIU.rounded())) IU, \(Int(goalProgress * 100)) percent of goal")
         }
     }
 
@@ -183,11 +236,37 @@ struct ActiveSunSessionView: View {
     private var modifiersCard: some View {
         GlassCard(cornerRadius: 24) {
             VStack(spacing: 12) {
-                sessionRow("Skin", "\(Int(plan.exposedBodySurfaceArea * 100))%", "person.fill")
+                Button {
+                    isShowingSkinCoverage = true
+                } label: {
+                    sessionRow(
+                        "Skin Coverage",
+                        SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
+                        "person.fill"
+                    )
+                }
+                .buttonStyle(.plain)
+
                 Divider().overlay(.white.opacity(0.12))
-                sessionRow("Clouds", plan.cloudCover.title, "cloud.sun.fill")
+
+                Menu {
+                    ForEach(CloudCoverPreset.allCases) { preset in
+                        Button(preset.title) {
+                            plan.cloudCover = preset
+                        }
+                    }
+                } label: {
+                    sessionRow("Clouds", plan.cloudCover.title, "cloud.sun.fill")
+                }
+
                 Divider().overlay(.white.opacity(0.12))
-                sessionRow("Goal", "\(Int(plan.targetIU)) IU", "target")
+
+                Button {
+                    isShowingGoalPicker = true
+                } label: {
+                    sessionRow("Goal", "\(Int(plan.targetIU.rounded())) IU", "target")
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -201,6 +280,10 @@ struct ActiveSunSessionView: View {
             Text(value)
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
+                .multilineTextAlignment(.trailing)
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.42))
         }
     }
 
@@ -215,21 +298,35 @@ struct ActiveSunSessionView: View {
         onComplete(result)
     }
 
+    private func refreshSessionSafetyNotifications() async {
+        await SessionSafetyNotificationService.schedule(for: plan, enabled: wantsSessionSafetyAlerts)
+    }
+
     private func evaluateSafetyAlerts() {
+        guard wantsSessionSafetyAlerts else { return }
         if !didShowTurnOverAlert, elapsedSeconds >= plan.turnOverAlertSeconds {
             didShowTurnOverAlert = true
             activeAlert = .turnOver
+            SessionSafetyNotificationService.cancelTurnOverNotification()
         }
 
         if !didShowMedWarningAlert, elapsedSeconds >= plan.medWarningSeconds {
             didShowMedWarningAlert = true
             activeAlert = .medWarning
+            SessionSafetyNotificationService.cancelMedWarningNotification()
+        }
+
+        if !didShowPrepareExitAlert, elapsedSeconds >= plan.prepareExitAlertSeconds {
+            didShowPrepareExitAlert = true
+            activeAlert = .prepareExit(countdown: plan.prepareExitCountdownText)
+            SessionSafetyNotificationService.cancelPrepareExitNotification()
         }
 
         if !didShowStopAlert, elapsedSeconds >= plan.stopAlertSeconds {
             didShowStopAlert = true
             isPaused = true
             activeAlert = .stop
+            SessionSafetyNotificationService.cancelStopNotification()
         }
     }
 
@@ -240,9 +337,10 @@ struct ActiveSunSessionView: View {
     }
 }
 
-private enum SunSessionSafetyAlert: Identifiable {
+private enum SunSessionSafetyAlert: Identifiable, Equatable {
     case turnOver
     case medWarning
+    case prepareExit(countdown: String)
     case stop
 
     var id: String {
@@ -251,9 +349,19 @@ private enum SunSessionSafetyAlert: Identifiable {
             "turnOver"
         case .medWarning:
             "medWarning"
+        case .prepareExit:
+            "prepareExit"
         case .stop:
             "stop"
         }
     }
-}
 
+    var feedbackKind: BigDoseAlertFeedback.Kind {
+        switch self {
+        case .turnOver, .medWarning, .prepareExit:
+            .warning
+        case .stop:
+            .critical
+        }
+    }
+}

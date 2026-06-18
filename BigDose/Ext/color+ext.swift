@@ -111,43 +111,6 @@ extension Color {
 
    static let gpDivider = Color(#colorLiteral(red: 0.768627451, green: 0.6078431373, blue: 0.8588235294, alpha: 1))
 
-	  // MARK: - BigWrd Color Palette (25 colors, ROYGBIV order)
-
-
-	  //	// MARK: cpMuted — Base palette (muted, warm, complementary to app)
-	  //	// R Red
-	  //	static let cpMutedRed         = Color(#colorLiteral(red: 0.72, green: 0.42, blue: 0.38, alpha: 1))   // cpMuted-Red
-	  //	static let cpMutedRedOrange   = Color(#colorLiteral(red: 0.7861937881, green: 0.487991035, blue: 0.3871542215, alpha: 1))   // cpMuted-Red-Orange
-	  //	static let cpMutedRedPink     = Color(#colorLiteral(red: 0.78, green: 0.52, blue: 0.50, alpha: 1))   // cpMuted-Red-Pink
-	  //	static let cpMutedCrimson     = Color(#colorLiteral(red: 0.68, green: 0.42, blue: 0.42, alpha: 1))   // cpMuted-Crimson
-	  //	static let cpMutedCoral       = Color(#colorLiteral(red: 0.82, green: 0.62, blue: 0.55, alpha: 1))   // cpMuted-Coral
-	  //	// O Orange
-	  //	static let cpMutedOrange      = Color(#colorLiteral(red: 0.82, green: 0.58, blue: 0.42, alpha: 1))   // cpMuted-Orange
-	  //	static let cpMutedAmber       = Color(#colorLiteral(red: 0.88, green: 0.72, blue: 0.50, alpha: 1))   // cpMuted-Amber
-	  //	static let cpMutedPeach       = Color(#colorLiteral(red: 0.88, green: 0.72, blue: 0.62, alpha: 1))   // cpMuted-Peach
-	  //	// Y Yellow
-	  //	static let cpMutedYellow      = Color(#colorLiteral(red: 0.88, green: 0.82, blue: 0.58, alpha: 1))   // cpMuted-Yellow
-	  //	static let cpMutedLime        = Color(#colorLiteral(red: 0.68, green: 0.75, blue: 0.55, alpha: 1))   // cpMuted-Lime
-	  //	static let cpMutedGold        = Color(#colorLiteral(red: 0.85, green: 0.75, blue: 0.55, alpha: 1))   // cpMuted-Gold
-	  //	static let cpMutedCream       = Color(#colorLiteral(red: 0.92, green: 0.90, blue: 0.78, alpha: 1))   // cpMuted-Cream
-	  //	// G Green
-	  //	static let cpMutedYellowGreen = Color(#colorLiteral(red: 0.58, green: 0.68, blue: 0.48, alpha: 1))   // cpMuted-Yellow-Green
-	  //	static let cpMutedGreen       = Color(#colorLiteral(red: 0.48, green: 0.62, blue: 0.48, alpha: 1))   // cpMuted-Green
-	  //	static let cpMutedTeal        = Color(#colorLiteral(red: 0.45, green: 0.62, blue: 0.58, alpha: 1))   // cpMuted-Teal
-	  //	// B Blue
-	  //	static let cpMutedCyan        = Color(#colorLiteral(red: 0.48, green: 0.68, blue: 0.72, alpha: 1))   // cpMuted-Cyan
-	  //	static let cpMutedSkyBlue     = Color(#colorLiteral(red: 0.48, green: 0.72, blue: 0.85, alpha: 1))   // cpMuted-Sky-Blue
-	  //	static let cpMutedBlue        = Color(#colorLiteral(red: 0.42, green: 0.58, blue: 0.75, alpha: 1))   // cpMuted-Blue
-	  //	// I Indigo
-	  //	static let cpMutedIndigo      = Color(#colorLiteral(red: 0.48, green: 0.50, blue: 0.68, alpha: 1))   // cpMuted-Indigo
-	  //	static let cpMutedBlueViolet  = Color(#colorLiteral(red: 0.55, green: 0.48, blue: 0.70, alpha: 1))   // cpMuted-Blue-Violet
-	  //	// V Violet
-	  //	static let cpMutedViolet      = Color(#colorLiteral(red: 0.62, green: 0.52, blue: 0.72, alpha: 1))   // cpMuted-Violet
-	  //	static let cpMutedPurple      = Color(#colorLiteral(red: 0.62, green: 0.55, blue: 0.72, alpha: 1))   // cpMuted-Purple
-	  //	static let cpMutedMagenta     = Color(#colorLiteral(red: 0.72, green: 0.55, blue: 0.62, alpha: 1))   // cpMuted-Magenta
-	  //	static let cpMutedPink        = Color(#colorLiteral(red: 0.78, green: 0.62, blue: 0.65, alpha: 1))   // cpMuted-Pink
-	  //	static let cpMutedRose        = Color(#colorLiteral(red: 0.78, green: 0.65, blue: 0.62, alpha: 1))   // cpMuted-Rose
-
 
 	  // MARK: cpMuted — Base palette (muted, warm, complementary to app)
 	  // R Red

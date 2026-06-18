@@ -123,6 +123,10 @@ struct OnboardingView: View {
         } message: {
             Text(healthAutofillMessage ?? "")
         }
+        .onChange(of: isShowingHealthAutofillResult) { _, isShowing in
+            guard isShowing else { return }
+            BigDoseAlertFeedback.present(kind: .informational)
+        }
     }
 
     private var basicsPage: some View {
@@ -562,6 +566,12 @@ struct OnboardingView: View {
 
         saveBaselineLabIfNeeded()
         try? modelContext.save()
+        Task {
+            await BigDoseNotificationCoordinator.refreshManagedAlerts(
+                profile: activeProfile,
+                modelContext: modelContext
+            )
+        }
         dismiss()
     }
 

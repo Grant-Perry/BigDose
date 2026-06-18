@@ -5,19 +5,19 @@ import SwiftData
 final class HealthImportBatch {
     #Index<HealthImportBatch>([\.importedAt], [\.startDate], [\.endDate])
 
-    var importedAt: Date
-    var startDate: Date
-    var endDate: Date
-    var source: DataRecordSource
-    var workoutCount: Int
-    var acceptedExposureCount: Int
-    var skippedCount: Int
-    var note: String
+    var importedAt: Date = Date.now
+    var startDate: Date = Date.now
+    var endDate: Date = Date.now
+    var source: DataRecordSource = DataRecordSource.healthKit
+    var workoutCount: Int = 0
+    var acceptedExposureCount: Int = 0
+    var skippedCount: Int = 0
+    var note: String = ""
 
     init(
         importedAt: Date = .now,
-        startDate: Date,
-        endDate: Date,
+        startDate: Date = .now,
+        endDate: Date = .now,
         source: DataRecordSource = .healthKit,
         workoutCount: Int = 0,
         acceptedExposureCount: Int = 0,

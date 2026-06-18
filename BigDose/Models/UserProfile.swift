@@ -3,47 +3,50 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var createdAt: Date
-    var updatedAt: Date
-    var isOnboardingComplete: Bool
-    var displayName: String
-    var skinType: FitzpatrickSkinType
-    var biologicalSex: BiologicalSex
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
+    var isOnboardingComplete: Bool = false
+    var displayName: String = ""
+    var avatarImageData: Data?
+    var skinType: FitzpatrickSkinType = FitzpatrickSkinType.typeII
+    var biologicalSex: BiologicalSex = BiologicalSex.notSpecified
     var dateOfBirth: Date?
     var heightCentimeters: Double?
     var weightKilograms: Double?
-    var goalNanogramsPerMilliliter: Double
+    var goalNanogramsPerMilliliter: Double = 50
     var baselineNanogramsPerMilliliter: Double?
-    var preferredDailyIU: Int
-    var typicalExposedBodySurfaceArea: Double
-    var usuallyUsesSunscreen: Bool
-    var wantsWindowReminders: Bool
-    var wantsRiskAlerts: Bool
-    var levelKnowledge: VitaminDLevelKnowledge
-    var incidentalSunMinutesPerWeek: Int
-    var defaultSupplementIU: Int
-    var wantsSolarWindowAlerts: Bool
-    var wantsSupplementReminders: Bool
-    var wantsLabReminders: Bool
-    var wantsWeeklyProgressAlerts: Bool
-    var wantsLevelTrendAlerts: Bool
-    var wantsMilestoneAlerts: Bool
-    var wantsWeatherBreakAlerts: Bool
-    var quietHoursEnabled: Bool
-    var quietHoursStartHour: Int
-    var quietHoursEndHour: Int
-    var supplementReminderHour: Int
-    var supplementReminderMinute: Int
-    var labReminderIntervalDays: Int
+    var preferredDailyIU: Int = 1_000
+    var typicalExposedBodySurfaceArea: Double = 0.25
+    var usuallyUsesSunscreen: Bool = false
+    var wantsWindowReminders: Bool = true
+    var wantsRiskAlerts: Bool = true
+    var levelKnowledge: VitaminDLevelKnowledge = VitaminDLevelKnowledge.willAddLater
+    var incidentalSunMinutesPerWeek: Int = 30
+    var defaultSupplementIU: Int = 1_000
+    var wantsSolarWindowAlerts: Bool = true
+    var wantsSupplementReminders: Bool = false
+    var wantsLabReminders: Bool = true
+    var wantsWeeklyProgressAlerts: Bool = true
+    var wantsLevelTrendAlerts: Bool = true
+    var wantsMilestoneAlerts: Bool = true
+    var wantsWeatherBreakAlerts: Bool = false
+    var quietHoursEnabled: Bool = false
+    var quietHoursStartHour: Int = 22
+    var quietHoursEndHour: Int = 7
+    var supplementReminderHour: Int = 9
+    var supplementReminderMinute: Int = 0
+    var labReminderIntervalDays: Int = 90
     var lastHealthKitImportAt: Date?
-    var healthKitImportStatus: HealthImportStatus
-    var hasAcceptedWellnessDisclaimer: Bool
+    var healthKitImportStatus: HealthImportStatus = HealthImportStatus.neverImported
+    var hasAcceptedWellnessDisclaimer: Bool = false
+    var prepareExitLeadPercent: Int = 20
 
     init(
         createdAt: Date = .now,
         updatedAt: Date = .now,
         isOnboardingComplete: Bool = false,
         displayName: String = "",
+        avatarImageData: Data? = nil,
         skinType: FitzpatrickSkinType = .typeII,
         biologicalSex: BiologicalSex = .notSpecified,
         dateOfBirth: Date? = nil,
@@ -74,12 +77,14 @@ final class UserProfile {
         labReminderIntervalDays: Int = 90,
         lastHealthKitImportAt: Date? = nil,
         healthKitImportStatus: HealthImportStatus = .neverImported,
-        hasAcceptedWellnessDisclaimer: Bool = false
+        hasAcceptedWellnessDisclaimer: Bool = false,
+        prepareExitLeadPercent: Int = 20
     ) {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isOnboardingComplete = isOnboardingComplete
         self.displayName = displayName
+        self.avatarImageData = avatarImageData
         self.skinType = skinType
         self.biologicalSex = biologicalSex
         self.dateOfBirth = dateOfBirth
@@ -111,10 +116,41 @@ final class UserProfile {
         self.lastHealthKitImportAt = lastHealthKitImportAt
         self.healthKitImportStatus = healthKitImportStatus
         self.hasAcceptedWellnessDisclaimer = hasAcceptedWellnessDisclaimer
+        self.prepareExitLeadPercent = Self.clampedPrepareExitLeadPercent(prepareExitLeadPercent)
     }
 }
 
 extension UserProfile {
+    static let prepareExitLeadPercentRange = 5...50
+
+    static func clampedPrepareExitLeadPercent(_ value: Int) -> Int {
+        min(max(value, prepareExitLeadPercentRange.lowerBound), prepareExitLeadPercentRange.upperBound)
+    }
+
+    var prepareExitLeadFraction: Double {
+        Double(Self.clampedPrepareExitLeadPercent(prepareExitLeadPercent)) / 100
+    }
+}
+
+extension UserProfile {
+    var doseDNABiologicalSexSummary: String {
+        var parts = [biologicalSex.title]
+
+        if let dateOfBirth {
+            let age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: .now).year ?? 0
+            if age > 0 {
+                parts.append("\(age) yrs. old")
+            }
+        }
+
+        if let weightKilograms {
+            let pounds = Int((weightKilograms * 2.20462).rounded())
+            parts.append("\(pounds) lbs.")
+        }
+
+        return parts.joined(separator: " - ")
+    }
+
     static var preview: UserProfile {
         UserProfile(
             isOnboardingComplete: true,

@@ -77,6 +77,18 @@ enum SkinExposurePreset: String, CaseIterable, Identifiable {
             0.85
         }
     }
+
+    static func closest(to exposedBodySurfaceArea: Double) -> SkinExposurePreset {
+        allCases.min {
+            abs($0.exposedBodySurfaceArea - exposedBodySurfaceArea) < abs($1.exposedBodySurfaceArea - exposedBodySurfaceArea)
+        } ?? .tshirtAndShorts
+    }
+
+    static func coverageLabel(for exposedBodySurfaceArea: Double) -> String {
+        let preset = closest(to: exposedBodySurfaceArea)
+        let percent = Int((exposedBodySurfaceArea * 100).rounded())
+        return "\(preset.title) · \(percent)%"
+    }
 }
 
 enum CloudCoverPreset: String, CaseIterable, Identifiable {

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 
 enum BigDoseModelContainerFactory {
@@ -19,9 +20,20 @@ enum BigDoseModelContainerFactory {
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: inMemory,
-            cloudKitDatabase: .none
+            cloudKitDatabase: inMemory ? .none : .automatic
         )
-        return try ModelContainer(for: schema, configurations: [configuration])
+
+        if inMemory {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        }
+
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            guard isMigrationFailure(error) else { throw error }
+            try removeStoreFiles(at: configuration.url)
+            return try ModelContainer(for: schema, configurations: [configuration])
+        }
     }
 
     @MainActor
@@ -34,4 +46,31 @@ enum BigDoseModelContainerFactory {
             fatalError("Failed to create preview model container: \(error)")
         }
     }()
+
+    private static func isMigrationFailure(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain && nsError.code == 134110 {
+            return true
+        }
+
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError,
+           underlying.domain == NSCocoaErrorDomain,
+           underlying.code == 134110 {
+            return true
+        }
+
+        return false
+    }
+
+    private static func removeStoreFiles(at url: URL) throws {
+        let fileManager = FileManager.default
+        let basePath = url.path
+
+        for suffix in ["", "-shm", "-wal"] {
+            let fileURL = URL(fileURLWithPath: basePath + suffix)
+            if fileManager.fileExists(atPath: fileURL.path) {
+                try fileManager.removeItem(at: fileURL)
+            }
+        }
+    }
 }

@@ -10,7 +10,7 @@ enum BigDoseAlertScheduler {
 
     static func requestAuthorization() async -> Bool {
         do {
-            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
             return false
         }
@@ -26,13 +26,29 @@ enum BigDoseAlertScheduler {
             return
         }
 
-        if profile.wantsSolarWindowAlerts, let start = dailyPlan?.nextUsefulStart, !isInQuietHours(start, profile: profile) {
-            await scheduleCalendar(
-                id: "solarWindow",
-                title: "Useful sunlight is coming up",
-                body: "BigDose found a sunlight window that matches your profile.",
-                date: start
-            )
+        if profile.wantsSolarWindowAlerts {
+            if let start = dailyPlan?.nextUsefulStart,
+               start > .now,
+               !isInQuietHours(start, profile: profile) {
+                await scheduleCalendar(
+                    id: "solarWindow.next",
+                    title: "Useful sunlight is coming up",
+                    body: "BigDose found upcoming sunlight that matches your profile.",
+                    date: start
+                )
+            }
+
+            if let best = dailyPlan?.bestWindowStart,
+               best > .now,
+               best != dailyPlan?.nextUsefulStart,
+               !isInQuietHours(best, profile: profile) {
+                await scheduleCalendar(
+                    id: "solarWindow.best",
+                    title: "Strong sunlight window today",
+                    body: "Today's strongest vitamin D window is approaching.",
+                    date: best
+                )
+            }
         }
 
         if profile.wantsSupplementReminders {

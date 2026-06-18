@@ -2,11 +2,29 @@ import SwiftData
 import SwiftUI
 
 struct ProfileView: View {
-    var profile: UserProfile?
+    @Query private var profiles: [UserProfile]
 
-    private var activeProfile: UserProfile {
-        profile ?? .preview
+    var body: some View {
+        if let profile = profiles.first {
+            ProfileContent(profile: profile)
+        } else {
+            NavigationStack {
+                ZStack {
+                    BigDoseGradientBackground()
+                    ProgressView("Loading profile")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+                }
+                .navigationTitle("Profile")
+                .toolbarTitleDisplayMode(.inline)
+            }
+        }
     }
+}
+
+private struct ProfileContent: View {
+    @Bindable var profile: UserProfile
 
     var body: some View {
         NavigationStack {
@@ -16,6 +34,7 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         title
+                        profileHero
                         profileCard
                         goalsCard
                         dataLinksCard
@@ -55,14 +74,63 @@ struct ProfileView: View {
         }
     }
 
+    private var profileHero: some View {
+        NavigationLink {
+            DoseDNAEditorView(profile: profile)
+        } label: {
+            GlassCard {
+                HStack(spacing: 16) {
+                    ProfileAvatarView(imageData: profile.avatarImageData, diameter: 72)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(profile.displayName.isEmpty ? "Add your name" : profile.displayName)
+                            .font(.title2.weight(.black))
+                            .foregroundStyle(.white)
+
+                        Text(profile.doseDNABiologicalSexSummary)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+
+                        Label("Edit Profile", systemImage: "pencil")
+                            .font(.caption.weight(.black))
+                            .foregroundStyle(.solarGold)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.right")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.42))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private var profileCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
-                ProfileRow(title: "Skin Type", value: "\(activeProfile.skinType.title) - \(activeProfile.skinType.subtitle)", systemImage: "person.crop.square")
-                ProfileRow(title: "Biological Sex", value: activeProfile.biologicalSex.title, systemImage: "figure.stand")
-                ProfileRow(title: "Typical Skin Exposed", value: "\(Int(activeProfile.typicalExposedBodySurfaceArea * 100))%", systemImage: "sun.max")
-                ProfileRow(title: "Incidental Sun", value: "\(activeProfile.incidentalSunMinutesPerWeek) min/wk", systemImage: "figure.walk")
-                ProfileRow(title: "Sunscreen", value: activeProfile.usuallyUsesSunscreen ? "Usually" : "Not usually", systemImage: "shield")
+                HStack {
+                    Text("Personal Inputs")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    NavigationLink {
+                        DoseDNAEditorView(profile: profile)
+                    } label: {
+                        Text("Edit")
+                            .font(.caption.weight(.black))
+                            .foregroundStyle(.solarGold)
+                    }
+                }
+
+                ProfileRow(title: "Skin Type", value: "\(profile.skinType.title) - \(profile.skinType.subtitle)", systemImage: "person.crop.square")
+                ProfileRow(title: "Biological Sex", value: profile.doseDNABiologicalSexSummary, systemImage: "figure.stand")
+                ProfileRow(title: "Typical Skin Exposed", value: "\(Int(profile.typicalExposedBodySurfaceArea * 100))%", systemImage: "sun.max")
+                ProfileRow(title: "Incidental Sun", value: "\(profile.incidentalSunMinutesPerWeek) min/wk", systemImage: "figure.walk")
+                ProfileRow(title: "Sunscreen", value: profile.usuallyUsesSunscreen ? "Usually" : "Not usually", systemImage: "shield")
             }
         }
     }
@@ -82,7 +150,7 @@ struct ProfileView: View {
 
                 Spacer()
 
-                Text("\(Int(activeProfile.goalNanogramsPerMilliliter))")
+                Text("\(Int(profile.goalNanogramsPerMilliliter))")
                     .font(.system(size: 46, weight: .black))
                     .foregroundStyle(.solarGold)
 
@@ -156,6 +224,7 @@ private struct ProfileRow: View {
                 Text(value)
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -193,6 +262,6 @@ struct ProfileLinkRow: View {
 }
 
 #Preview {
-    ProfileView(profile: .preview)
+    ProfileView()
         .modelContainer(BigDoseModelContainerFactory.preview)
 }

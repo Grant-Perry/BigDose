@@ -5,11 +5,11 @@ import SwiftData
 final class DailySunPlan {
     #Index<DailySunPlan>([\.date])
 
-    var date: Date
-    var generatedAt: Date
-    var latitude: Double
-    var longitude: Double
-    var locationLabel: String
+    var date: Date = Date.now
+    var generatedAt: Date = Date.now
+    var latitude: Double = 0
+    var longitude: Double = 0
+    var locationLabel: String = "Current Location"
     var sunrise: Date?
     var solarNoon: Date?
     var sunset: Date?
@@ -17,11 +17,11 @@ final class DailySunPlan {
     var bestWindowEnd: Date?
     var nextUsefulStart: Date?
     var nextUsefulEnd: Date?
-    var targetIU: Int
-    var estimatedIU: Double
-    var peakUVIndex: Double
-    var currentAltitudeDegrees: Double
-    var quality: SunWindowQuality
+    var targetIU: Int = 1_000
+    var estimatedIU: Double = 0
+    var peakUVIndex: Double = 0
+    var currentAltitudeDegrees: Double = 0
+    var quality: SunWindowQuality = SunWindowQuality.noD
     var weatherAttribution: String?
 
     init(

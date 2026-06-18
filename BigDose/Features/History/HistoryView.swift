@@ -37,7 +37,12 @@ struct HistoryView: View {
 
                             sectionTitle("Imports")
                             ForEach(importBatches) { batch in
-                                importRow(batch)
+                                NavigationLink {
+                                    HealthImportBatchLogView(batchImportedAt: batch.importedAt)
+                                } label: {
+                                    importRow(batch)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -129,7 +134,7 @@ struct HistoryView: View {
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(session.source.title)
+                    Text(session.historySourceTitle)
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
 

@@ -4,11 +4,6 @@ import UserNotifications
 
 struct NotificationSettingsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
-    @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
-    @Query(sort: \FoodVitaminDEntry.loggedAt, order: .reverse) private var foods: [FoodVitaminDEntry]
-    @Query(sort: \LabResult.measuredAt, order: .reverse) private var labs: [LabResult]
-    @Query(sort: \DailySunPlan.generatedAt, order: .reverse) private var dailyPlans: [DailySunPlan]
     @State private var authorizationStatus: UNAuthorizationStatus = .notDetermined
     var profile: UserProfile?
 
@@ -80,7 +75,7 @@ struct NotificationSettingsView: View {
                         .foregroundStyle(.white.opacity(0.68))
 
                 default:
-                    Text("BigDose will schedule reminders automatically when an enabled alert has something useful to say.")
+                    Text("BigDose schedules iOS notifications so reminders can arrive even when the app is closed. Sun session safety alerts also fire in the background during an active session.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
                 }
@@ -175,14 +170,10 @@ struct NotificationSettingsView: View {
 
     private func reschedule() async {
         guard let profile else { return }
-        let progress = ProgressAggregationService.snapshot(
+        await BigDoseNotificationCoordinator.refreshManagedAlerts(
             profile: profile,
-            sessions: sessions,
-            supplements: supplements,
-            foods: foods,
-            labs: labs
+            modelContext: modelContext
         )
-        await BigDoseAlertScheduler.reschedule(profile: profile, dailyPlan: dailyPlans.first, progress: progress)
     }
 }
 

@@ -62,4 +62,21 @@ enum DailySunPlanService {
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(86_400)
         return SolarGeometryService.solarNoon(latitude: latitude, longitude: longitude, date: tomorrow)
     }
+
+    /// Best remaining sunlight highlight for today — avoids showing a morning peak after it has passed.
+    static func displayBestSunlightTime(for plan: DailySunPlan, now: Date = .now) -> Date? {
+        if let start = plan.bestWindowStart, start > now {
+            return start
+        }
+
+        if let next = plan.nextUsefulStart, next > now {
+            return next
+        }
+
+        if let noon = plan.solarNoon {
+            return noon
+        }
+
+        return plan.bestWindowStart ?? plan.nextUsefulStart
+    }
 }

@@ -5,15 +5,15 @@ import SwiftData
 final class HealthImportItem {
     #Index<HealthImportItem>([\.startedAt], [\.externalIdentifier])
 
-    var externalIdentifier: String
-    var batchImportedAt: Date
-    var startedAt: Date
-    var endedAt: Date
-    var activityName: String
-    var durationSeconds: TimeInterval
-    var wasAcceptedForExposure: Bool
-    var confidence: Double
-    var note: String
+    var externalIdentifier: String = ""
+    var batchImportedAt: Date = Date.now
+    var startedAt: Date = Date.now
+    var endedAt: Date = Date.now
+    var activityName: String = ""
+    var durationSeconds: TimeInterval = 0
+    var wasAcceptedForExposure: Bool = false
+    var confidence: Double = 0
+    var note: String = ""
 
     init(
         externalIdentifier: String,

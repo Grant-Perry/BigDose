@@ -70,11 +70,11 @@ struct ManageDataView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("iCloud sync is off until the SwiftData schema is migrated for CloudKit requirements. Use rescue exports for backup today.")
+                Text("BigDose syncs your profile, sessions, labs, and imports through iCloud when you're signed in on this device. Rescue exports remain available for manual backup.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
-                Text(profile?.lastHealthKitImportAt == nil ? "No recent import activity" : "Latest Apple Health import: \(profile?.lastHealthKitImportAt?.formatted(date: .abbreviated, time: .shortened) ?? "")")
+                Text(profile?.lastHealthKitImportAt == nil ? "No recent Apple Health import" : "Latest Apple Health import: \(profile?.lastHealthKitImportAt?.formatted(date: .abbreviated, time: .shortened) ?? "")")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.56))
             }

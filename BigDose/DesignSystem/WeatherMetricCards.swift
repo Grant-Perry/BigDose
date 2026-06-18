@@ -165,7 +165,7 @@ struct WeatherWindCard: View {
     }
 }
 
-private struct BigDoseWeatherTile<Content: View>: View {
+struct BigDoseWeatherTile<Content: View>: View {
     var accent: Color
     @ViewBuilder var content: Content
 
@@ -189,7 +189,7 @@ private struct BigDoseWeatherTile<Content: View>: View {
     }
 }
 
-private struct WeatherTileHeader: View {
+struct WeatherTileHeader: View {
     var icon: String
     var title: String
     var accent: Color

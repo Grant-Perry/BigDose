@@ -5,13 +5,13 @@ import SwiftData
 final class DailyProgressSummary {
     #Index<DailyProgressSummary>([\.date])
 
-    var date: Date
-    var sunIU: Double
-    var supplementIU: Double
-    var foodIU: Double
-    var targetIU: Double
-    var sufficientDay: Bool
-    var streakCount: Int
+    var date: Date = Date.now
+    var sunIU: Double = 0
+    var supplementIU: Double = 0
+    var foodIU: Double = 0
+    var targetIU: Double = 1_000
+    var sufficientDay: Bool = false
+    var streakCount: Int = 0
 
     init(
         date: Date = .now,

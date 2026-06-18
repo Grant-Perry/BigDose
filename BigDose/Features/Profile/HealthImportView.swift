@@ -4,12 +4,20 @@ import SwiftUI
 struct HealthImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \HealthImportItem.startedAt, order: .reverse) private var importedItems: [HealthImportItem]
+    @Query(sort: \HealthImportBatch.importedAt, order: .reverse) private var importBatches: [HealthImportBatch]
     @State private var service = HealthKitImportService()
     @State private var candidates: [HealthWorkoutImportCandidate] = []
     @State private var isLoading = false
     @State private var statusMessage = "Review outdoor workouts from the last 90 days before BigDose counts them."
-    @State private var lastResult: HealthImportResult?
+    @State private var highlightedBatchDate: Date?
     var profile: UserProfile?
+
+    private var latestBatch: HealthImportBatch? {
+        if let highlightedBatchDate {
+            return importBatches.first { $0.importedAt == highlightedBatchDate } ?? importBatches.first
+        }
+        return importBatches.first
+    }
 
     var body: some View {
         ZStack {
@@ -20,8 +28,13 @@ struct HealthImportView: View {
                     header
                     actionCard
 
-                    if let lastResult {
-                        summaryCard(lastResult)
+                    if let latestBatch {
+                        NavigationLink {
+                            HealthImportBatchLogView(batchImportedAt: latestBatch.importedAt)
+                        } label: {
+                            summaryCard(latestBatch)
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     if !candidates.isEmpty {
@@ -94,7 +107,7 @@ struct HealthImportView: View {
         }
     }
 
-    private func summaryCard(_ result: HealthImportResult) -> some View {
+    private func summaryCard(_ batch: HealthImportBatch) -> some View {
         GlassCard {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -102,14 +115,18 @@ struct HealthImportView: View {
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("\(result.acceptedCount) accepted • \(result.skippedCount) skipped")
+                    Text("\(batch.acceptedExposureCount) accepted • \(batch.skippedCount) skipped")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
+
+                    Label("View import log", systemImage: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.solarGold)
                 }
 
                 Spacer()
 
-                Text("\(result.workoutCount)")
+                Text("\(batch.workoutCount)")
                     .font(.system(size: 42, weight: .black))
                     .foregroundStyle(.solarGold)
 
@@ -172,9 +189,10 @@ struct HealthImportView: View {
 
     private func commitImport() {
         guard let profile else { return }
-        lastResult = service.commit(candidates: candidates, profile: profile, modelContext: modelContext)
+        let result = service.commit(candidates: candidates, profile: profile, modelContext: modelContext)
+        highlightedBatchDate = result.importedAt
         candidates.removeAll()
-        statusMessage = "Import complete. You can inspect imported items in History."
+        statusMessage = "Import complete. Tap Latest Import to review what was imported."
     }
 }
 

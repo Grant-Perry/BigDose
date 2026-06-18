@@ -41,14 +41,14 @@ final class HomeViewModel {
     func refresh(profile: UserProfile) async {
         await refresh()
 
-        if dailyPlan == nil, let weather {
-            do {
-                let location = try await locationService.requestCurrentLocation()
-                dailyPlan = DailySunPlanService.makePlan(profile: profile, weather: weather, location: location)
-            } catch {
-                dailyPlan = nil
-                statusMessage = "Solar guidance unavailable: \(friendlyMessage(for: error))"
-            }
+        guard let weather else { return }
+
+        do {
+            let location = try await locationService.requestCurrentLocation()
+            dailyPlan = DailySunPlanService.makePlan(profile: profile, weather: weather, location: location)
+        } catch {
+            dailyPlan = nil
+            statusMessage = "Solar guidance unavailable: \(friendlyMessage(for: error))"
         }
     }
 

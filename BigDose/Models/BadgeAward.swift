@@ -5,10 +5,10 @@ import SwiftData
 final class BadgeAward {
     #Index<BadgeAward>([\.awardedAt])
 
-    var awardedAt: Date
-    var badgeID: String
-    var title: String
-    var detail: String
+    var awardedAt: Date = Date.now
+    var badgeID: String = ""
+    var title: String = ""
+    var detail: String = ""
 
     init(awardedAt: Date = .now, badgeID: String, title: String, detail: String = "") {
         self.awardedAt = awardedAt

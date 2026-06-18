@@ -11,7 +11,7 @@ struct SessionTypePickerView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Add Dose")
+                        Text("Dose Type")
                             .font(.system(.largeTitle, weight: .semibold))
                             .foregroundStyle(.white)
 
@@ -27,12 +27,16 @@ struct SessionTypePickerView: View {
                         .foregroundStyle(.solarGold)
                 }
 
-                LazyVGrid(columns: sessionColumns, spacing: 12) {
-                    ForEach(BigDoseSessionType.allCases) { type in
+                StartSunSessionActionButton(size: .prominent) {
+                    onSelect(.sun)
+                }
+
+                HStack(spacing: 10) {
+                    ForEach([BigDoseSessionType.lamp, .supplement, .scheduled]) { type in
                         Button {
                             onSelect(type)
                         } label: {
-                            SessionTypeCard(type: type)
+                            DoseTypeSecondaryCard(type: type)
                         }
                         .buttonStyle(.plain)
                     }
@@ -43,37 +47,28 @@ struct SessionTypePickerView: View {
             .padding(22)
         }
     }
-
-    private var sessionColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
-    }
 }
 
-private struct SessionTypeCard: View {
+private struct DoseTypeSecondaryCard: View {
     let type: BigDoseSessionType
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 10) {
             Image(systemName: type.systemImage)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(.solarGold)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(type.title)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.leading)
-
-                Text(type.detail)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(type.shortTitle)
+                .font(.caption.weight(.black))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-        .padding(16)
-        .bigDoseGlass(cornerRadius: 24)
+        .frame(maxWidth: .infinity, minHeight: 108)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+        .bigDoseGlass(cornerRadius: 22)
     }
 }
 

@@ -5,23 +5,24 @@ import SwiftData
 final class ExposureSession {
     #Index<ExposureSession>([\.startedAt], [\.endedAt])
 
-    var startedAt: Date
-    var endedAt: Date
-    var durationSeconds: TimeInterval
-    var averageUVIndex: Double
-    var maxUVIndex: Double
-    var estimatedIU: Double
-    var exposedBodySurfaceArea: Double
-    var sunscreenFactor: Double
-    var source: ExposureSource
-    var quality: SunWindowQuality
+    var startedAt: Date = Date.now
+    var endedAt: Date = Date.now
+    var durationSeconds: TimeInterval = 0
+    var averageUVIndex: Double = 0
+    var maxUVIndex: Double = 0
+    var estimatedIU: Double = 0
+    var exposedBodySurfaceArea: Double = 0.25
+    var sunscreenFactor: Double = 1
+    var source: ExposureSource = ExposureSource.manual
+    var quality: SunWindowQuality = SunWindowQuality.low
     var locationLabel: String?
     var latitude: Double?
     var longitude: Double?
     var externalIdentifier: String?
     var importBatchImportedAt: Date?
-    var confidence: Double
-    var note: String
+    var sourceAppName: String?
+    var confidence: Double = 1
+    var note: String = ""
 
     init(
         startedAt: Date = .now,
@@ -39,6 +40,7 @@ final class ExposureSession {
         longitude: Double? = nil,
         externalIdentifier: String? = nil,
         importBatchImportedAt: Date? = nil,
+        sourceAppName: String? = nil,
         confidence: Double = 1,
         note: String = ""
     ) {
@@ -57,7 +59,19 @@ final class ExposureSession {
         self.longitude = longitude
         self.externalIdentifier = externalIdentifier
         self.importBatchImportedAt = importBatchImportedAt
+        self.sourceAppName = sourceAppName
         self.confidence = confidence
         self.note = note
+    }
+}
+
+extension ExposureSession {
+    var historySourceTitle: String {
+        guard let sourceAppName else {
+            return source.title
+        }
+
+        let trimmed = sourceAppName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? source.title : trimmed
     }
 }

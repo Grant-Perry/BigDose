@@ -69,4 +69,17 @@ enum BigDoseSessionType: CaseIterable, Identifiable {
             "Plan a future best-window reminder."
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .sun:
+            "Sun Session"
+        case .lamp:
+            "Lamp"
+        case .supplement:
+            "Supplement Dose"
+        case .scheduled:
+            "Schedule"
+        }
+    }
 }

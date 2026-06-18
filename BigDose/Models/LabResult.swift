@@ -5,10 +5,10 @@ import SwiftData
 final class LabResult {
     #Index<LabResult>([\.measuredAt])
 
-    var measuredAt: Date
-    var nanogramsPerMilliliter: Double
-    var note: String
-    var source: DataRecordSource
+    var measuredAt: Date = Date.now
+    var nanogramsPerMilliliter: Double = 30
+    var note: String = ""
+    var source: DataRecordSource = DataRecordSource.manual
     var externalIdentifier: String?
 
     init(

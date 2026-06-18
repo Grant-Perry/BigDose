@@ -5,7 +5,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     var profile: UserProfile?
 
-    @State private var isShowingResetConfirmation = false
+    @State private var resetOnboardingStep: ResetOnboardingStep = .none
     @State private var isShowingOnboarding = false
 
     var body: some View {
@@ -15,10 +15,11 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     header
-                    onboardingCard
+                    sessionSafetyCard
                     notificationsCard
                     manageDataCard
                     medicalCard
+                    resetOnboardingCard
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
@@ -28,13 +29,34 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.inline)
-        .confirmationDialog("Reset onboarding?", isPresented: $isShowingResetConfirmation) {
+        .confirmationDialog(
+            "Reset onboarding?",
+            isPresented: isPresented(for: .firstConfirm),
+            titleVisibility: .visible
+        ) {
+            Button("Continue") {
+                resetOnboardingStep = .finalConfirm
+            }
+            Button("Cancel", role: .cancel) {
+                resetOnboardingStep = .none
+            }
+        } message: {
+            Text("This sends you back through the full setup flow. Your saved sessions, labs, supplements, and progress stay on this device.")
+        }
+        .confirmationDialog(
+            "Are you absolutely certain?",
+            isPresented: isPresented(for: .finalConfirm),
+            titleVisibility: .visible
+        ) {
             Button("Reset Onboarding", role: .destructive) {
                 resetOnboarding()
+                resetOnboardingStep = .none
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {
+                resetOnboardingStep = .none
+            }
         } message: {
-            Text("This will reopen onboarding so you can retake the setup flow. Your stored profile values remain editable through onboarding.")
+            Text("This will clear your onboarding completion and wellness disclaimer acceptance. You must walk through setup again before BigDose treats your profile as ready.")
         }
         .fullScreenCover(isPresented: $isShowingOnboarding) {
             OnboardingView(profile: profile)
@@ -53,26 +75,26 @@ struct SettingsView: View {
         }
     }
 
-    private var onboardingCard: some View {
+    private var resetOnboardingCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Label("Onboarding", systemImage: "sparkles")
+                Label("Onboarding", systemImage: "exclamationmark.triangle.fill")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.solarOrange)
 
-                Text("Run the setup flow again to adjust your name, birth date, sex, body context, skin type, sun habits, and disclaimer acknowledgement.")
+                Text("Only use this if you need to rerun setup from scratch. BigDose will ask you to confirm twice before continuing.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
                 Button(role: .destructive) {
-                    isShowingResetConfirmation = true
+                    resetOnboardingStep = .firstConfirm
                 } label: {
                     Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
                         .font(.headline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .tint(.solarOrange)
             }
         }
@@ -109,6 +131,43 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private var sessionSafetyCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Session Safety", systemImage: "shield.lefthalf.filled")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+
+                Text("How far ahead of the exit alert BigDose warns you to start packing up and moving inside.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.68))
+
+                if let profile {
+                    Stepper(value: prepareExitLeadPercentBinding, in: UserProfile.prepareExitLeadPercentRange, step: 5) {
+                        Text("Exit prep warning: \(profile.prepareExitLeadPercent)%")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .tint(.solarGold)
+
+                    Text("At \(profile.prepareExitLeadPercent)%, \"Get ready to exit sun\" fires that much before the stop alert — for example, about \(profile.prepareExitLeadPercent)% of the time left to exit.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.56))
+                }
+            }
+        }
+    }
+
+    private var prepareExitLeadPercentBinding: Binding<Int> {
+        Binding {
+            profile?.prepareExitLeadPercent ?? 20
+        } set: { value in
+            profile?.prepareExitLeadPercent = UserProfile.clampedPrepareExitLeadPercent(value)
+            profile?.updatedAt = .now
+            try? modelContext.save()
+        }
+    }
+
     private var notificationsCard: some View {
         NavigationLink {
             NotificationSettingsView(profile: profile)
@@ -131,6 +190,16 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private func isPresented(for step: ResetOnboardingStep) -> Binding<Bool> {
+        Binding {
+            resetOnboardingStep == step
+        } set: { isPresented in
+            if !isPresented, resetOnboardingStep == step {
+                resetOnboardingStep = .none
+            }
+        }
+    }
+
     private func resetOnboarding() {
         guard let profile else {
             isShowingOnboarding = true
@@ -143,6 +212,12 @@ struct SettingsView: View {
         try? modelContext.save()
         isShowingOnboarding = true
     }
+}
+
+private enum ResetOnboardingStep {
+    case none
+    case firstConfirm
+    case finalConfirm
 }
 
 #Preview {

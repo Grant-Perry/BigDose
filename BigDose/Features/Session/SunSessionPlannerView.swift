@@ -35,7 +35,8 @@ struct SunSessionPlannerView: View {
             currentTemperatureFahrenheit: weather.temperatureFahrenheit,
             skinType: profile.skinType,
             locationName: weather.locationName,
-            targetIU: Double(profile.preferredDailyIU)
+            targetIU: Double(profile.preferredDailyIU),
+            exitLeadFraction: profile.prepareExitLeadFraction
         )
     }
 
@@ -123,7 +124,7 @@ struct SunSessionPlannerView: View {
                             .foregroundStyle(.solarGold)
                     }
 
-                    Slider(value: $durationSeconds, in: 5 * 60...60 * 60, step: 60)
+                    Slider(value: $durationSeconds, in: 60...90 * 60, step: 60)
                         .tint(.solarGold)
 
                     HStack(spacing: 8) {
