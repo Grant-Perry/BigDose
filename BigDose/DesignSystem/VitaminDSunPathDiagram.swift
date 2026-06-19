@@ -157,44 +157,78 @@ struct VitaminDSunPathDiagram: View {
         size: CGFloat
     ) -> some View {
         let point = layout.point(for: date)
-        let labelOffset: CGFloat = isPeak ? -34 : 28
 
         return ZStack {
-            Circle()
-                .fill(isPeak ? Color.gpGatePill.opacity(0.34) : Color.solarGold.opacity(0.18))
-                .frame(width: size + 14, height: size + 14)
-                .blur(radius: isPeak ? 10 : 6)
-                .position(point)
+            sunGlyph(at: point, isPeak: isPeak, size: size)
 
-            Circle()
-                .fill(.white.opacity(isPeak ? 0.96 : 0.88))
-                .frame(width: size, height: size)
-                .overlay {
-                    Image(systemName: "sun.max.fill")
-                        .font(.system(size: size * 0.52, weight: .bold))
-                        .foregroundStyle(isPeak ? Color.gpHiOrange : .solarGold)
-                }
-                .shadow(color: .solarGold.opacity(isPeak ? 0.55 : 0.28), radius: isPeak ? 12 : 6)
-                .position(point)
-
-            VStack(spacing: 2) {
-                if isPeak {
+            if isPeak {
+                VStack(spacing: 2) {
                     Text("Solar Noon")
                         .font(.caption2.weight(.black))
                         .foregroundStyle(.white.opacity(0.72))
-                }
 
-                if let detail {
-                    Text(detail)
-                        .font(.caption.weight(.black))
-                        .foregroundStyle(.solarGold)
+                    if let detail {
+                        Text(detail)
+                            .font(.caption.weight(.black))
+                            .foregroundStyle(.solarGold)
+                    }
                 }
+                .position(x: point.x, y: point.y - size * 0.95)
 
                 Text(label)
-                    .font(isPeak ? .caption.weight(.black) : .caption2.weight(.bold))
-                    .foregroundStyle(.white.opacity(isPeak ? 0.92 : 0.78))
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .position(x: point.x, y: point.y + size * 0.72)
+            } else {
+                Text(label)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .position(x: point.x, y: point.y + size * 0.72)
             }
-            .position(x: point.x, y: point.y + labelOffset)
+        }
+    }
+
+    private func sunGlyph(at point: CGPoint, isPeak: Bool, size: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.solarGold.opacity(isPeak ? 0.55 : 0.38),
+                            Color.solarOrange.opacity(isPeak ? 0.22 : 0.14),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: size * 0.95
+                    )
+                )
+                .frame(width: size * 1.85, height: size * 1.85)
+                .blur(radius: isPeak ? 7 : 5)
+                .position(point)
+
+            Circle()
+                .fill(Color.gpGatePill.opacity(isPeak ? 0.42 : 0.26))
+                .frame(width: size * 0.72, height: size * 0.72)
+                .blur(radius: isPeak ? 9 : 6)
+                .position(point)
+
+            Image(systemName: "sun.max.fill")
+                .font(.system(size: size * 0.56, weight: .bold))
+                .foregroundStyle(
+                    isPeak
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                colors: [Color.gpHiOrange, Color.gpGatePill],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        : AnyShapeStyle(Color.solarGold)
+                )
+                .shadow(color: .solarGold.opacity(isPeak ? 0.85 : 0.55), radius: isPeak ? 10 : 6)
+                .shadow(color: .solarOrange.opacity(isPeak ? 0.45 : 0.28), radius: isPeak ? 4 : 2)
+                .position(point)
         }
     }
 
