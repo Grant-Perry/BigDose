@@ -27,25 +27,17 @@ struct HomeView: View {
             ZStack {
                 BigDoseGradientBackground()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        header
-                        weatherCard
-                        solarGuidanceCard
-                        goalCard
-                        recommendationCard
-                        metricGrid
-                        scienceNudge
-                        legalFooter
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
-                    .padding(.bottom, 110)
+                TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                    dashboardScrollContent(now: timeline.date)
                 }
-                .scrollIndicators(.hidden)
             }
             .navigationTitle("BigDose")
             .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    BigDoseNavigationWordmark()
+                }
+            }
             .task {
                 await refreshHome()
                 restoreActiveSessionIfNeeded()
@@ -62,15 +54,43 @@ struct HomeView: View {
         }
     }
 
-    private var header: some View {
+    @ViewBuilder
+    private func dashboardScrollContent(now: Date) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Dashboard")
+                        .font(.bigDoseHeader(.title2).weight(.black))
+                        .foregroundStyle(.white)
+                        .accessibilityAddTraits(.isHeader)
+
+                    header(now: now)
+                }
+
+                weatherCard
+                solarGuidanceCard(now: now)
+                goalCard
+                recommendationCard
+                metricGrid
+                scienceNudge
+                legalFooter
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 110)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func header(now: Date) -> some View {
         HomeHeroHeader(
             profile: profile ?? activeProfile,
             todayGoalProgress: todayGoalProgress,
             todayCollectedIU: todayCollectedIU,
             targetIU: activeProfile.preferredDailyIU,
-            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0) }
+            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
+            now: now
         )
-        .padding(.top, 4)
     }
 
     @ViewBuilder
@@ -127,11 +147,10 @@ struct HomeView: View {
                         weatherExpandedDetails(weather)
                     }
 
-                    Text(homeViewModel.statusMessage)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.58))
-
-                    BigDoseWeatherAttributionView(weather: weather)
+                    BigDoseWeatherAttributionView(
+                        weather: weather,
+                        statusMessage: homeViewModel.statusMessage
+                    )
                 }
                 .animation(.smooth(duration: 0.32), value: isShowingMoreWeather)
                 .clipped()
@@ -218,13 +237,13 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private var solarGuidanceCard: some View {
-        if let plan = currentPlan, let display = vitaminDWindowDisplay(for: plan) {
+    private func solarGuidanceCard(now: Date) -> some View {
+        if let plan = currentPlan, let display = vitaminDWindowDisplay(for: plan, now: now) {
             GlassCard {
                 VStack(alignment: .leading, spacing: 18) {
-                    solarGuidanceHeader(plan: plan, display: display)
+                    solarGuidanceHeader(plan: plan, display: display, now: now)
 
-                    VitaminDSunPathDiagram(display: display)
+                    VitaminDSunPathDiagram(display: display, now: now)
 
                     HStack(spacing: 12) {
                         solarPeakChip(plan: plan)
@@ -249,7 +268,7 @@ struct HomeView: View {
         }
     }
 
-    private func solarGuidanceHeader(plan: DailySunPlan, display: VitaminDWindowDisplay) -> some View {
+    private func solarGuidanceHeader(plan: DailySunPlan, display: VitaminDWindowDisplay, now: Date) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(display.cardTitle)
@@ -264,15 +283,24 @@ struct HomeView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(Int(plan.currentAltitudeDegrees.rounded()))°")
+                Text("\(Int(currentSunAltitude(for: plan, at: now).rounded()))°")
                     .font(.system(size: 34, weight: .black))
                     .foregroundStyle(.solarGold)
+                    .contentTransition(.numericText())
 
                 Text("sun now")
                     .font(.caption.weight(.black))
                     .foregroundStyle(.white.opacity(0.62))
             }
         }
+    }
+
+    private func currentSunAltitude(for plan: DailySunPlan, at now: Date) -> Double {
+        SolarGeometryService.solarPosition(
+            latitude: plan.latitude,
+            longitude: plan.longitude,
+            date: now
+        ).altitudeDegrees
     }
 
     private func solarPeakChip(plan: DailySunPlan) -> some View {
@@ -673,16 +701,16 @@ struct HomeView: View {
         return "\(formattedTime(start)) - \(formattedTime(end))"
     }
 
-    private func vitaminDWindowDisplay(for plan: DailySunPlan) -> VitaminDWindowDisplay? {
+    private func vitaminDWindowDisplay(for plan: DailySunPlan, now: Date) -> VitaminDWindowDisplay? {
         guard plan.latitude != 0 || plan.longitude != 0 else { return nil }
-        return DailySunPlanService.vitaminDWindowDisplay(for: plan)
+        return DailySunPlanService.vitaminDWindowDisplay(for: plan, now: now)
     }
 
     private func logDefaultSupplement() {
         let dose = SupplementDose(
             takenAt: .now,
             internationalUnits: activeProfile.defaultSupplementIU,
-            note: "Quick logged from Home"
+            note: "Quick logged from Dashboard"
         )
         modelContext.insert(dose)
         undoSupplementDose = dose
@@ -842,6 +870,7 @@ private struct SupplementLogActionButton: View {
 private struct BigDoseWeatherAttributionView: View {
     @Environment(\.colorScheme) private var colorScheme
     var weather: BigDoseWeatherSnapshot
+    var statusMessage: String?
 
     private var markURL: URL? {
         colorScheme == .dark ? weather.combinedMarkDarkURL : weather.combinedMarkLightURL
@@ -849,6 +878,11 @@ private struct BigDoseWeatherAttributionView: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.caption2.weight(.semibold))
+            }
+
             if let markURL {
                 AsyncImage(url: markURL) { image in
                     image
@@ -858,22 +892,30 @@ private struct BigDoseWeatherAttributionView: View {
                 } placeholder: {
                     Text("Weather")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.58))
                 }
             } else {
                 Text("Weather")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.58))
             }
 
             if let url = weather.attributionURL {
                 Link("Data Sources", destination: url)
                     .font(.caption2.weight(.semibold))
             }
+
+            Spacer(minLength: 0)
         }
         .foregroundStyle(.white.opacity(0.58))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Weather data attribution and legal data sources")
+        .accessibilityLabel(accessibilityLabelText)
+    }
+
+    private var accessibilityLabelText: String {
+        if let statusMessage {
+            "\(statusMessage). Weather data attribution and legal data sources."
+        } else {
+            "Weather data attribution and legal data sources"
+        }
     }
 }
 

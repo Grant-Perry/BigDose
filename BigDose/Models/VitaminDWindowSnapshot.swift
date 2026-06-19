@@ -17,7 +17,26 @@ struct VitaminDWindowSnapshot: Equatable {
 
     var durationLabel: String? {
         guard let duration else { return nil }
+        return Self.formattedDuration(duration)
+    }
 
+    func remainingDuration(from now: Date = .now) -> TimeInterval? {
+        guard let windowEnd else { return nil }
+
+        if let windowStart, now < windowStart {
+            return max(windowEnd.timeIntervalSince(windowStart), 0)
+        }
+
+        guard now <= windowEnd else { return nil }
+        return max(windowEnd.timeIntervalSince(now), 0)
+    }
+
+    func remainingDurationLabel(now: Date) -> String? {
+        guard let remainingDuration = remainingDuration(from: now) else { return nil }
+        return Self.formattedDuration(remainingDuration)
+    }
+
+    static func formattedDuration(_ duration: TimeInterval) -> String {
         let totalMinutes = Int(duration.rounded(.down) / 60)
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
@@ -44,6 +63,10 @@ struct VitaminDWindowDisplay: Equatable {
     var nextOpportunityStart: Date?
     var nextOpportunityTiming: BestSunlightHighlight.Timing
 
+    var isWindowOpenNow: Bool {
+        isToday && nextOpportunityStart == nil && snapshot.hasWindow
+    }
+
     var dayLabel: String {
         isToday ? "Today" : "Tomorrow"
     }
@@ -52,21 +75,38 @@ struct VitaminDWindowDisplay: Equatable {
         isToday ? "Vitamin D Window Today" : "Vitamin D Window Tomorrow"
     }
 
-    var bannerTitle: String {
-        guard let nextOpportunityStart else {
-            return isToday ? "Vitamin D window is open now" : "No vitamin D window tomorrow"
+    var bannerTitleLead: String {
+        "Vitamin D window is..."
+    }
+
+    var bannerTitleDetail: String {
+        if isWindowOpenNow {
+            return "Open Now"
         }
 
-        let time = nextOpportunityStart.formatted(date: .omitted, time: .shortened)
-        switch nextOpportunityTiming {
-        case .today:
-            return "Next D opportunity is today at \(time)"
-        case .tomorrow:
-            return "Next D opportunity is tomorrow at \(time)"
+        guard let nextOpportunityStart else {
+            return isToday ? "Open Now" : "Unavailable Tomorrow"
         }
+
+        return VitaminDWindowHeadline.scheduledOpeningTitle(nextOpening: nextOpportunityStart)
+    }
+
+    var bannerTitle: String {
+        "\(bannerTitleLead) \(bannerTitleDetail)"
+    }
+
+    var nextWindowTitle: String {
+        VitaminDWindowHeadline.nextWindowTitle(
+            isOpenNow: isWindowOpenNow,
+            nextOpening: nextOpportunityStart ?? (isToday ? nil : snapshot.windowStart)
+        )
     }
 
     var bannerEyebrow: String {
+        if isWindowOpenNow {
+            return "D Window Open"
+        }
+
         guard nextOpportunityStart != nil else {
             return isToday ? "D Window Open" : "Tomorrow's Plan"
         }
@@ -77,5 +117,10 @@ struct VitaminDWindowDisplay: Equatable {
         case .tomorrow:
             return "Tomorrow's Window"
         }
+    }
+
+    func remainingWindowDurationLabel(at now: Date) -> String? {
+        guard isWindowOpenNow else { return nil }
+        return snapshot.remainingDurationLabel(now: now)
     }
 }

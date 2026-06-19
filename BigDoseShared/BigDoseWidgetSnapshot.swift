@@ -10,6 +10,10 @@ struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
     var bestWindowEnd: Date?
     var nextUsefulStart: Date?
     var nextUsefulEnd: Date?
+    var vitaminDWindowStart: Date?
+    var vitaminDWindowEnd: Date?
+    var nextVitaminDWindowStart: Date?
+    var isVitaminDWindowOpenNow: Bool
     var todayCollectedIU: Double
     var targetIU: Int
     var isInBestWindow: Bool
@@ -29,19 +33,26 @@ struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
             return calendar.date(byAdding: .second, value: 15, to: now) ?? now.addingTimeInterval(15)
         }
 
-        if isInBestWindow, let end = bestWindowEnd, end > now {
+        if isVitaminDWindowOpenNow, let end = vitaminDWindowEnd, end > now {
             return end
         }
 
-        if let start = nextUsefulStart, start > now {
+        if let start = nextVitaminDWindowStart, start > now {
             return start
         }
 
-        if let start = bestWindowStart, start > now {
-            return start
+        if let end = vitaminDWindowEnd, end > now {
+            return end
         }
 
         return calendar.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1_800)
+    }
+
+    var nextWindowTitle: String {
+        VitaminDWindowHeadline.nextWindowTitle(
+            isOpenNow: isVitaminDWindowOpenNow,
+            nextOpening: nextVitaminDWindowStart
+        )
     }
 
     var widgetDeepLinkURL: URL? {
@@ -62,6 +73,10 @@ struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         bestWindowEnd: nil,
         nextUsefulStart: nil,
         nextUsefulEnd: nil,
+        vitaminDWindowStart: nil,
+        vitaminDWindowEnd: nil,
+        nextVitaminDWindowStart: nil,
+        isVitaminDWindowOpenNow: false,
         todayCollectedIU: 0,
         targetIU: 1_000,
         isInBestWindow: false,

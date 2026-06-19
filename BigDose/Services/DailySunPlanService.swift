@@ -110,7 +110,13 @@ enum DailySunPlanService {
 
     /// Best remaining sunlight highlight — never surfaces a past time as if it is still upcoming.
     static func displayBestSunlightHighlight(for plan: DailySunPlan, now: Date = .now) -> BestSunlightHighlight? {
-        guard let opportunity = nextVitaminDOpportunity(for: plan, now: now) else { return nil }
+        let display = vitaminDWindowDisplay(for: plan, now: now)
+
+        if display.isWindowOpenNow {
+            return BestSunlightHighlight(date: now, timing: .today, isOpenNow: true)
+        }
+
+        guard let opportunity = nextVitaminDOpportunity(from: display, now: now) else { return nil }
         return BestSunlightHighlight(date: opportunity.date, timing: opportunity.timing)
     }
 
@@ -159,18 +165,21 @@ struct BestSunlightHighlight: Equatable {
 
     var date: Date
     var timing: Timing
+    var isOpenNow: Bool = false
 
     var title: String {
-        let time = date.formatted(date: .omitted, time: .shortened)
-        switch timing {
-        case .today:
-            return "Next D opportunity is today at \(time)"
-        case .tomorrow:
-            return "Next D opportunity is tomorrow at \(time)"
+        if isOpenNow {
+            return "Right Now!"
         }
+
+        return VitaminDWindowHeadline.scheduledOpeningTitle(nextOpening: date)
     }
 
     var eyebrow: String {
+        if isOpenNow {
+            return "D Window Open"
+        }
+
         switch timing {
         case .today:
             return "Up Next"

@@ -356,7 +356,7 @@
 				CODE_SIGN_ENTITLEMENTS = BigDose/BigDose.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = KP3ZH5K2SY;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -412,7 +412,7 @@
 				CODE_SIGN_ENTITLEMENTS = BigDose/BigDose.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = KP3ZH5K2SY;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -467,7 +467,7 @@
 				CODE_SIGN_ENTITLEMENTS = BigDoseLiveActivity/BigDoseLiveActivity.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = KP3ZH5K2SY;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/BigDoseLiveActivity-Info.plist";
@@ -497,7 +497,7 @@
 				CODE_SIGN_ENTITLEMENTS = BigDoseLiveActivity/BigDoseLiveActivity.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = KP3ZH5K2SY;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/BigDoseLiveActivity-Info.plist";

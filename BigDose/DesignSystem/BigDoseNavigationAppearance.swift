@@ -26,3 +26,14 @@ enum BigDoseNavigationAppearance {
         navBar.scrollEdgeAppearance = standard
     }
 }
+
+struct BigDoseNavigationWordmark: View {
+    var size: CGFloat = 30
+
+    var body: some View {
+        Text("BigDose")
+            .font(.bigDoseWordmark(size))
+            .foregroundStyle(.white)
+            .accessibilityAddTraits(.isHeader)
+    }
+}

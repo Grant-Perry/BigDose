@@ -3,10 +3,12 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(BigDoseAppState.self) private var appState
     var profile: UserProfile?
 
-    @State private var resetOnboardingStep: ResetOnboardingStep = .none
+    @State private var confirmationStep: SettingsConfirmationStep = .none
     @State private var isShowingOnboarding = false
+    @State private var onboardingProfile: UserProfile?
 
     var body: some View {
         ZStack {
@@ -19,7 +21,7 @@ struct SettingsView: View {
                     notificationsCard
                     manageDataCard
                     medicalCard
-                    resetOnboardingCard
+                    onboardingControlsCard
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
@@ -31,35 +33,50 @@ struct SettingsView: View {
         .toolbarTitleDisplayMode(.inline)
         .confirmationDialog(
             "Reset onboarding?",
-            isPresented: isPresented(for: .firstConfirm),
-            titleVisibility: .visible
-        ) {
-            Button("Continue") {
-                resetOnboardingStep = .finalConfirm
-            }
-            Button("Cancel", role: .cancel) {
-                resetOnboardingStep = .none
-            }
-        } message: {
-            Text("This sends you back through the full setup flow. Your saved sessions, labs, supplements, and progress stay on this device.")
-        }
-        .confirmationDialog(
-            "Are you absolutely certain?",
-            isPresented: isPresented(for: .finalConfirm),
+            isPresented: isPresented(for: .resetOnboarding),
             titleVisibility: .visible
         ) {
             Button("Reset Onboarding", role: .destructive) {
                 resetOnboarding()
-                resetOnboardingStep = .none
+                confirmationStep = .none
             }
             Button("Cancel", role: .cancel) {
-                resetOnboardingStep = .none
+                confirmationStep = .none
             }
         } message: {
-            Text("This will clear your onboarding completion and wellness disclaimer acceptance. You must walk through setup again before BigDose treats your profile as ready.")
+            Text("This sends you back through setup. Your sessions, labs, supplements, and progress stay on this device.")
+        }
+        .confirmationDialog(
+            "Nuke all BigDose data?",
+            isPresented: isPresented(for: .nukeFirstConfirm),
+            titleVisibility: .visible
+        ) {
+            Button("Continue") {
+                confirmationStep = .nukeFinalConfirm
+            }
+            Button("Cancel", role: .cancel) {
+                confirmationStep = .none
+            }
+        } message: {
+            Text("This permanently deletes your profile, sessions, labs, supplements, imports, and progress on this device.")
+        }
+        .confirmationDialog(
+            "Are you absolutely certain?",
+            isPresented: isPresented(for: .nukeFinalConfirm),
+            titleVisibility: .visible
+        ) {
+            Button("Nuke All Data", role: .destructive) {
+                nukeAllData()
+                confirmationStep = .none
+            }
+            Button("Cancel", role: .cancel) {
+                confirmationStep = .none
+            }
+        } message: {
+            Text("There is no undo. BigDose will erase everything local and send you through onboarding from scratch.")
         }
         .fullScreenCover(isPresented: $isShowingOnboarding) {
-            OnboardingView(profile: profile)
+            OnboardingView(profile: onboardingProfile ?? profile, onFinished: completeOnboardingPresentation)
         }
     }
 
@@ -75,19 +92,19 @@ struct SettingsView: View {
         }
     }
 
-    private var resetOnboardingCard: some View {
+    private var onboardingControlsCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Label("Onboarding", systemImage: "exclamationmark.triangle.fill")
+                Label("Onboarding & Data", systemImage: "exclamationmark.triangle.fill")
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.solarOrange)
 
-                Text("Only use this if you need to rerun setup from scratch. BigDose will ask you to confirm twice before continuing.")
+                Text("Reset onboarding reruns setup without deleting your saved data. Nuke wipes everything local and starts completely fresh.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
                 Button(role: .destructive) {
-                    resetOnboardingStep = .firstConfirm
+                    confirmationStep = .resetOnboarding
                 } label: {
                     Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
                         .font(.bigDoseHeader(.headline).weight(.semibold))
@@ -96,6 +113,17 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(.solarOrange)
+
+                Button(role: .destructive) {
+                    confirmationStep = .nukeFirstConfirm
+                } label: {
+                    Label("Nuke All Data", systemImage: "trash.fill")
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
         }
     }
@@ -190,18 +218,26 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
-    private func isPresented(for step: ResetOnboardingStep) -> Binding<Bool> {
+    private func isPresented(for step: SettingsConfirmationStep) -> Binding<Bool> {
         Binding {
-            resetOnboardingStep == step
+            confirmationStep == step
         } set: { isPresented in
-            if !isPresented, resetOnboardingStep == step {
-                resetOnboardingStep = .none
+            if !isPresented, confirmationStep == step {
+                confirmationStep = .none
             }
         }
     }
 
+    private func completeOnboardingPresentation() {
+        appState.selectedTab = .home
+        appState.isShowingOnboarding = false
+        isShowingOnboarding = false
+        onboardingProfile = nil
+    }
+
     private func resetOnboarding() {
         guard let profile else {
+            onboardingProfile = nil
             isShowingOnboarding = true
             return
         }
@@ -210,19 +246,32 @@ struct SettingsView: View {
         profile.hasAcceptedWellnessDisclaimer = false
         profile.updatedAt = .now
         try? modelContext.save()
+        onboardingProfile = profile
         isShowingOnboarding = true
+    }
+
+    private func nukeAllData() {
+        do {
+            let freshProfile = try BigDoseLocalDataReset.nukeAndCreateFreshProfile(in: modelContext)
+            onboardingProfile = freshProfile
+            isShowingOnboarding = true
+        } catch {
+            return
+        }
     }
 }
 
-private enum ResetOnboardingStep {
+private enum SettingsConfirmationStep {
     case none
-    case firstConfirm
-    case finalConfirm
+    case resetOnboarding
+    case nukeFirstConfirm
+    case nukeFinalConfirm
 }
 
 #Preview {
     NavigationStack {
         SettingsView(profile: .preview)
+            .environment(BigDoseAppState())
     }
     .modelContainer(BigDoseModelContainerFactory.preview)
 }

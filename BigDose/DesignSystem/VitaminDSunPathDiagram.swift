@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VitaminDSunPathDiagram: View {
     var display: VitaminDWindowDisplay
+    var now: Date
 
     var body: some View {
         VStack(spacing: 14) {
@@ -239,10 +240,19 @@ struct VitaminDSunPathDiagram: View {
                     .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
 
-                Text(display.snapshot.durationLabel ?? "Unavailable")
-                    .font(.system(size: 34, weight: .black))
-                    .foregroundStyle(.solarGold)
-                    .contentTransition(.numericText())
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(display.snapshot.durationLabel ?? "Unavailable")
+                        .font(.system(size: 34, weight: .black))
+                        .foregroundStyle(.solarGold)
+                        .contentTransition(.numericText())
+
+                    if let remainingLabel = display.remainingWindowDurationLabel(at: now) {
+                        Text("\(remainingLabel) remaining")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .offset(y: -5)
+                    }
+                }
 
                 Spacer(minLength: 0)
             }
@@ -257,9 +267,11 @@ struct VitaminDSunPathDiagram: View {
 
     private var accessibilitySummary: String {
         let duration = display.snapshot.durationLabel ?? "unknown duration"
+        let remaining = display.remainingWindowDurationLabel(at: now).map { "\($0) remaining" }
         let start = display.snapshot.windowStart?.formatted(date: .omitted, time: .shortened) ?? "unknown"
         let end = display.snapshot.windowEnd?.formatted(date: .omitted, time: .shortened) ?? "unknown"
-        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration). Solar noon \(Int(display.snapshot.solarNoonAltitudeDegrees.rounded())) degrees."
+        let remainingPhrase = remaining.map { ", \($0)" } ?? ""
+        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration)\(remainingPhrase). Solar noon \(Int(display.snapshot.solarNoonAltitudeDegrees.rounded())) degrees."
     }
 }
 

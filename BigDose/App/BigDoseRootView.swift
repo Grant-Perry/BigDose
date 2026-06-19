@@ -35,6 +35,7 @@ struct BigDoseRootView: View {
                 BigDoseLaunchLoadingView()
             }
         }
+        .environment(appState)
         .task {
             await ensureProfileExists()
         }
@@ -46,8 +47,19 @@ struct BigDoseRootView: View {
             )
         }
         .fullScreenCover(isPresented: $appState.isShowingOnboarding) {
-            OnboardingView(profile: profile)
+            if let profile {
+                OnboardingView(profile: profile, onFinished: completeOnboardingPresentation)
+            }
         }
+        .onChange(of: profile?.isOnboardingComplete) { _, isComplete in
+            guard isComplete == true else { return }
+            completeOnboardingPresentation()
+        }
+    }
+
+    private func completeOnboardingPresentation() {
+        appState.selectedTab = .home
+        appState.isShowingOnboarding = false
     }
 
     private func ensureProfileExists() async {

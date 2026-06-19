@@ -12,12 +12,12 @@ enum BigDoseWidgetSnapshotBuilder {
         now: Date = .now,
         calendar: Calendar = .current
     ) -> BigDoseWidgetSnapshot {
-        let bestStart = plan?.bestWindowStart ?? plan?.nextUsefulStart
-        let bestEnd = plan?.bestWindowEnd ?? plan?.nextUsefulEnd
-        let isInBestWindow: Bool = {
-            guard let start = bestStart, let end = bestEnd else { return false }
-            return now >= start && now <= end
-        }()
+        let displayWindow = plan.map { DailySunPlanService.vitaminDWindowDisplay(for: $0, now: now) }
+        let vitaminDWindowStart = displayWindow?.snapshot.windowStart
+        let vitaminDWindowEnd = displayWindow?.snapshot.windowEnd
+        let isVitaminDWindowOpenNow = displayWindow.map(\.isWindowOpenNow) ?? false
+        let nextVitaminDWindowStart = displayWindow?.nextOpportunityStart
+            ?? (displayWindow?.isToday == false ? displayWindow?.snapshot.windowStart : nil)
 
         let activeSession = activeSessionWidgetState(
             plan: activeSessionPlan,
@@ -35,9 +35,13 @@ enum BigDoseWidgetSnapshotBuilder {
             bestWindowEnd: plan?.bestWindowEnd,
             nextUsefulStart: plan?.nextUsefulStart,
             nextUsefulEnd: plan?.nextUsefulEnd,
+            vitaminDWindowStart: vitaminDWindowStart,
+            vitaminDWindowEnd: vitaminDWindowEnd,
+            nextVitaminDWindowStart: nextVitaminDWindowStart,
+            isVitaminDWindowOpenNow: isVitaminDWindowOpenNow,
             todayCollectedIU: todayCollectedIU,
             targetIU: profile.preferredDailyIU,
-            isInBestWindow: isInBestWindow,
+            isInBestWindow: isVitaminDWindowOpenNow,
             isOnboardingComplete: profile.isOnboardingComplete,
             activeSession: activeSession
         )

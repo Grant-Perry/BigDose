@@ -6,40 +6,60 @@ struct HomeHeroHeader: View {
     var todayCollectedIU: Double
     var targetIU: Int
     var vitaminDWindowDisplay: VitaminDWindowDisplay?
+    var now: Date
+
+    private let avatarDiameter: CGFloat = 88
+
+    private var avatarOverflow: CGFloat {
+        avatarDiameter * 0.5
+    }
 
     var body: some View {
-        GlassCard(cornerRadius: 28) {
-            VStack(alignment: .leading, spacing: 18) {
-                profileRow
+        ZStack(alignment: .topLeading) {
+            GlassCard(cornerRadius: 28) {
+                VStack(alignment: .leading, spacing: 18) {
+                    profileRow
 
-                if let vitaminDWindowDisplay {
-                    NextDOpportunityBanner(
-                        display: vitaminDWindowDisplay,
-                        todayGoalProgress: todayGoalProgress,
-                        todayCollectedIU: todayCollectedIU,
-                        targetIU: targetIU
-                    )
-                } else {
-                    fallbackPanel
+                    if let vitaminDWindowDisplay {
+                        NextDOpportunityBanner(
+                            display: vitaminDWindowDisplay,
+                            todayGoalProgress: todayGoalProgress,
+                            todayCollectedIU: todayCollectedIU,
+                            targetIU: targetIU
+                        )
+                    } else {
+                        fallbackPanel
+                    }
                 }
             }
-            .overlay(alignment: .topTrailing) {
-                avatarButton
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            avatarCluster
+                .frame(maxWidth: .infinity, alignment: .topTrailing)
+                .offset(x: avatarOverflow, y: -avatarOverflow)
         }
-        .overlay(alignment: .topTrailing) {
+        .frame(maxWidth: .infinity)
+        .padding(.top, avatarOverflow)
+        .padding(.bottom, -avatarOverflow)
+        .offset(y: -avatarOverflow)
+    }
+
+    private var avatarCluster: some View {
+        ZStack {
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [.solarGold.opacity(0.28), .clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 120
+                        endRadius: 72
                     )
                 )
-                .frame(width: 180, height: 180)
-                .offset(x: 36, y: -48)
+                .frame(width: 150, height: 150)
+                .opacity(0.9)
                 .allowsHitTesting(false)
+
+            avatarButton
         }
     }
 
@@ -49,13 +69,12 @@ struct HomeHeroHeader: View {
         } label: {
             ProfileAvatarView(
                 imageData: profile.avatarImageData,
-                diameter: 76,
+                diameter: avatarDiameter,
                 showsEditBadge: profile.avatarImageData == nil
             )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Edit profile photo")
-        .offset(x: 4, y: -4)
     }
 
     private var profileRow: some View {
@@ -66,7 +85,7 @@ struct HomeHeroHeader: View {
 
             nameRow
         }
-        .padding(.trailing, 84)
+        .padding(.trailing, avatarDiameter * 0.62)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -92,7 +111,9 @@ struct HomeHeroHeader: View {
     }
 
     private var fallbackPanel: some View {
-        HStack(alignment: .center, spacing: 14) {
+        let goalDialDiameter: CGFloat = 96 * 0.85
+
+        return HStack(alignment: .center, spacing: 14) {
             Image(systemName: "sun.max.trianglebadge.exclamationmark.fill")
                 .font(.bigDoseHeader(.title2).weight(.bold))
                 .foregroundStyle(.solarGold)
@@ -113,16 +134,7 @@ struct HomeHeroHeader: View {
                     .foregroundStyle(.white.opacity(0.48))
             }
 
-            Spacer(minLength: 8)
-
-            SunSessionGoalDialView(
-                goalProgress: todayGoalProgress,
-                goalTimerInterval: nil,
-                isPaused: true,
-                diameter: 58,
-                lineWidth: 4,
-                progressCaption: "today"
-            )
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,10 +143,21 @@ struct HomeHeroHeader: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         }
+        .overlay(alignment: .trailing) {
+            SunSessionGoalDialView(
+                goalProgress: todayGoalProgress,
+                goalTimerInterval: nil,
+                isPaused: true,
+                diameter: goalDialDiameter,
+                lineWidth: 5,
+                progressCaption: "today"
+            )
+            .padding(.trailing, 8)
+        }
     }
 
     private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: .now)
+        let hour = Calendar.current.component(.hour, from: now)
         switch hour {
         case 5..<12:
             return "Good morning"

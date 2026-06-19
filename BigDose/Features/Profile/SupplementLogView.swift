@@ -63,7 +63,7 @@ struct SupplementLogView: View {
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("Use Add to record a dose. Home can also quick-log your default amount.")
+                Text("Use Add to record a dose. Dashboard can also quick-log your default amount.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
             }

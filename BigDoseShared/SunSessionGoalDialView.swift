@@ -105,6 +105,7 @@ struct BigDoseLiveActivityLogoMark: View {
                     .resizable()
                     .renderingMode(.original)
                     .scaledToFill()
+					.offset(y: -10) 
             } else {
                 Image(systemName: "sun.max.fill")
                     .font(.caption.weight(.bold))

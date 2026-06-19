@@ -277,7 +277,7 @@ struct BigDoseHomeWidgetEntryView: View {
         ZStack {
             AccessoryWidgetBackground()
             VStack(spacing: 2) {
-                Image(systemName: entry.snapshot.isInBestWindow ? "sun.max.fill" : "clock.fill")
+                Image(systemName: entry.snapshot.isVitaminDWindowOpenNow ? "sun.max.fill" : "clock.fill")
                     .font(.caption.weight(.bold))
                 Text("\(Int(entry.snapshot.todayGoalProgress * 100))%")
                     .font(.caption2.weight(.black))
@@ -347,25 +347,21 @@ struct BigDoseHomeWidgetEntryView: View {
             return "Finish setup in BigDose"
         }
 
-        if snapshot.isInBestWindow {
-            return "Best window now"
-        }
-
-        if let start = snapshot.nextUsefulStart ?? snapshot.bestWindowStart {
-            return "Next window \(WidgetTimeFormatting.compactTime(start))"
-        }
-
-        return snapshot.windowQualityTitle
+        return snapshot.nextWindowTitle
     }
 
     private var windowDetail: String? {
         let snapshot = entry.snapshot
 
-        guard let start = snapshot.bestWindowStart, let end = snapshot.bestWindowEnd else {
-            return snapshot.locationLabel
+        if snapshot.isVitaminDWindowOpenNow, let end = snapshot.vitaminDWindowEnd {
+            return "Open until \(WidgetTimeFormatting.compactTime(end))"
         }
 
-        return WidgetTimeFormatting.compactRange(start: start, end: end)
+        if let start = snapshot.vitaminDWindowStart, let end = snapshot.vitaminDWindowEnd {
+            return WidgetTimeFormatting.compactRange(start: start, end: end)
+        }
+
+        return snapshot.locationLabel
     }
 }
 
@@ -377,7 +373,7 @@ enum WidgetTimeFormatting {
     static func compactRange(start: Date, end: Date) -> String {
         let startText = start.formatted(date: .omitted, time: .shortened)
         let endText = end.formatted(date: .omitted, time: .shortened)
-        return "Best \(startText)–\(endText)"
+        return "\(startText)–\(endText)"
     }
 }
 

@@ -30,7 +30,7 @@ final class HomeViewModel {
         do {
             weather = try await BigDoseWeatherService.weather(for: location)
             dailyPlan = nil
-            statusMessage = "Live WeatherKit data"
+            statusMessage = "WeatherKit data"
         } catch {
             weather = nil
             dailyPlan = nil

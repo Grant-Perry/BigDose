@@ -6,6 +6,8 @@ struct NextDOpportunityBanner: View {
     var todayCollectedIU: Double
     var targetIU: Int
 
+    private let goalDialDiameter: CGFloat = 96 * 0.85
+
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             Image(systemName: bannerSymbol)
@@ -19,26 +21,20 @@ struct NextDOpportunityBanner: View {
                     .foregroundStyle(.solarGold)
                     .textCase(.uppercase)
 
-                Text(display.bannerTitle)
-                    .font(.bigDoseHeader(.headline).weight(.black))
-                    .foregroundStyle(.white)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(display.bannerTitleLead)
+                    Text(display.bannerTitleDetail)
+                }
+                .font(.bigDoseHeader(.headline).weight(.black))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
 
                 Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.white.opacity(0.48))
             }
 
-            Spacer(minLength: 8)
-
-            SunSessionGoalDialView(
-                goalProgress: todayGoalProgress,
-                goalTimerInterval: nil,
-                isPaused: true,
-                diameter: 58,
-                lineWidth: 4,
-                progressCaption: "today"
-            )
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -46,6 +42,17 @@ struct NextDOpportunityBanner: View {
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(.white.opacity(0.08), lineWidth: 1)
+        }
+        .overlay(alignment: .trailing) {
+            SunSessionGoalDialView(
+                goalProgress: todayGoalProgress,
+                goalTimerInterval: nil,
+                isPaused: true,
+                diameter: goalDialDiameter,
+                lineWidth: 5,
+                progressCaption: "today"
+            )
+            .padding(.trailing, 8)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(display.bannerTitle). \(Int(todayGoalProgress * 100)) percent of today's goal.")

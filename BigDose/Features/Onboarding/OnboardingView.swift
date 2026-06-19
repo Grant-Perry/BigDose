@@ -7,6 +7,7 @@ struct OnboardingView: View {
     @Query(sort: \LabResult.measuredAt, order: .reverse) private var labResults: [LabResult]
     @FocusState private var focusedField: OnboardingField?
     var profile: UserProfile?
+    var onFinished: (() -> Void)? = nil
 
     @State private var displayName = ""
     @State private var dateOfBirth = Calendar.current.date(byAdding: .year, value: -40, to: .now) ?? .now
@@ -446,7 +447,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.solarGold)
                 }
 
-                Text("You can log one-off doses or use this value for a quick daily entry from Home.")
+                Text("You can log one-off doses or use this value for a quick daily entry from Dashboard.")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
             }
@@ -707,6 +708,7 @@ struct OnboardingView: View {
                 modelContext: modelContext
             )
         }
+        onFinished?()
         dismiss()
     }
 
