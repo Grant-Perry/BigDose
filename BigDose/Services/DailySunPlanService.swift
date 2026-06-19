@@ -34,7 +34,9 @@ enum DailySunPlanService {
             ),
             targetIU: Double(profile.preferredDailyIU)
         )
-        let fallbackNext = tomorrowSolarNoon(latitude: latitude, longitude: longitude, now: now)
+
+        let displayWindow = vitaminDWindowDisplay(latitude: latitude, longitude: longitude, now: now)
+        let nextOpportunity = nextVitaminDOpportunity(from: displayWindow, now: now)
 
         return DailySunPlan(
             date: Calendar.current.startOfDay(for: now),
@@ -42,13 +44,18 @@ enum DailySunPlanService {
             latitude: latitude,
             longitude: longitude,
             locationLabel: weather.locationName,
-            sunrise: solarDay.sunrise,
-            solarNoon: solarDay.solarNoon,
-            sunset: solarDay.sunset,
+            sunrise: displayWindow.snapshot.sunrise ?? solarDay.sunrise,
+            solarNoon: displayWindow.snapshot.solarNoon,
+            sunset: displayWindow.snapshot.sunset ?? solarDay.sunset,
             bestWindowStart: bestHour?.date,
             bestWindowEnd: bestHour?.date.addingTimeInterval(3_600),
-            nextUsefulStart: nextHour?.date ?? fallbackNext,
-            nextUsefulEnd: (nextHour?.date ?? fallbackNext).addingTimeInterval(3_600),
+            vitaminDWindowStart: displayWindow.snapshot.windowStart,
+            vitaminDWindowEnd: displayWindow.snapshot.windowEnd,
+            vitaminDWindowReferenceDay: displayWindow.snapshot.referenceDay,
+            solarNoonAltitudeDegrees: displayWindow.snapshot.solarNoonAltitudeDegrees,
+            vitaminDThresholdDegrees: displayWindow.snapshot.thresholdDegrees,
+            nextUsefulStart: nextOpportunity?.date ?? nextHour?.date,
+            nextUsefulEnd: nextOpportunity.map { $0.endDate } ?? nextHour?.date.addingTimeInterval(3_600),
             targetIU: profile.preferredDailyIU,
             estimatedIU: estimate.estimatedIU,
             peakUVIndex: peakUV,
@@ -58,25 +65,126 @@ enum DailySunPlanService {
         )
     }
 
-    private static func tomorrowSolarNoon(latitude: Double, longitude: Double, now: Date) -> Date {
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(86_400)
-        return SolarGeometryService.solarNoon(latitude: latitude, longitude: longitude, date: tomorrow)
+    static func vitaminDWindowDisplay(
+        latitude: Double,
+        longitude: Double,
+        now: Date = .now
+    ) -> VitaminDWindowDisplay {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now)
+        let todaySnapshot = SolarGeometryService.vitaminDWindow(
+            latitude: latitude,
+            longitude: longitude,
+            date: todayStart
+        )
+
+        if let start = todaySnapshot.windowStart,
+           let end = todaySnapshot.windowEnd,
+           now <= end {
+            return VitaminDWindowDisplay(
+                snapshot: todaySnapshot,
+                isToday: true,
+                nextOpportunityStart: now < start ? start : nil,
+                nextOpportunityTiming: .today
+            )
+        }
+
+        let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart.addingTimeInterval(86_400)
+        let tomorrowSnapshot = SolarGeometryService.vitaminDWindow(
+            latitude: latitude,
+            longitude: longitude,
+            date: tomorrowStart
+        )
+
+        return VitaminDWindowDisplay(
+            snapshot: tomorrowSnapshot,
+            isToday: false,
+            nextOpportunityStart: tomorrowSnapshot.windowStart ?? tomorrowSnapshot.solarNoon,
+            nextOpportunityTiming: .tomorrow
+        )
     }
 
-    /// Best remaining sunlight highlight for today — avoids showing a morning peak after it has passed.
+    static func vitaminDWindowDisplay(for plan: DailySunPlan, now: Date = .now) -> VitaminDWindowDisplay {
+        vitaminDWindowDisplay(latitude: plan.latitude, longitude: plan.longitude, now: now)
+    }
+
+    /// Best remaining sunlight highlight — never surfaces a past time as if it is still upcoming.
+    static func displayBestSunlightHighlight(for plan: DailySunPlan, now: Date = .now) -> BestSunlightHighlight? {
+        guard let opportunity = nextVitaminDOpportunity(for: plan, now: now) else { return nil }
+        return BestSunlightHighlight(date: opportunity.date, timing: opportunity.timing)
+    }
+
     static func displayBestSunlightTime(for plan: DailySunPlan, now: Date = .now) -> Date? {
-        if let start = plan.bestWindowStart, start > now {
-            return start
+        displayBestSunlightHighlight(for: plan, now: now)?.date
+    }
+
+    static func nextVitaminDOpportunity(for plan: DailySunPlan, now: Date = .now) -> NextVitaminDOpportunity? {
+        nextVitaminDOpportunity(from: vitaminDWindowDisplay(for: plan, now: now), now: now)
+    }
+
+    private static func nextVitaminDOpportunity(
+        from display: VitaminDWindowDisplay,
+        now: Date
+    ) -> NextVitaminDOpportunity? {
+        if let start = display.nextOpportunityStart, start > now {
+            return NextVitaminDOpportunity(
+                date: start,
+                endDate: display.snapshot.windowEnd ?? start.addingTimeInterval(3_600),
+                timing: display.nextOpportunityTiming
+            )
         }
 
-        if let next = plan.nextUsefulStart, next > now {
-            return next
+        if display.isToday,
+           let start = display.snapshot.windowStart,
+           let end = display.snapshot.windowEnd,
+           now >= start, now <= end {
+            return NextVitaminDOpportunity(date: now, endDate: end, timing: .today)
         }
 
-        if let noon = plan.solarNoon {
-            return noon
-        }
+        return nil
+    }
+}
 
-        return plan.bestWindowStart ?? plan.nextUsefulStart
+struct NextVitaminDOpportunity: Equatable {
+    var date: Date
+    var endDate: Date
+    var timing: BestSunlightHighlight.Timing
+}
+
+struct BestSunlightHighlight: Equatable {
+    enum Timing: Equatable {
+        case today
+        case tomorrow
+    }
+
+    var date: Date
+    var timing: Timing
+
+    var title: String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        switch timing {
+        case .today:
+            return "Next D opportunity is today at \(time)"
+        case .tomorrow:
+            return "Next D opportunity is tomorrow at \(time)"
+        }
+    }
+
+    var eyebrow: String {
+        switch timing {
+        case .today:
+            return "Up Next"
+        case .tomorrow:
+            return "Tomorrow's Window"
+        }
+    }
+
+    var cardTitle: String {
+        switch timing {
+        case .today:
+            return "Vitamin D Window Today"
+        case .tomorrow:
+            return "Vitamin D Window Tomorrow"
+        }
     }
 }

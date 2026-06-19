@@ -268,6 +268,8 @@ private struct PrecipHourlyColumn: View {
                 Text("\(Int(normalizedChance * 100))%")
                     .font(.caption2.weight(.black))
                     .foregroundStyle(hasPrecip ? PrecipitationChartStyle.precipBlue : .white.opacity(0.42))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
 
             Text(hourLabel)

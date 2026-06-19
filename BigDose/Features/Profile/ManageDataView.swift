@@ -143,14 +143,21 @@ struct ManageDataView: View {
     }
 
     private var healthCard: some View {
-        NavigationLink {
-            HealthImportView(profile: profile)
-        } label: {
-            GlassCard {
-                ProfileLinkRow(title: "Import from Apple Health", detail: "Review 90 days of workouts", systemImage: "heart.fill")
+        VStack(alignment: .leading, spacing: 10) {
+            NavigationLink {
+                HealthImportView(profile: profile)
+            } label: {
+                GlassCard {
+                    AppleHealthNavigationRow(
+                        title: "Import from Apple Health",
+                        detail: "Review 90 days of workouts"
+                    )
+                }
             }
+            .buttonStyle(.plain)
+
+            AppleHealthKitAttributionView()
         }
-        .buttonStyle(.plain)
     }
 
     private var clearCard: some View {

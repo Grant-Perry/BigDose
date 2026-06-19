@@ -22,6 +22,7 @@ struct DoseDNAEditorView: View {
     @State private var avatarImageData: Data?
     @State private var isShowingAvatarEditor = false
     @State private var hasLoadedFromProfile = false
+    @State private var healthKitImportService = HealthKitImportService()
 
     var body: some View {
         ZStack {
@@ -256,6 +257,15 @@ struct DoseDNAEditorView: View {
                 focusedField: $focusedField,
                 field: .defaultSupplement
             )
+
+            Toggle("Save supplements to Apple Health", isOn: $profile.wantsHealthKitSupplementExport)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .tint(.solarGold)
+                .onChange(of: profile.wantsHealthKitSupplementExport) { _, isEnabled in
+                    guard isEnabled else { return }
+                    Task { await requestSupplementWriteAccess() }
+                }
         }
     }
 
@@ -341,6 +351,85 @@ struct DoseDNAEditorView: View {
 
     private var defaultSupplementIU: Int {
         Int(defaultSupplementIUText) ?? profile.defaultSupplementIU
+    }
+
+    private func requestSupplementWriteAccess() async {
+        do {
+            try await healthKitImportService.requestSupplementWriteAuthorization()
+            try? modelContext.save()
+        } catch {
+            profile.wantsHealthKitSupplementExport = false
+            try? modelContext.save()
+        }
+    }
+}
+
+struct DoseDNAEditorContainer: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var profile: UserProfile
+
+    @State private var healthKitImportService = HealthKitImportService()
+    @State private var pendingMetricUpdate: HealthProfileMetricUpdatePlan?
+    @State private var isShowingMetricSyncConfirmation = false
+
+    var body: some View {
+        DoseDNAEditorView(profile: profile)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Task { await prepareToLeave() }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.headline.weight(.semibold))
+                    }
+                    .accessibilityLabel("Back")
+                }
+            }
+            .alert("Update Apple Health?", isPresented: $isShowingMetricSyncConfirmation) {
+                Button("Update Apple Health") {
+                    Task {
+                        await applyPendingMetricUpdate()
+                        pendingMetricUpdate = nil
+                        dismiss()
+                    }
+                }
+                Button("Not Now", role: .cancel) {
+                    pendingMetricUpdate = nil
+                    dismiss()
+                }
+            } message: {
+                Text(pendingMetricUpdate?.confirmationMessage ?? "")
+            }
+            .onChange(of: isShowingMetricSyncConfirmation) { _, isShowing in
+                guard isShowing else { return }
+                BigDoseAlertFeedback.present(kind: .informational)
+            }
+    }
+
+    private func prepareToLeave() async {
+        let plan = await healthKitImportService.profileMetricUpdatePlan(
+            heightCentimeters: profile.heightCentimeters,
+            weightKilograms: profile.weightKilograms
+        )
+
+        if let plan {
+            pendingMetricUpdate = plan
+            isShowingMetricSyncConfirmation = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private func applyPendingMetricUpdate() async {
+        guard let pendingMetricUpdate else { return }
+
+        do {
+            try await healthKitImportService.requestProfileMetricsWriteAuthorization()
+            try await healthKitImportService.applyProfileMetricUpdates(pendingMetricUpdate)
+        } catch {
+            return
+        }
     }
 }
 

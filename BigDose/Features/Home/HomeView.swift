@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var isShowingMoreWeather = false
     @State private var sessionRoute: SessionRoute?
     @State private var undoSupplementDose: SupplementDose?
+    @State private var healthKitImportService = HealthKitImportService()
 
     private var activeProfile: UserProfile {
         profile ?? UserProfile.preview
@@ -58,26 +59,28 @@ struct HomeView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Prime D Window")
-                .font(.system(.largeTitle, weight: .semibold))
-                .foregroundStyle(.white)
-
-            Text(headerSummary)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.68))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.top, 8)
+        HomeHeroHeader(
+            profile: profile ?? activeProfile,
+            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0) },
+            detail: headerDetail
+        )
+        .padding(.top, 4)
     }
 
-    private var headerSummary: String {
-        guard let plan = currentPlan else {
-            return "BigDose needs current location and Apple Weather to calculate today’s strongest sunlight window."
+    private var headerDetail: String {
+        guard let display = currentPlan.flatMap({ vitaminDWindowDisplay(for: $0) }) else {
+            return "BigDose needs your location and Apple Weather to calculate your vitamin D window."
         }
 
-        let strongestTime = DailySunPlanService.displayBestSunlightTime(for: plan)
-        return "Today looks strongest around \(formattedTime(strongestTime)). Short, clean exposure beats chasing a burn."
+        if display.nextOpportunityStart == nil, display.isToday {
+            return "The sun is above \(Int(display.snapshot.thresholdDegrees.rounded()))° right now. Short, clean exposure beats chasing a burn."
+        }
+
+        if let duration = display.snapshot.durationLabel {
+            return "You'll have about \(duration) of useful sunlight \(display.dayLabel.lowercased())."
+        }
+
+        return "Short, clean exposure beats chasing a burn."
     }
 
     @ViewBuilder
@@ -226,53 +229,20 @@ struct HomeView: View {
 
     @ViewBuilder
     private var solarGuidanceCard: some View {
-        if let plan = currentPlan {
+        if let plan = currentPlan, let display = vitaminDWindowDisplay(for: plan) {
             GlassCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Best Sunlight Today")
-                                .font(.title3.weight(.black))
-                                .foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 18) {
+                    solarGuidanceHeader(plan: plan, display: display)
 
-                            Text(plan.locationLabel)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.62))
-                        }
+                    VitaminDSunPathDiagram(display: display)
 
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(formattedTime(bestSunlightTime(for: plan)))
-                                .font(.system(size: 40, weight: .black))
-                                .foregroundStyle(.solarGold)
-                                .minimumScaleFactor(0.72)
-                                .lineLimit(1)
-
-                            Text("\(Int(plan.currentAltitudeDegrees.rounded()))° sun angle")
-                                .font(.caption.weight(.black))
-                                .foregroundStyle(.white.opacity(0.62))
-                        }
+                    HStack(spacing: 12) {
+                        solarPeakChip(plan: plan)
+                        solarStatusChip(plan: plan)
                     }
-
-                    SunArcMeter(
-                        progress: min(max(plan.peakUVIndex / 11, 0), 1),
-                        quality: plan.quality,
-                        title: plan.peakUVIndex.formatted(.number.precision(.fractionLength(1))),
-                        subtitle: "peak UV",
-                        showsQualityBadge: false
-                    )
 
                     StartSunSessionActionButton(isEnabled: homeViewModel.weather != nil, size: .compact) {
                         sessionRoute = .typePicker
-                    }
-
-                    VStack(spacing: 10) {
-                        SolarPlanRow(title: "Sunrise", value: formattedTime(plan.sunrise), systemImage: "sunrise.fill")
-                        SolarPlanRow(title: "Solar Noon", value: formattedTime(plan.solarNoon), systemImage: "sun.max.fill")
-                        SolarPlanRow(title: "Sunset", value: formattedTime(plan.sunset), systemImage: "sunset.fill")
-                        SolarPlanRow(title: "Useful Window", value: formattedRange(start: plan.bestWindowStart, end: plan.bestWindowEnd), systemImage: "sparkles")
-                        SolarPlanRow(title: "Next Useful Sunlight", value: formattedTime(plan.nextUsefulStart), systemImage: "arrow.triangle.2.circlepath")
                     }
 
                     if let weather = homeViewModel.weather {
@@ -287,6 +257,68 @@ struct HomeView: View {
                 systemImage: "sun.max.trianglebadge.exclamationmark.fill"
             )
         }
+    }
+
+    private func solarGuidanceHeader(plan: DailySunPlan, display: VitaminDWindowDisplay) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(display.cardTitle)
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+
+                Text(plan.locationLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(Int(plan.currentAltitudeDegrees.rounded()))°")
+                    .font(.system(size: 34, weight: .black))
+                    .foregroundStyle(.solarGold)
+
+                Text("sun now")
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+        }
+    }
+
+    private func solarPeakChip(plan: DailySunPlan) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Peak UV")
+                .font(.caption2.weight(.black))
+                .foregroundStyle(.white.opacity(0.58))
+                .textCase(.uppercase)
+
+            Text(plan.peakUVIndex.formatted(.number.precision(.fractionLength(1))))
+                .font(.title2.weight(.black))
+                .foregroundStyle(.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 18, style: .continuous))
+    }
+
+    private func solarStatusChip(plan: DailySunPlan) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Window")
+                .font(.caption2.weight(.black))
+                .foregroundStyle(.white.opacity(0.58))
+                .textCase(.uppercase)
+
+            Text(formattedRange(start: plan.vitaminDWindowStart, end: plan.vitaminDWindowEnd))
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 18, style: .continuous))
     }
 
     private var goalCard: some View {
@@ -522,7 +554,10 @@ struct HomeView: View {
             }
 
         case .supplementDose:
-            AddSupplementDoseView(defaultIU: activeProfile.defaultSupplementIU)
+            AddSupplementDoseView(
+                defaultIU: activeProfile.defaultSupplementIU,
+                profile: profile
+            )
 
         case .activeSunSession(let plan):
             ActiveSunSessionView(
@@ -585,6 +620,11 @@ struct HomeView: View {
             existing.sunset = plan.sunset
             existing.bestWindowStart = plan.bestWindowStart
             existing.bestWindowEnd = plan.bestWindowEnd
+            existing.vitaminDWindowStart = plan.vitaminDWindowStart
+            existing.vitaminDWindowEnd = plan.vitaminDWindowEnd
+            existing.vitaminDWindowReferenceDay = plan.vitaminDWindowReferenceDay
+            existing.solarNoonAltitudeDegrees = plan.solarNoonAltitudeDegrees
+            existing.vitaminDThresholdDegrees = plan.vitaminDThresholdDegrees
             existing.nextUsefulStart = plan.nextUsefulStart
             existing.nextUsefulEnd = plan.nextUsefulEnd
             existing.targetIU = plan.targetIU
@@ -609,8 +649,9 @@ struct HomeView: View {
         return "\(formattedTime(start)) - \(formattedTime(end))"
     }
 
-    private func bestSunlightTime(for plan: DailySunPlan) -> Date? {
-        DailySunPlanService.displayBestSunlightTime(for: plan)
+    private func vitaminDWindowDisplay(for plan: DailySunPlan) -> VitaminDWindowDisplay? {
+        guard plan.latitude != 0 || plan.longitude != 0 else { return nil }
+        return DailySunPlanService.vitaminDWindowDisplay(for: plan)
     }
 
     private func logDefaultSupplement() {
@@ -622,12 +663,22 @@ struct HomeView: View {
         modelContext.insert(dose)
         undoSupplementDose = dose
         try? modelContext.save()
+
+        if let profile {
+            Task {
+                await healthKitImportService.syncSupplementDoseToHealth(dose, profile: profile)
+                try? modelContext.save()
+            }
+        }
     }
 
     private func undoSupplementLog(_ dose: SupplementDose) {
-        modelContext.delete(dose)
-        undoSupplementDose = nil
-        try? modelContext.save()
+        Task {
+            await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            modelContext.delete(dose)
+            undoSupplementDose = nil
+            try? modelContext.save()
+        }
     }
 
     private func undoSupplementRow(_ dose: SupplementDose) -> some View {
@@ -723,26 +774,6 @@ private struct HomeUnavailableSheet: View {
                     .padding(.top, 8)
             }
             .padding(24)
-        }
-    }
-}
-
-private struct SolarPlanRow: View {
-    var title: String
-    var value: String
-    var systemImage: String
-
-    var body: some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.78))
-
-            Spacer()
-
-            Text(value)
-                .font(.subheadline.weight(.black))
-                .foregroundStyle(.white)
         }
     }
 }

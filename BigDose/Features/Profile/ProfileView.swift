@@ -76,7 +76,7 @@ private struct ProfileContent: View {
 
     private var profileHero: some View {
         NavigationLink {
-            DoseDNAEditorView(profile: profile)
+            DoseDNAEditorContainer(profile: profile)
         } label: {
             GlassCard {
                 HStack(spacing: 16) {
@@ -118,7 +118,7 @@ private struct ProfileContent: View {
                     Spacer()
 
                     NavigationLink {
-                        DoseDNAEditorView(profile: profile)
+                        DoseDNAEditorContainer(profile: profile)
                     } label: {
                         Text("Edit")
                             .font(.caption.weight(.black))

@@ -21,11 +21,38 @@ struct HealthImportResult: Sendable {
     var skippedCount: Int
 }
 
+struct HealthProfileMetricUpdatePlan: Sendable {
+    var heightCentimeters: Double?
+    var weightKilograms: Double?
+
+    var isEmpty: Bool {
+        heightCentimeters == nil && weightKilograms == nil
+    }
+
+    var confirmationMessage: String {
+        var parts: [String] = []
+
+        if let heightCentimeters {
+            let inches = Int((heightCentimeters / 2.54).rounded())
+            parts.append("height (\(inches / 12)′\(inches % 12)″)")
+        }
+
+        if let weightKilograms {
+            let pounds = Int((weightKilograms * 2.20462).rounded())
+            parts.append("weight (\(pounds) lb)")
+        }
+
+        return "BigDose can update your \(parts.joined(separator: " and ")) in Apple Health."
+    }
+}
+
 struct HealthProfileAutofill: Sendable {
     var dateOfBirth: Date?
     var biologicalSex: BiologicalSex?
     var heightCentimeters: Double?
     var weightKilograms: Double?
+    var skinType: FitzpatrickSkinType?
+    var suggestedDefaultSupplementIU: Int?
 
     var filledFields: [String] {
         var fields: [String] = []
@@ -33,6 +60,8 @@ struct HealthProfileAutofill: Sendable {
         if biologicalSex != nil { fields.append("biological sex") }
         if heightCentimeters != nil { fields.append("height") }
         if weightKilograms != nil { fields.append("weight") }
+        if skinType != nil { fields.append("skin type") }
+        if suggestedDefaultSupplementIU != nil { fields.append("default supplement") }
         return fields
     }
 
@@ -42,6 +71,7 @@ struct HealthProfileAutofill: Sendable {
         if biologicalSex == nil { fields.append("biological sex") }
         if heightCentimeters == nil { fields.append("height") }
         if weightKilograms == nil { fields.append("weight") }
+        if skinType == nil { fields.append("skin type") }
         return fields
     }
 }
@@ -49,6 +79,7 @@ struct HealthProfileAutofill: Sendable {
 enum HealthKitImportError: LocalizedError {
     case unavailable
     case authorizationDenied
+    case supplementTypeUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -56,6 +87,8 @@ enum HealthKitImportError: LocalizedError {
             "Health data is not available on this device."
         case .authorizationDenied:
             "Apple Health permission was not granted."
+        case .supplementTypeUnavailable:
+            "Apple Health does not expose dietary vitamin D on this device."
         }
     }
 }
@@ -69,44 +102,21 @@ final class HealthKitImportService {
     }
 
     func requestAuthorization() async throws {
-        guard isAvailable else { throw HealthKitImportError.unavailable }
-
-        let readTypes: Set<HKObjectType> = [
-            HKObjectType.workoutType()
-        ]
-
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: readTypes) { success, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if success {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
-                }
-            }
-        }
+        try await requestOnboardingAuthorization()
     }
 
     func requestProfileAuthorization() async throws {
+        try await requestOnboardingAuthorization()
+    }
+
+    func requestOnboardingAuthorization() async throws {
         guard isAvailable else { throw HealthKitImportError.unavailable }
 
-        var readTypes = Set<HKObjectType>()
-        if let biologicalSex = HKObjectType.characteristicType(forIdentifier: .biologicalSex) {
-            readTypes.insert(biologicalSex)
-        }
-        if let dateOfBirth = HKObjectType.characteristicType(forIdentifier: .dateOfBirth) {
-            readTypes.insert(dateOfBirth)
-        }
-        if let height = HKObjectType.quantityType(forIdentifier: .height) {
-            readTypes.insert(height)
-        }
-        if let bodyMass = HKObjectType.quantityType(forIdentifier: .bodyMass) {
-            readTypes.insert(bodyMass)
-        }
-
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: readTypes) { success, error in
+            healthStore.requestAuthorization(
+                toShare: Self.onboardingShareTypes,
+                read: Self.onboardingReadTypes
+            ) { success, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else if success {
@@ -119,20 +129,239 @@ final class HealthKitImportService {
     }
 
     func fetchProfileAutofill() async throws -> HealthProfileAutofill {
-        try await requestProfileAuthorization()
+        try await requestOnboardingAuthorization()
 
         let dateOfBirthComponents = try? healthStore.dateOfBirthComponents()
         let dateOfBirth = dateOfBirthComponents.flatMap { Calendar.current.date(from: $0) }
         let biologicalSex = try? healthStore.biologicalSex().biologicalSex.bigDoseSex
+        let skinType = try? healthStore.fitzpatrickSkinType().skinType.bigDoseSkinType
         let height = try await latestQuantity(.height, unit: .meter()).map { $0 * 100 }
         let weight = try await latestQuantity(.bodyMass, unit: .gramUnit(with: .kilo))
+        let suggestedDefaultSupplementIU = try await fetchSuggestedDefaultSupplementIU()
 
         return HealthProfileAutofill(
             dateOfBirth: dateOfBirth,
             biologicalSex: biologicalSex,
             heightCentimeters: height,
-            weightKilograms: weight
+            weightKilograms: weight,
+            skinType: skinType,
+            suggestedDefaultSupplementIU: suggestedDefaultSupplementIU
         )
+    }
+
+    func requestSupplementWriteAuthorization() async throws {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+        guard !Self.supplementShareTypes.isEmpty else { throw HealthKitImportError.supplementTypeUnavailable }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.requestAuthorization(toShare: Self.supplementShareTypes, read: []) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+    }
+
+    func fetchSuggestedDefaultSupplementIU(lookbackDays: Int = 14) async throws -> Int? {
+        guard let type = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) else {
+            return nil
+        }
+
+        let end = Date()
+        let start = Calendar.current.date(byAdding: .day, value: -lookbackDays, to: end) ?? end.addingTimeInterval(-Double(lookbackDays) * 86_400)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        let samples = try await quantitySamples(for: type, predicate: predicate)
+        guard !samples.isEmpty else { return nil }
+
+        var dailyMicrograms: [Date: Double] = [:]
+        let calendar = Calendar.current
+
+        for sample in samples {
+            let day = calendar.startOfDay(for: sample.startDate)
+            let micrograms = sample.quantity.doubleValue(for: Self.vitaminDMicrogramUnit)
+            dailyMicrograms[day, default: 0] += micrograms
+        }
+
+        let dailyInternationalUnits = dailyMicrograms.values
+            .map { Self.internationalUnits(fromMicrograms: $0) }
+            .filter { $0 > 0 }
+            .sorted()
+
+        guard !dailyInternationalUnits.isEmpty else { return nil }
+
+        let median = dailyInternationalUnits[dailyInternationalUnits.count / 2]
+        return Self.roundedSupplementIU(median)
+    }
+
+    func saveSupplementDose(internationalUnits: Int, takenAt: Date) async throws -> UUID {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+        guard let type = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) else {
+            throw HealthKitImportError.supplementTypeUnavailable
+        }
+
+        let micrograms = Self.micrograms(fromInternationalUnits: internationalUnits)
+        let quantity = HKQuantity(unit: Self.vitaminDMicrogramUnit, doubleValue: micrograms)
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: quantity,
+            start: takenAt,
+            end: takenAt,
+            metadata: [
+                "BigDoseSource": "supplement-log"
+            ]
+        )
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.save(sample) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+
+        return sample.uuid
+    }
+
+    func deleteSupplementDose(externalIdentifier: String) async throws {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+        guard let sampleUUID = UUID(uuidString: externalIdentifier),
+              let type = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) else {
+            return
+        }
+
+        let predicate = HKQuery.predicateForObject(with: sampleUUID)
+        let samples = try await quantitySamples(for: type, predicate: predicate)
+        guard !samples.isEmpty else { return }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.delete(samples) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+    }
+
+    func requestProfileMetricsReadAuthorization() async throws {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+        guard !Self.profileMetricReadTypes.isEmpty else { throw HealthKitImportError.unavailable }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.requestAuthorization(toShare: [], read: Self.profileMetricReadTypes) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+    }
+
+    func requestProfileMetricsWriteAuthorization() async throws {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+        guard !Self.profileMetricShareTypes.isEmpty else { throw HealthKitImportError.unavailable }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.requestAuthorization(toShare: Self.profileMetricShareTypes, read: []) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+    }
+
+    func profileMetricUpdatePlan(
+        heightCentimeters: Double?,
+        weightKilograms: Double?
+    ) async -> HealthProfileMetricUpdatePlan? {
+        guard isAvailable else { return nil }
+
+        do {
+            try await requestProfileMetricsReadAuthorization()
+
+            var plan = HealthProfileMetricUpdatePlan()
+
+            if let heightCentimeters {
+                let healthKitHeight = try await latestQuantity(.height, unit: .meter()).map { $0 * 100 }
+                if Self.shouldUpdateHealthKit(
+                    stored: healthKitHeight,
+                    newValue: heightCentimeters,
+                    tolerance: Self.heightToleranceCentimeters
+                ) {
+                    plan.heightCentimeters = heightCentimeters
+                }
+            }
+
+            if let weightKilograms {
+                let healthKitWeight = try await latestQuantity(.bodyMass, unit: .gramUnit(with: .kilo))
+                if Self.shouldUpdateHealthKit(
+                    stored: healthKitWeight,
+                    newValue: weightKilograms,
+                    tolerance: Self.weightToleranceKilograms
+                ) {
+                    plan.weightKilograms = weightKilograms
+                }
+            }
+
+            return plan.isEmpty ? nil : plan
+        } catch {
+            return nil
+        }
+    }
+
+    func applyProfileMetricUpdates(_ plan: HealthProfileMetricUpdatePlan) async throws {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+
+        if let heightCentimeters = plan.heightCentimeters {
+            try await saveHeight(centimeters: heightCentimeters)
+        }
+
+        if let weightKilograms = plan.weightKilograms {
+            try await saveWeight(kilograms: weightKilograms)
+        }
+    }
+
+    func syncSupplementDoseToHealth(_ dose: SupplementDose, profile: UserProfile) async {
+        guard profile.wantsHealthKitSupplementExport else { return }
+
+        do {
+            let sampleID = try await saveSupplementDose(
+                internationalUnits: dose.internationalUnits,
+                takenAt: dose.takenAt
+            )
+            dose.externalIdentifier = sampleID.uuidString
+        } catch {
+            return
+        }
+    }
+
+    func removeSupplementDoseFromHealth(_ dose: SupplementDose) async {
+        guard let externalIdentifier = dose.externalIdentifier else { return }
+
+        do {
+            try await deleteSupplementDose(externalIdentifier: externalIdentifier)
+            dose.externalIdentifier = nil
+        } catch {
+            return
+        }
     }
 
     func fetchWorkoutCandidates(days: Int = 90, existingIDs: Set<String> = []) async throws -> [HealthWorkoutImportCandidate] {
@@ -289,6 +518,163 @@ final class HealthKitImportService {
         )
     }
 
+    nonisolated static var onboardingReadTypes: Set<HKObjectType> {
+        var readTypes = Set<HKObjectType>()
+        readTypes.insert(HKObjectType.workoutType())
+
+        if let biologicalSex = HKObjectType.characteristicType(forIdentifier: .biologicalSex) {
+            readTypes.insert(biologicalSex)
+        }
+        if let dateOfBirth = HKObjectType.characteristicType(forIdentifier: .dateOfBirth) {
+            readTypes.insert(dateOfBirth)
+        }
+        if let fitzpatrickSkinType = HKObjectType.characteristicType(forIdentifier: .fitzpatrickSkinType) {
+            readTypes.insert(fitzpatrickSkinType)
+        }
+        if let height = HKObjectType.quantityType(forIdentifier: .height) {
+            readTypes.insert(height)
+        }
+        if let bodyMass = HKObjectType.quantityType(forIdentifier: .bodyMass) {
+            readTypes.insert(bodyMass)
+        }
+        if let dietaryVitaminD = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) {
+            readTypes.insert(dietaryVitaminD)
+        }
+
+        return readTypes
+    }
+
+    nonisolated static var onboardingShareTypes: Set<HKSampleType> {
+        profileMetricShareTypes
+    }
+
+    nonisolated static var profileMetricReadTypes: Set<HKObjectType> {
+        var types = Set<HKObjectType>()
+
+        if let height = HKObjectType.quantityType(forIdentifier: .height) {
+            types.insert(height)
+        }
+        if let bodyMass = HKObjectType.quantityType(forIdentifier: .bodyMass) {
+            types.insert(bodyMass)
+        }
+
+        return types
+    }
+
+    nonisolated static var profileMetricShareTypes: Set<HKSampleType> {
+        var types = Set<HKSampleType>()
+
+        if let height = HKObjectType.quantityType(forIdentifier: .height) {
+            types.insert(height)
+        }
+        if let bodyMass = HKObjectType.quantityType(forIdentifier: .bodyMass) {
+            types.insert(bodyMass)
+        }
+
+        return types
+    }
+
+    nonisolated static let heightToleranceCentimeters = 0.5
+    nonisolated static let weightToleranceKilograms = 0.1
+
+    nonisolated static var supplementShareTypes: Set<HKSampleType> {
+        guard let dietaryVitaminD = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) else {
+            return []
+        }
+
+        return [dietaryVitaminD]
+    }
+
+    nonisolated static let vitaminDMicrogramUnit = HKUnit.gramUnit(with: .micro)
+
+    nonisolated static func internationalUnits(fromMicrograms micrograms: Double) -> Int {
+        Int((micrograms * 40).rounded())
+    }
+
+    nonisolated static func micrograms(fromInternationalUnits internationalUnits: Int) -> Double {
+        Double(internationalUnits) / 40.0
+    }
+
+    nonisolated static func roundedSupplementIU(_ internationalUnits: Int) -> Int {
+        max(100, Int((Double(internationalUnits) / 100).rounded()) * 100)
+    }
+
+    private func quantitySamples(for type: HKQuantityType, predicate: NSPredicate?) async throws -> [HKQuantitySample] {
+        try await withCheckedThrowingContinuation { continuation in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                continuation.resume(returning: samples as? [HKQuantitySample] ?? [])
+            }
+
+            healthStore.execute(query)
+        }
+    }
+
+    private func saveHeight(centimeters: Double) async throws {
+        guard let type = HKObjectType.quantityType(forIdentifier: .height) else { return }
+
+        let quantity = HKQuantity(unit: .meter(), doubleValue: centimeters / 100)
+        let now = Date()
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: quantity,
+            start: now,
+            end: now,
+            metadata: [
+                "BigDoseSource": "profile-sync"
+            ]
+        )
+
+        try await saveQuantitySample(sample)
+    }
+
+    private func saveWeight(kilograms: Double) async throws {
+        guard let type = HKObjectType.quantityType(forIdentifier: .bodyMass) else { return }
+
+        let quantity = HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: kilograms)
+        let now = Date()
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: quantity,
+            start: now,
+            end: now,
+            metadata: [
+                "BigDoseSource": "profile-sync"
+            ]
+        )
+
+        try await saveQuantitySample(sample)
+    }
+
+    private func saveQuantitySample(_ sample: HKQuantitySample) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.save(sample) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitImportError.authorizationDenied)
+                }
+            }
+        }
+    }
+
+    nonisolated static func shouldUpdateHealthKit(stored: Double?, newValue: Double, tolerance: Double) -> Bool {
+        guard let stored else { return true }
+        return abs(stored - newValue) > tolerance
+    }
+
     private func latestQuantity(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit) async throws -> Double? {
         guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
             return nil
@@ -323,6 +709,27 @@ private extension HKBiologicalSex {
             .male
         case .female:
             .female
+        default:
+            nil
+        }
+    }
+}
+
+private extension HKFitzpatrickSkinType {
+    nonisolated var bigDoseSkinType: FitzpatrickSkinType? {
+        switch self {
+        case .I:
+            .typeI
+        case .II:
+            .typeII
+        case .III:
+            .typeIII
+        case .IV:
+            .typeIV
+        case .V:
+            .typeV
+        case .VI:
+            .typeVI
         default:
             nil
         }

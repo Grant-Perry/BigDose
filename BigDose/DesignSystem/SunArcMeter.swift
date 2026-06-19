@@ -18,19 +18,37 @@ struct SunArcMeter: View {
     var body: some View {
         VStack(spacing: 18) {
             ZStack {
-                ArcShape(startAngle: .degrees(200), endAngle: .degrees(340))
-                    .stroke(Color.gpDark1.opacity(0.72), style: StrokeStyle(lineWidth: 22, lineCap: .round))
+                ArcGaugeRing(
+                    startAngle: .degrees(200),
+                    endAngle: .degrees(340),
+                    fill: AnyShapeStyle(
+                        LinearGradient(
+                            colors: [
+                                Color.gpDark1.opacity(0.82),
+                                Color.gpDark1.opacity(0.66),
+                                Color.black.opacity(0.84)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    ),
+                    innerShadowIntensity: 1
+                )
 
-                ArcShape(startAngle: .degrees(200), endAngle: .degrees(200 + 140 * animatedProgress))
-                    .stroke(
+                ArcGaugeRing(
+                    startAngle: .degrees(200),
+                    endAngle: .degrees(200 + 140 * animatedProgress),
+                    fill: AnyShapeStyle(
                         LinearGradient(
                             colors: [Color.gpHiOrange, Color.gpGatePill],
                             startPoint: .leading,
                             endPoint: .trailing
-                        ),
-                        style: StrokeStyle(lineWidth: 22, lineCap: .round)
-                    )
-                    .shadow(color: Color.gpHiOrange.opacity(glow ? 0.75 : 0.35), radius: glow ? 20 : 10)
+                        )
+                    ),
+                    innerShadowIntensity: 0.82,
+                    outerGlowColor: Color.gpHiOrange.opacity(glow ? 0.75 : 0.35),
+                    outerGlowRadius: glow ? 20 : 10
+                )
 
                 ArcOrbitingSun(progress: animatedProgress) {
                     sun
@@ -109,6 +127,93 @@ struct SunArcMeter: View {
         }
     }
 
+}
+
+private struct ArcGaugeRing: View {
+    var startAngle: Angle
+    var endAngle: Angle
+    var lineWidth: CGFloat = 22
+    var fill: AnyShapeStyle
+    var innerShadowIntensity: Double = 1
+    var outerGlowColor: Color?
+    var outerGlowRadius: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            ArcRingSegmentShape(startAngle: startAngle, endAngle: endAngle, lineWidth: lineWidth)
+                .fill(fill)
+
+            ArcRingSegmentShape(startAngle: startAngle, endAngle: endAngle, lineWidth: lineWidth)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .clear,
+                            .black.opacity(0.18 * innerShadowIntensity),
+                            .black.opacity(0.58 * innerShadowIntensity)
+                        ],
+                        center: UnitPoint(x: 0.5, y: 0.94),
+                        startRadius: 8,
+                        endRadius: 118
+                    )
+                )
+                .blendMode(.multiply)
+
+            ArcShape(startAngle: startAngle, endAngle: endAngle)
+                .stroke(
+                    .black.opacity(0.62 * innerShadowIntensity),
+                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                )
+                .blur(radius: 7)
+                .mask {
+                    ArcRingSegmentShape(startAngle: startAngle, endAngle: endAngle, lineWidth: lineWidth)
+                        .fill(.black)
+                }
+
+            ArcShape(startAngle: startAngle, endAngle: endAngle)
+                .stroke(
+                    .black.opacity(0.34 * innerShadowIntensity),
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                )
+                .blur(radius: 2.5)
+                .offset(y: 1.5)
+                .mask {
+                    ArcRingSegmentShape(startAngle: startAngle, endAngle: endAngle, lineWidth: lineWidth)
+                        .fill(.black)
+                }
+        }
+        .shadow(color: outerGlowColor ?? .clear, radius: outerGlowRadius)
+    }
+}
+
+private struct ArcRingSegmentShape: Shape {
+    var startAngle: Angle
+    var endAngle: Angle
+    var lineWidth: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let center = ArcMeterGeometry.center(in: rect)
+        let radius = ArcMeterGeometry.radius(in: rect)
+        let outerRadius = radius + lineWidth / 2
+        let innerRadius = max(radius - lineWidth / 2, 0)
+
+        var path = Path()
+        path.addArc(
+            center: center,
+            radius: outerRadius,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            clockwise: false
+        )
+        path.addArc(
+            center: center,
+            radius: innerRadius,
+            startAngle: endAngle,
+            endAngle: startAngle,
+            clockwise: true
+        )
+        path.closeSubpath()
+        return path
+    }
 }
 
 private struct ArcShape: Shape {

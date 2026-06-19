@@ -29,14 +29,24 @@ struct OnboardingView: View {
     @State private var wantsWeeklyProgressAlerts = true
     @State private var selectedSkinType: FitzpatrickSkinType = .typeII
     @State private var acceptedDisclaimer = false
+    @State private var wantsHealthKitSupplementExport = false
+    @State private var didPrefillSupplementFromHealth = false
     @State private var page = 0
-    @State private var isAutofillingFromHealth = false
+    @State private var isSyncingHealth = false
     @State private var healthAutofillMessage: String?
     @State private var healthAutofillTitle = "Apple Health Autofill"
     @State private var isShowingHealthAutofillResult = false
+    @State private var pendingMetricUpdate: HealthProfileMetricUpdatePlan?
+    @State private var isShowingMetricSyncConfirmation = false
+    @State private var isFinishingOnboarding = false
+    @State private var isCheckingMetricSync = false
+    @State private var metricSyncNextAction: MetricSyncNextAction?
     @State private var healthKitImportService = HealthKitImportService()
 
-    private let lastPage = 9
+    private let healthPage = 2
+    private let bodyPageIndex = 4
+    private let levelPageIndex = 5
+    private let lastPage = 10
 
     var body: some View {
         ZStack {
@@ -60,35 +70,50 @@ struct OnboardingView: View {
                     )
                     .tag(1)
 
-                    basicsPage
-                        .tag(2)
+                    OnboardingAppleHealthPage(
+                        isSyncing: isSyncingHealth,
+                        onSync: {
+                            Task { await syncHealthData() }
+                        },
+                        onSkip: {
+                            withAnimation(.smooth) {
+                                page = healthPage + 1
+                            }
+                        }
+                    )
+                    .tag(2)
 
-                    bodyPage
+                    basicsPage
                         .tag(3)
 
-                    levelPage
+                    bodyPage
                         .tag(4)
 
-                    supplementPage
+                    levelPage
                         .tag(5)
 
-                    skinTypePage
+                    supplementPage
                         .tag(6)
 
-                    exposurePage
+                    skinTypePage
                         .tag(7)
 
-                    alertsPage
+                    exposurePage
                         .tag(8)
 
-                    firstResultPage
+                    alertsPage
                         .tag(9)
+
+                    firstResultPage
+                        .tag(10)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
 
-                primaryButton
-                    .padding(.horizontal, 22)
-                    .padding(.bottom, 18)
+                if page != healthPage {
+                    primaryButton
+                        .padding(.horizontal, 22)
+                        .padding(.bottom, 18)
+                }
             }
         }
         .scrollDismissesKeyboard(.interactively)
@@ -117,13 +142,37 @@ struct OnboardingView: View {
             wantsWeeklyProgressAlerts = profile?.wantsWeeklyProgressAlerts ?? true
             selectedSkinType = profile?.skinType ?? .typeII
             acceptedDisclaimer = profile?.hasAcceptedWellnessDisclaimer ?? false
+            wantsHealthKitSupplementExport = profile?.wantsHealthKitSupplementExport ?? false
         }
         .alert(healthAutofillTitle, isPresented: $isShowingHealthAutofillResult) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {
+                if page == healthPage {
+                    withAnimation(.smooth) {
+                        page = healthPage + 1
+                    }
+                }
+            }
         } message: {
             Text(healthAutofillMessage ?? "")
         }
         .onChange(of: isShowingHealthAutofillResult) { _, isShowing in
+            guard isShowing else { return }
+            BigDoseAlertFeedback.present(kind: .informational)
+        }
+        .alert("Update Apple Health?", isPresented: $isShowingMetricSyncConfirmation) {
+            Button("Update Apple Health") {
+                Task {
+                    await applyPendingMetricUpdate()
+                    completeMetricSyncNextAction()
+                }
+            }
+            Button("Not Now", role: .cancel) {
+                completeMetricSyncNextAction()
+            }
+        } message: {
+            Text(pendingMetricUpdate?.confirmationMessage ?? "")
+        }
+        .onChange(of: isShowingMetricSyncConfirmation) { _, isShowing in
             guard isShowing else { return }
             BigDoseAlertFeedback.present(kind: .informational)
         }
@@ -160,26 +209,6 @@ struct OnboardingView: View {
                         }
                         .pickerStyle(.segmented)
                     }
-                }
-
-                Button {
-                    Task {
-                        await autofillFromHealth()
-                    }
-                } label: {
-                    Label(isAutofillingFromHealth ? "Checking Apple Health" : "Autofill from Apple Health", systemImage: "heart.fill")
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                }
-                .buttonStyle(.bordered)
-                .tint(.solarGold)
-                .disabled(isAutofillingFromHealth)
-
-                if let healthAutofillMessage {
-                    Text(healthAutofillMessage)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.68))
                 }
 
                 Text("Age and biological sex can affect vitamin D metabolism. We keep this local in SwiftData.")
@@ -298,51 +327,7 @@ struct OnboardingView: View {
 
                 VStack(spacing: 10) {
                     ForEach(VitaminDLevelKnowledge.allCases) { option in
-                        Button {
-                            withAnimation(.smooth) {
-                                levelKnowledge = option
-                            }
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: levelKnowledge == option ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(levelKnowledge == option ? .solarGold : .white.opacity(0.42))
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(option.title)
-                                        .font(.headline.weight(.semibold))
-                                    Text(option.detail)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.white.opacity(0.62))
-                                }
-
-                                Spacer()
-                            }
-                            .foregroundStyle(.white)
-                            .padding(14)
-                            .bigDoseGlass(cornerRadius: 20)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if levelKnowledge == .knowsRecentResult {
-                    GlassCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            OnboardingTextField(
-                                title: "25(OH)D Result",
-                                text: $baselineNanogramsText,
-                                placeholder: "ng/mL",
-                                keyboardType: .decimalPad,
-                                focusedField: $focusedField,
-                                field: .baselineLevel
-                            )
-
-                            DatePicker("Measured", selection: $baselineMeasuredAt, displayedComponents: .date)
-                                .font(.headline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .tint(.solarGold)
-                        }
+                        levelOptionCard(option)
                     }
                 }
 
@@ -351,7 +336,72 @@ struct OnboardingView: View {
                     .foregroundStyle(.white.opacity(0.62))
             }
             .padding(22)
+            .padding(.bottom, 28)
         }
+    }
+
+    private func levelOptionCard(_ option: VitaminDLevelKnowledge) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.smooth) {
+                    levelKnowledge = option
+                    if option == .knowsRecentResult {
+                        focusedField = .baselineLevel
+                    } else {
+                        focusedField = nil
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: levelKnowledge == option ? "checkmark.circle.fill" : "circle")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(levelKnowledge == option ? .solarGold : .white.opacity(0.42))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(option.title)
+                            .font(.headline.weight(.semibold))
+                        Text(option.detail)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
+                    Spacer()
+                }
+                .foregroundStyle(.white)
+                .padding(14)
+            }
+            .buttonStyle(.plain)
+
+            if option == .knowsRecentResult, levelKnowledge == .knowsRecentResult {
+                VStack(alignment: .leading, spacing: 16) {
+                    Divider()
+                        .overlay(.white.opacity(0.12))
+
+                    OnboardingTextField(
+                        title: "25(OH)D Result",
+                        text: $baselineNanogramsText,
+                        placeholder: "e.g. 42",
+                        keyboardType: .decimalPad,
+                        focusedField: $focusedField,
+                        field: .baselineLevel
+                    )
+
+                    DatePicker("Measured", selection: $baselineMeasuredAt, displayedComponents: .date)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+
+                    Text("This is the number from your lab report, usually labeled 25(OH)D or vitamin D, measured in ng/mL.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .bigDoseGlass(cornerRadius: 20)
     }
 
     private var supplementPage: some View {
@@ -378,7 +428,22 @@ struct OnboardingView: View {
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(.white)
                             .tint(.solarGold)
+
+                        Toggle("Save supplements to Apple Health", isOn: $wantsHealthKitSupplementExport)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .tint(.solarGold)
+                            .onChange(of: wantsHealthKitSupplementExport) { _, isEnabled in
+                                guard isEnabled else { return }
+                                Task { await requestSupplementWriteAccess() }
+                            }
                     }
+                }
+
+                if didPrefillSupplementFromHealth {
+                    Text("Default supplement was prefilled from recent vitamin D entries in Apple Health. Review before continuing.")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.solarGold)
                 }
 
                 Text("You can log one-off doses or use this value for a quick daily entry from Home.")
@@ -518,13 +583,34 @@ struct OnboardingView: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(.solarOrange)
-        .disabled(page == lastPage && !acceptedDisclaimer)
+        .disabled(isPrimaryButtonDisabled)
+    }
+
+    private var isPrimaryButtonDisabled: Bool {
+        if isFinishingOnboarding || isCheckingMetricSync {
+            return true
+        }
+
+        if page == lastPage, !acceptedDisclaimer {
+            return true
+        }
+
+        if page == levelPageIndex, levelKnowledge == .knowsRecentResult {
+            return baselineNanogramsPerMilliliter == nil
+        }
+
+        return false
     }
 
     private func advance() {
         focusedField = nil
 
         if page == lastPage && !acceptedDisclaimer {
+            return
+        }
+
+        if page == bodyPageIndex {
+            offerMetricSyncBeforeContinuing(nextAction: .advancePage)
             return
         }
 
@@ -555,6 +641,7 @@ struct OnboardingView: View {
         activeProfile.wantsSupplementReminders = wantsSupplementReminders
         activeProfile.wantsLabReminders = wantsLabReminders
         activeProfile.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
+        activeProfile.wantsHealthKitSupplementExport = wantsHealthKitSupplementExport
         activeProfile.skinType = selectedSkinType
         activeProfile.hasAcceptedWellnessDisclaimer = acceptedDisclaimer
         activeProfile.isOnboardingComplete = true
@@ -566,13 +653,72 @@ struct OnboardingView: View {
 
         saveBaselineLabIfNeeded()
         try? modelContext.save()
+
+        isFinishingOnboarding = true
+        offerMetricSyncBeforeContinuing(nextAction: .finishOnboarding(activeProfile))
+    }
+
+    private func offerMetricSyncBeforeContinuing(nextAction: MetricSyncNextAction) {
+        isCheckingMetricSync = true
+        metricSyncNextAction = nextAction
+
+        let plannedHeightCentimeters = heightCentimeters
+        let plannedWeightKilograms = weightKilograms
+
+        Task { @MainActor in
+            let plan = await healthKitImportService.profileMetricUpdatePlan(
+                heightCentimeters: plannedHeightCentimeters,
+                weightKilograms: plannedWeightKilograms
+            )
+
+            isCheckingMetricSync = false
+
+            if let plan {
+                pendingMetricUpdate = plan
+                isShowingMetricSyncConfirmation = true
+            } else {
+                completeMetricSyncNextAction()
+            }
+        }
+    }
+
+    private func completeMetricSyncNextAction() {
+        guard let metricSyncNextAction else { return }
+
+        switch metricSyncNextAction {
+        case .advancePage:
+            withAnimation(.smooth) {
+                page += 1
+            }
+        case .finishOnboarding(let profile):
+            finishOnboarding(profile: profile)
+        }
+
+        pendingMetricUpdate = nil
+        self.metricSyncNextAction = nil
+    }
+
+    private func finishOnboarding(profile: UserProfile) {
+        isFinishingOnboarding = false
+
         Task {
             await BigDoseNotificationCoordinator.refreshManagedAlerts(
-                profile: activeProfile,
+                profile: profile,
                 modelContext: modelContext
             )
         }
         dismiss()
+    }
+
+    private func applyPendingMetricUpdate() async {
+        guard let pendingMetricUpdate else { return }
+
+        do {
+            try await healthKitImportService.requestProfileMetricsWriteAuthorization()
+            try await healthKitImportService.applyProfileMetricUpdates(pendingMetricUpdate)
+        } catch {
+            return
+        }
     }
 
     private var heightCentimeters: Double? {
@@ -591,32 +737,31 @@ struct OnboardingView: View {
         return pounds / 2.20462
     }
 
-    private func autofillFromHealth() async {
-        isAutofillingFromHealth = true
-        defer { isAutofillingFromHealth = false }
+    private func syncHealthData() async {
+        isSyncingHealth = true
+        defer { isSyncingHealth = false }
 
         do {
             let autofill = try await healthKitImportService.fetchProfileAutofill()
             apply(autofill)
+            profile?.healthKitImportStatus = .authorized
 
             if autofill.filledFields.isEmpty {
-                healthAutofillTitle = "Nothing to Autofill"
-                healthAutofillMessage = "Apple Health did not return profile fields for BigDose to fill. You can keep entering them manually."
+                healthAutofillTitle = "Apple Health Connected"
+                healthAutofillMessage = "Permission was granted, but Apple Health did not share profile fields yet. You can enter them manually on the next screens."
             } else {
-                healthAutofillTitle = "Autofill Complete"
-                var message = "Filled \(autofill.filledFields.joined(separator: ", ")) from Apple Health. Review before continuing."
+                healthAutofillTitle = "Apple Health Connected"
+                var message = "Filled \(autofill.filledFields.joined(separator: ", ")) from Apple Health."
                 if !autofill.missingFields.isEmpty {
                     message += "\n\nNot found or not shared: \(autofill.missingFields.joined(separator: ", "))."
                 }
-                if autofill.heightCentimeters != nil || autofill.weightKilograms != nil {
-                    message += "\n\nContinue to Body Context to review height and weight."
-                }
                 healthAutofillMessage = message
             }
+
             isShowingHealthAutofillResult = true
         } catch {
             healthAutofillTitle = "Apple Health Unavailable"
-            healthAutofillMessage = "Apple Health autofill was not available: \(error.localizedDescription)"
+            healthAutofillMessage = "Apple Health sync was not available: \(error.localizedDescription)"
             isShowingHealthAutofillResult = true
         }
     }
@@ -638,6 +783,26 @@ struct OnboardingView: View {
 
         if let weightKilograms = autofill.weightKilograms {
             weightPoundsText = String(Int((weightKilograms * 2.20462).rounded()))
+        }
+
+        if let skinType = autofill.skinType {
+            selectedSkinType = skinType
+        }
+
+        if let suggestedDefaultSupplementIU = autofill.suggestedDefaultSupplementIU {
+            defaultSupplementIUText = String(suggestedDefaultSupplementIU)
+            didPrefillSupplementFromHealth = true
+        }
+    }
+
+    private func requestSupplementWriteAccess() async {
+        do {
+            try await healthKitImportService.requestSupplementWriteAuthorization()
+        } catch {
+            wantsHealthKitSupplementExport = false
+            healthAutofillTitle = "Apple Health Write Unavailable"
+            healthAutofillMessage = "BigDose could not get permission to save supplements to Apple Health: \(error.localizedDescription)"
+            isShowingHealthAutofillResult = true
         }
     }
 
@@ -756,6 +921,11 @@ private struct OnboardingTextField: View {
                 .background(.white.opacity(0.08), in: .rect(cornerRadius: 16))
         }
     }
+}
+
+private enum MetricSyncNextAction {
+    case advancePage
+    case finishOnboarding(UserProfile)
 }
 
 private enum OnboardingField: Hashable {

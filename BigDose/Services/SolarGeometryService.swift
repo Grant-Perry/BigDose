@@ -54,6 +54,72 @@ enum SolarGeometryService {
         return SolarPosition(date: date, altitudeDegrees: altitude, azimuthDegrees: azimuth)
     }
 
+    static func vitaminDWindow(
+        latitude: Double,
+        longitude: Double,
+        date: Date,
+        altitudeThreshold: Double = SolarPosition.vitaminDSynthesisAltitudeDegrees,
+        timeZone: TimeZone = .current
+    ) -> VitaminDWindowSnapshot {
+        let solarDay = solarDay(latitude: latitude, longitude: longitude, date: date, timeZone: timeZone)
+        let crossings = timesAtAltitude(
+            latitude: latitude,
+            longitude: longitude,
+            date: date,
+            altitudeDegrees: altitudeThreshold,
+            timeZone: timeZone
+        )
+        let noonPosition = solarPosition(
+            latitude: latitude,
+            longitude: longitude,
+            date: solarDay.solarNoon,
+            timeZone: timeZone
+        )
+
+        return VitaminDWindowSnapshot(
+            referenceDay: Calendar.current.startOfDay(for: date),
+            sunrise: solarDay.sunrise,
+            sunset: solarDay.sunset,
+            solarNoon: solarDay.solarNoon,
+            solarNoonAltitudeDegrees: noonPosition.altitudeDegrees,
+            windowStart: crossings.morning,
+            windowEnd: crossings.evening,
+            thresholdDegrees: altitudeThreshold
+        )
+    }
+
+    static func timesAtAltitude(
+        latitude: Double,
+        longitude: Double,
+        date: Date,
+        altitudeDegrees: Double,
+        timeZone: TimeZone = .current
+    ) -> (morning: Date?, evening: Date?) {
+        let calendar = calendar(timeZone: timeZone)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let gamma = fractionalYear(dayOfYear: dayOfYear, hour: 12)
+        let equation = equationOfTime(gamma)
+        let declination = solarDeclination(gamma)
+        let latitudeRadians = degreesToRadians(latitude)
+        let zenith = degreesToRadians(90 - altitudeDegrees)
+
+        let hourAngleCosine = (cos(zenith) / (cos(latitudeRadians) * cos(declination))) - tan(latitudeRadians) * tan(declination)
+        guard hourAngleCosine >= -1, hourAngleCosine <= 1 else {
+            return (nil, nil)
+        }
+
+        let hourAngle = radiansToDegrees(acos(hourAngleCosine))
+        let timezoneHours = Double(timeZone.secondsFromGMT(for: date)) / 3_600
+        let solarNoonMinutes = 720 - 4 * longitude - equation + timezoneHours * 60
+        let morningMinutes = solarNoonMinutes - hourAngle * 4
+        let eveningMinutes = solarNoonMinutes + hourAngle * 4
+
+        return (
+            dateByAdding(minutes: morningMinutes, toStartOfDayFor: date, timeZone: timeZone),
+            dateByAdding(minutes: eveningMinutes, toStartOfDayFor: date, timeZone: timeZone)
+        )
+    }
+
     static func solarNoon(
         latitude _: Double,
         longitude: Double,

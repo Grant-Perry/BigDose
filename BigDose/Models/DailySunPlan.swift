@@ -15,6 +15,11 @@ final class DailySunPlan {
     var sunset: Date?
     var bestWindowStart: Date?
     var bestWindowEnd: Date?
+    var vitaminDWindowStart: Date?
+    var vitaminDWindowEnd: Date?
+    var vitaminDWindowReferenceDay: Date?
+    var solarNoonAltitudeDegrees: Double = 0
+    var vitaminDThresholdDegrees: Double = SolarPosition.vitaminDSynthesisAltitudeDegrees
     var nextUsefulStart: Date?
     var nextUsefulEnd: Date?
     var targetIU: Int = 1_000
@@ -35,6 +40,11 @@ final class DailySunPlan {
         sunset: Date? = nil,
         bestWindowStart: Date? = nil,
         bestWindowEnd: Date? = nil,
+        vitaminDWindowStart: Date? = nil,
+        vitaminDWindowEnd: Date? = nil,
+        vitaminDWindowReferenceDay: Date? = nil,
+        solarNoonAltitudeDegrees: Double = 0,
+        vitaminDThresholdDegrees: Double = SolarPosition.vitaminDSynthesisAltitudeDegrees,
         nextUsefulStart: Date? = nil,
         nextUsefulEnd: Date? = nil,
         targetIU: Int = 1_000,
@@ -54,6 +64,11 @@ final class DailySunPlan {
         self.sunset = sunset
         self.bestWindowStart = bestWindowStart
         self.bestWindowEnd = bestWindowEnd
+        self.vitaminDWindowStart = vitaminDWindowStart
+        self.vitaminDWindowEnd = vitaminDWindowEnd
+        self.vitaminDWindowReferenceDay = vitaminDWindowReferenceDay
+        self.solarNoonAltitudeDegrees = solarNoonAltitudeDegrees
+        self.vitaminDThresholdDegrees = vitaminDThresholdDegrees
         self.nextUsefulStart = nextUsefulStart
         self.nextUsefulEnd = nextUsefulEnd
         self.targetIU = targetIU

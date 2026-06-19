@@ -5,6 +5,7 @@ struct SupplementLogView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SupplementDose.takenAt, order: .reverse) private var doses: [SupplementDose]
     @State private var isAddingDose = false
+    @State private var healthKitImportService = HealthKitImportService()
     var profile: UserProfile?
 
     var body: some View {
@@ -44,7 +45,10 @@ struct SupplementLogView: View {
             }
         }
         .sheet(isPresented: $isAddingDose) {
-            AddSupplementDoseView(defaultIU: profile?.defaultSupplementIU ?? 1_000)
+            AddSupplementDoseView(
+                defaultIU: profile?.defaultSupplementIU ?? 1_000,
+                profile: profile
+            )
         }
     }
 
@@ -93,8 +97,11 @@ struct SupplementLogView: View {
         }
         .contextMenu {
             Button("Delete", role: .destructive) {
-                modelContext.delete(dose)
-                try? modelContext.save()
+                Task {
+                    await healthKitImportService.removeSupplementDoseFromHealth(dose)
+                    modelContext.delete(dose)
+                    try? modelContext.save()
+                }
             }
         }
     }
@@ -106,9 +113,12 @@ struct AddSupplementDoseView: View {
     @State private var takenAt = Date()
     @State private var iuText: String
     @State private var note = ""
+    @State private var healthKitImportService = HealthKitImportService()
+    var profile: UserProfile?
 
-    init(defaultIU: Int = 1_000) {
+    init(defaultIU: Int = 1_000, profile: UserProfile? = nil) {
         _iuText = State(initialValue: String(defaultIU))
+        self.profile = profile
     }
 
     var body: some View {
@@ -134,8 +144,17 @@ struct AddSupplementDoseView: View {
 
     private func save() {
         guard let iu = Int(iuText) else { return }
-        modelContext.insert(SupplementDose(takenAt: takenAt, internationalUnits: iu, note: note))
+        let dose = SupplementDose(takenAt: takenAt, internationalUnits: iu, note: note)
+        modelContext.insert(dose)
         try? modelContext.save()
+
+        if let profile {
+            Task {
+                await healthKitImportService.syncSupplementDoseToHealth(dose, profile: profile)
+                try? modelContext.save()
+            }
+        }
+
         dismiss()
     }
 }

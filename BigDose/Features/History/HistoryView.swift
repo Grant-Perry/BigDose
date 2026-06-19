@@ -218,27 +218,33 @@ struct HistoryView: View {
 
     private func importRow(_ batch: HealthImportBatch) -> some View {
         GlassCard(cornerRadius: 24) {
-            HStack {
-                Image(systemName: "heart.fill")
-                    .font(.title2.weight(.black))
-                    .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 12) {
+                Image("WorksWithAppleHealth")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 180, maxHeight: 28, alignment: .leading)
+                    .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Apple Health Import")
-                        .font(.headline.weight(.black))
-                        .foregroundStyle(.white)
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Apple Health Import")
+                            .font(.headline.weight(.black))
+                            .foregroundStyle(.white)
 
-                    Text("\(batch.workoutCount) workouts • \(batch.acceptedExposureCount) accepted")
-                        .font(.caption.weight(.semibold))
+                        Text("\(batch.workoutCount) workouts • \(batch.acceptedExposureCount) accepted")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
+                    Spacer()
+
+                    Text(batch.importedAt, style: .date)
+                        .font(.caption.weight(.bold))
                         .foregroundStyle(.white.opacity(0.62))
                 }
-
-                Spacer()
-
-                Text(batch.importedAt, style: .date)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.62))
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Apple Health import on \(batch.importedAt.formatted(date: .abbreviated, time: .omitted)). \(batch.workoutCount) workouts, \(batch.acceptedExposureCount) accepted.")
         }
     }
 }

@@ -21,7 +21,7 @@ enum VitaminDLevelKnowledge: String, Codable, CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .knowsRecentResult:
-            "Use a 25(OH)D blood test as the starting point."
+            "Enter your 25(OH)D blood test result in ng/mL."
         case .wantsEstimate:
             "Use profile and lifestyle answers until a lab is added."
         case .willAddLater:

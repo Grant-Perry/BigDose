@@ -72,7 +72,7 @@ struct HealthImportView: View {
     private var actionCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Label("90-day workout lookback", systemImage: "heart.fill")
+                Text("90-day workout lookback")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
 
@@ -80,17 +80,12 @@ struct HealthImportView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
-                Button {
+                AppleHealthKitActionSection(
+                    caption: "Review outdoor workouts from the last 90 days before BigDose counts them.",
+                    isLoading: isLoading
+                ) {
                     Task { await loadCandidates() }
-                } label: {
-                    Label(isLoading ? "Checking Apple Health" : "Review Apple Health Workouts", systemImage: "arrow.down.heart.fill")
-                        .font(.headline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.solarOrange)
-                .disabled(isLoading)
 
                 Button {
                     commitImport()

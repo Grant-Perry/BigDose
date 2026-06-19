@@ -38,6 +38,7 @@ final class UserProfile {
     var labReminderIntervalDays: Int = 90
     var lastHealthKitImportAt: Date?
     var healthKitImportStatus: HealthImportStatus = HealthImportStatus.neverImported
+    var wantsHealthKitSupplementExport: Bool = false
     var hasAcceptedWellnessDisclaimer: Bool = false
     var prepareExitLeadPercent: Int = 20
 
@@ -77,6 +78,7 @@ final class UserProfile {
         labReminderIntervalDays: Int = 90,
         lastHealthKitImportAt: Date? = nil,
         healthKitImportStatus: HealthImportStatus = .neverImported,
+        wantsHealthKitSupplementExport: Bool = false,
         hasAcceptedWellnessDisclaimer: Bool = false,
         prepareExitLeadPercent: Int = 20
     ) {
@@ -115,6 +117,7 @@ final class UserProfile {
         self.labReminderIntervalDays = labReminderIntervalDays
         self.lastHealthKitImportAt = lastHealthKitImportAt
         self.healthKitImportStatus = healthKitImportStatus
+        self.wantsHealthKitSupplementExport = wantsHealthKitSupplementExport
         self.hasAcceptedWellnessDisclaimer = hasAcceptedWellnessDisclaimer
         self.prepareExitLeadPercent = Self.clampedPrepareExitLeadPercent(prepareExitLeadPercent)
     }
