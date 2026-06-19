@@ -8,7 +8,7 @@ struct MetricPill: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
-                .font(.headline.weight(.bold))
+                .font(.bigDoseHeader(.headline).weight(.bold))
                 .foregroundStyle(.solarGold)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -17,7 +17,7 @@ struct MetricPill: View {
                     .foregroundStyle(.white.opacity(0.58))
 
                 Text(value)
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

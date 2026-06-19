@@ -71,7 +71,7 @@ struct SunSessionPlannerView: View {
         HStack {
             Button(action: onCancel) {
                 Image(systemName: "chevron.left")
-                    .font(.title2.weight(.bold))
+                    .font(.bigDoseHeader(.title2).weight(.bold))
                     .foregroundStyle(.white)
                     .frame(width: 46, height: 46)
                     .background(.white.opacity(0.10), in: .circle)
@@ -80,7 +80,7 @@ struct SunSessionPlannerView: View {
             Spacer()
 
             Text("Plan Your Session")
-                .font(.title2.weight(.semibold))
+                .font(.bigDoseHeader(.title2).weight(.semibold))
                 .foregroundStyle(.white)
 
             Spacer()
@@ -116,11 +116,11 @@ struct SunSessionPlannerView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         Text("Session Length")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
                         Spacer()
                         Text("\(Int(durationSeconds / 60)) min")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.solarGold)
                     }
 
@@ -184,7 +184,7 @@ struct SunSessionPlannerView: View {
             Image(systemName: "flame.fill")
             Text(minutes > 0 ? "Time to MED: \(minutes) min. Turn over before then." : "No meaningful UV estimate right now.")
         }
-        .font(.headline.weight(.semibold))
+        .font(.bigDoseHeader(.headline).weight(.semibold))
         .foregroundStyle(.solarOrange)
         .padding(.horizontal, 4)
     }
@@ -194,7 +194,7 @@ struct SunSessionPlannerView: View {
             onStart(plan)
         } label: {
             Label("Start Session", systemImage: "play.fill")
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
         }
@@ -206,17 +206,17 @@ struct SunSessionPlannerView: View {
         GlassCard(cornerRadius: 22) {
             HStack {
                 Image(systemName: icon)
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.solarGold)
 
                 Text(title)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Spacer()
 
                 Text(value)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.68))
 
                 Image(systemName: "chevron.down")

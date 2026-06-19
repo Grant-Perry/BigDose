@@ -80,7 +80,7 @@ struct HealthImportBatchLogView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(acceptedItems.count) accepted")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("\(skippedItems.count) skipped")
@@ -95,7 +95,7 @@ struct HealthImportBatchLogView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("items")
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }
@@ -120,7 +120,7 @@ struct HealthImportBatchLogView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.activityName)
-                            .font(.headline.weight(.black))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.white)
 
                         Text(item.startedAt.formatted(date: .abbreviated, time: .shortened))
@@ -131,7 +131,7 @@ struct HealthImportBatchLogView: View {
                     Spacer()
 
                     Text("\(Int(item.durationSeconds / 60)) min")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.solarGold)
                 }
 

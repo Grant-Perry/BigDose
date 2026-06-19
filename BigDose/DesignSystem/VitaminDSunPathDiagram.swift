@@ -236,7 +236,7 @@ struct VitaminDSunPathDiagram: View {
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("D for")
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
 
                 Text(display.snapshot.durationLabel ?? "Unavailable")

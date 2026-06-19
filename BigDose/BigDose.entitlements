@@ -18,5 +18,9 @@
 	<string>$(TeamIdentifierPrefix)com.grantperry.BigDose</string>
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.grantperry.BigDose</string>
+	</array>
 </dict>
 </plist>

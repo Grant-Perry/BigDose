@@ -2,12 +2,14 @@ import SwiftUI
 
 struct NextDOpportunityBanner: View {
     var display: VitaminDWindowDisplay
-    var detail: String
+    var todayGoalProgress: Double
+    var todayCollectedIU: Double
+    var targetIU: Int
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             Image(systemName: bannerSymbol)
-                .font(.title2.weight(.bold))
+                .font(.bigDoseHeader(.title2).weight(.bold))
                 .foregroundStyle(.solarGold)
                 .symbolEffect(.pulse, options: .repeating, value: display.nextOpportunityStart != nil)
 
@@ -18,22 +20,25 @@ struct NextDOpportunityBanner: View {
                     .textCase(.uppercase)
 
                 Text(display.bannerTitle)
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(detail)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.58))
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.48))
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.42))
-                .padding(.top, 4)
+            SunSessionGoalDialView(
+                goalProgress: todayGoalProgress,
+                goalTimerInterval: nil,
+                isPaused: true,
+                diameter: 58,
+                lineWidth: 4,
+                progressCaption: "today"
+            )
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -43,7 +48,7 @@ struct NextDOpportunityBanner: View {
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(display.bannerTitle). \(detail)")
+        .accessibilityLabel("\(display.bannerTitle). \(Int(todayGoalProgress * 100)) percent of today's goal.")
     }
 
     private var bannerSymbol: String {

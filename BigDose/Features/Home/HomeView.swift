@@ -48,9 +48,13 @@ struct HomeView: View {
             .toolbarTitleDisplayMode(.inline)
             .task {
                 await refreshHome()
+                restoreActiveSessionIfNeeded()
             }
             .refreshable {
                 await refreshHome()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .bigDoseOpenSessionFromLiveActivity)) { notification in
+                restoreActiveSessionIfNeeded(expectedSessionID: notification.object as? String)
             }
             .fullScreenCover(item: $sessionRoute) { route in
                 sessionView(for: route)
@@ -61,26 +65,12 @@ struct HomeView: View {
     private var header: some View {
         HomeHeroHeader(
             profile: profile ?? activeProfile,
-            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0) },
-            detail: headerDetail
+            todayGoalProgress: todayGoalProgress,
+            todayCollectedIU: todayCollectedIU,
+            targetIU: activeProfile.preferredDailyIU,
+            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0) }
         )
         .padding(.top, 4)
-    }
-
-    private var headerDetail: String {
-        guard let display = currentPlan.flatMap({ vitaminDWindowDisplay(for: $0) }) else {
-            return "BigDose needs your location and Apple Weather to calculate your vitamin D window."
-        }
-
-        if display.nextOpportunityStart == nil, display.isToday {
-            return "The sun is above \(Int(display.snapshot.thresholdDegrees.rounded()))° right now. Short, clean exposure beats chasing a burn."
-        }
-
-        if let duration = display.snapshot.durationLabel {
-            return "You'll have about \(duration) of useful sunlight \(display.dayLabel.lowercased())."
-        }
-
-        return "Short, clean exposure beats chasing a burn."
     }
 
     @ViewBuilder
@@ -173,7 +163,7 @@ struct HomeView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(weather.locationName)
-                    .font(.title2.weight(.semibold))
+                    .font(.bigDoseHeader(.title2).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text(weather.displayConditionSummary)
@@ -263,7 +253,7 @@ struct HomeView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(display.cardTitle)
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
 
                 Text(plan.locationLabel)
@@ -293,7 +283,7 @@ struct HomeView: View {
                 .textCase(.uppercase)
 
             Text(plan.peakUVIndex.formatted(.number.precision(.fractionLength(1))))
-                .font(.title2.weight(.black))
+                .font(.bigDoseHeader(.title2).weight(.black))
                 .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -325,7 +315,7 @@ struct HomeView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
                 Label("Goal", systemImage: "target")
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
 
                 SunArcMeter(
@@ -386,11 +376,11 @@ struct HomeView: View {
                 .contentTransition(.numericText())
 
             Text("IU")
-                .font(.headline.weight(.black))
+                .font(.bigDoseHeader(.headline).weight(.black))
                 .foregroundStyle(.white.opacity(0.72))
 
             Text("is what you'll get")
-                .font(.headline.weight(.bold))
+                .font(.bigDoseHeader(.headline).weight(.bold))
                 .foregroundStyle(.white.opacity(0.72))
 
             Text("*")
@@ -496,12 +486,12 @@ struct HomeView: View {
             GlassCard(cornerRadius: 24) {
                 HStack(spacing: 14) {
                     Image(systemName: "sparkles")
-                        .font(.title2.weight(.bold))
+                        .font(.bigDoseHeader(.title2).weight(.bold))
                         .foregroundStyle(.solarGold)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("How BigDose Works")
-                            .font(.headline.weight(.black))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.white)
 
                         Text("Freshman-level science. No medical cosplay.")
@@ -512,7 +502,7 @@ struct HomeView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.headline.weight(.bold))
+                        .font(.bigDoseHeader(.headline).weight(.bold))
                         .foregroundStyle(.white.opacity(0.55))
                 }
             }
@@ -563,7 +553,7 @@ struct HomeView: View {
             ActiveSunSessionView(
                 plan: plan,
                 wantsSessionSafetyAlerts: activeProfile.wantsRiskAlerts,
-                onCancel: { sessionRoute = .sunPlanner },
+                onCancel: { sessionRoute = nil },
                 onComplete: { result in sessionRoute = .completion(result) }
             )
 
@@ -592,6 +582,7 @@ struct HomeView: View {
         )
         modelContext.insert(session)
         try? modelContext.save()
+        SunSessionSessionCleanup.finishSession(clearPendingCommandFor: result.plan.liveActivitySessionID)
     }
 
     private var currentPlan: DailySunPlan? {
@@ -601,10 +592,43 @@ struct HomeView: View {
     private func refreshHome() async {
         await homeViewModel.refresh(profile: activeProfile)
         persistDailyPlanIfNeeded()
+        publishWidgetSnapshot()
         await BigDoseNotificationCoordinator.refreshManagedAlerts(
             profile: activeProfile,
             modelContext: modelContext
         )
+    }
+
+    private func publishWidgetSnapshot() {
+        BigDoseWidgetPublisher.publishFromStores(
+            profile: activeProfile,
+            plan: currentPlan,
+            weather: homeViewModel.weather,
+            todayCollectedIU: todayCollectedIU
+        )
+    }
+
+    private func restoreActiveSessionIfNeeded(expectedSessionID: String? = nil) {
+        guard sessionRoute == nil else { return }
+        guard let record = ActiveSunSessionStore.load() else { return }
+        if let expectedSessionID, record.sessionID != expectedSessionID { return }
+        guard let plan = ActiveSunSessionPersistence.plan(from: record) else { return }
+
+        if SunSessionLiveActivityCommandStore.hasPendingEnd(for: record.sessionID) {
+            _ = SunSessionLiveActivityCommandStore.consume(for: record.sessionID)
+            let elapsed = record.currentElapsed()
+            let result = SunSessionResult(
+                plan: plan,
+                endedAt: .now,
+                elapsedSeconds: max(elapsed, 1),
+                estimatedIU: plan.estimatedIU(at: elapsed)
+            )
+            SunSessionSessionCleanup.finishSession(clearPendingCommandFor: record.sessionID)
+            sessionRoute = .completion(result)
+            return
+        }
+
+        sessionRoute = .activeSunSession(plan)
     }
 
     private func persistDailyPlanIfNeeded() {
@@ -663,6 +687,7 @@ struct HomeView: View {
         modelContext.insert(dose)
         undoSupplementDose = dose
         try? modelContext.save()
+        publishWidgetSnapshot()
 
         if let profile {
             Task {
@@ -678,6 +703,7 @@ struct HomeView: View {
             modelContext.delete(dose)
             undoSupplementDose = nil
             try? modelContext.save()
+            publishWidgetSnapshot()
         }
     }
 
@@ -713,12 +739,12 @@ struct HomeView: View {
         GlassCard {
             HStack(alignment: .top, spacing: 14) {
                 unavailableSymbol(systemImage, showsUnavailableSlash: showsUnavailableSlash)
-                    .font(.title2.weight(.bold))
+                    .font(.bigDoseHeader(.title2).weight(.bold))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text(detail)
@@ -763,12 +789,12 @@ private struct HomeUnavailableSheet: View {
                     .multilineTextAlignment(.center)
 
                 Text(message)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.68))
                     .multilineTextAlignment(.center)
 
                 Button("Close", action: onClose)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .buttonStyle(.borderedProminent)
                     .tint(.solarOrange)
                     .padding(.top, 8)

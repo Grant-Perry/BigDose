@@ -198,7 +198,7 @@ struct OnboardingView: View {
                         )
 
                         DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
                             .tint(.solarGold)
 
@@ -240,7 +240,7 @@ struct OnboardingView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .firstTextBaseline) {
                                 Text("Goal Vitamin D Blood Level")
-                                    .font(.headline.weight(.semibold))
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
                                     .foregroundStyle(.white)
 
                                 Spacer()
@@ -292,7 +292,7 @@ struct OnboardingView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(skinType.title)
-                                        .font(.headline.weight(.semibold))
+                                        .font(.bigDoseHeader(.headline).weight(.semibold))
                                     Text(skinType.subtitle)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.white.opacity(0.62))
@@ -301,7 +301,7 @@ struct OnboardingView: View {
                                 Spacer()
 
                                 Image(systemName: selectedSkinType == skinType ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3.weight(.bold))
+                                    .font(.bigDoseHeader(.title3).weight(.bold))
                                     .foregroundStyle(selectedSkinType == skinType ? .solarGold : .white.opacity(0.35))
                             }
                             .foregroundStyle(.white)
@@ -354,12 +354,12 @@ struct OnboardingView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: levelKnowledge == option ? "checkmark.circle.fill" : "circle")
-                        .font(.title3.weight(.semibold))
+                        .font(.bigDoseHeader(.title3).weight(.semibold))
                         .foregroundStyle(levelKnowledge == option ? .solarGold : .white.opacity(0.42))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(option.title)
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                         Text(option.detail)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
@@ -387,7 +387,7 @@ struct OnboardingView: View {
                     )
 
                     DatePicker("Measured", selection: $baselineMeasuredAt, displayedComponents: .date)
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
@@ -425,12 +425,12 @@ struct OnboardingView: View {
                         )
 
                         Toggle("Remind me to log it", isOn: $wantsSupplementReminders)
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
                             .tint(.solarGold)
 
                         Toggle("Save supplements to Apple Health", isOn: $wantsHealthKitSupplementExport)
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
                             .tint(.solarGold)
                             .onChange(of: wantsHealthKitSupplementExport) { _, isEnabled in
@@ -469,7 +469,7 @@ struct OnboardingView: View {
                             .font(.system(size: 48, weight: .semibold))
                             .foregroundStyle(.solarGold)
                         Text("% exposed")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white.opacity(0.72))
                     }
 
@@ -477,7 +477,7 @@ struct OnboardingView: View {
                         .tint(.solarGold)
 
                     Toggle("I usually wear sunscreen", isOn: $usuallyUsesSunscreen)
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
@@ -486,7 +486,7 @@ struct OnboardingView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("\(Int(incidentalSunMinutesPerWeek)) minutes per week")
-                            .font(.title2.weight(.semibold))
+                            .font(.bigDoseHeader(.title2).weight(.semibold))
                             .foregroundStyle(.solarGold)
 
                         Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
@@ -523,7 +523,7 @@ struct OnboardingView: View {
                         Toggle("Lab retest cadence", isOn: $wantsLabReminders)
                         Toggle("Weekly progress", isOn: $wantsWeeklyProgressAlerts)
                     }
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
                     .tint(.solarGold)
                 }
@@ -577,7 +577,7 @@ struct OnboardingView: View {
             advance()
         } label: {
             Text(page == lastPage ? "Enter BigDose" : "Continue")
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
         }
@@ -850,7 +850,7 @@ private struct OnboardingPageView: View {
             OnboardingHeader(symbolName: symbolName, eyebrow: eyebrow, title: title)
 
             Text(detail)
-                .font(.title3.weight(.semibold))
+                .font(.bigDoseHeader(.title3).weight(.semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.72))
                 .padding(.horizontal, 24)
@@ -904,7 +904,7 @@ private struct OnboardingTextField: View {
                 .foregroundStyle(.white.opacity(0.6))
 
             TextField(placeholder, text: $text)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(.words)

@@ -50,12 +50,12 @@ struct SunSessionCompleteView: View {
                             .font(.system(size: 56, weight: .semibold))
                             .foregroundStyle(.solarGold)
                         Text("IU")
-                            .font(.title3.weight(.semibold))
+                            .font(.bigDoseHeader(.title3).weight(.semibold))
                             .foregroundStyle(.white.opacity(0.72))
                     }
 
                     Text("vitamin D estimated")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white.opacity(0.68))
                 }
             }
@@ -80,7 +80,7 @@ struct SunSessionCompleteView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Rate Factors")
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
 
                 summaryRow("Skin type", result.plan.skinType.title)
@@ -95,7 +95,7 @@ struct SunSessionCompleteView: View {
     private var doneButton: some View {
         Button(action: onDone) {
             Text("Done")
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
         }
@@ -106,11 +106,11 @@ struct SunSessionCompleteView: View {
     private func summaryRow(_ title: String, _ value: String, highlight: Bool = false) -> some View {
         HStack {
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.62))
             Spacer()
             Text(value)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(highlight ? .solarGold : .white)
         }
     }

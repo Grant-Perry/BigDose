@@ -79,7 +79,7 @@ struct SettingsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 Label("Onboarding", systemImage: "exclamationmark.triangle.fill")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.solarOrange)
 
                 Text("Only use this if you need to rerun setup from scratch. BigDose will ask you to confirm twice before continuing.")
@@ -90,7 +90,7 @@ struct SettingsView: View {
                     resetOnboardingStep = .firstConfirm
                 } label: {
                     Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -107,12 +107,12 @@ struct SettingsView: View {
             GlassCard {
                 HStack(spacing: 14) {
                     Image(systemName: "cross.case.fill")
-                        .font(.title2.weight(.semibold))
+                        .font(.bigDoseHeader(.title2).weight(.semibold))
                         .foregroundStyle(.solarGold)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("How BigDose Works")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
 
                         Text("Review the plain-language science and non-medical boundaries.")
@@ -123,7 +123,7 @@ struct SettingsView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }
@@ -135,7 +135,7 @@ struct SettingsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 Label("Session Safety", systemImage: "shield.lefthalf.filled")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("How far ahead of the exit alert BigDose warns you to start packing up and moving inside.")
@@ -145,7 +145,7 @@ struct SettingsView: View {
                 if let profile {
                     Stepper(value: prepareExitLeadPercentBinding, in: UserProfile.prepareExitLeadPercentRange, step: 5) {
                         Text("Exit prep warning: \(profile.prepareExitLeadPercent)%")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
                     }
                     .tint(.solarGold)

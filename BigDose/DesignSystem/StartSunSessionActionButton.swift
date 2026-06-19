@@ -73,7 +73,7 @@ struct StartSunSessionActionButton: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white.opacity(isEnabled ? 0.58 : 0.28))
             }
             .frame(maxWidth: .infinity, minHeight: size == .prominent ? 96 : 76, alignment: .leading)

@@ -76,11 +76,11 @@ struct RiskProfileView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Label(risk.safetyLabel, systemImage: "info.circle.fill")
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 Text(risk.summary)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("Confidence: \(risk.confidence). BigDose uses this for reminders and session guidance; it is not a medical diagnosis.")
@@ -100,7 +100,7 @@ private struct RiskScoreCard: View {
         GlassCard(cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: symbolName)
-                    .font(.title2.weight(.bold))
+                    .font(.bigDoseHeader(.title2).weight(.bold))
                     .foregroundStyle(.solarGold)
 
                 Text(title)

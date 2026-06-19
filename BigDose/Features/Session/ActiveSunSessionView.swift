@@ -1,11 +1,13 @@
 import Combine
 import SwiftUI
+import UIKit
 
 struct ActiveSunSessionView: View {
     var wantsSessionSafetyAlerts: Bool
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var plan: SunSessionPlan
     @State private var elapsedSeconds: TimeInterval = 0
     @State private var isPaused = false
@@ -16,6 +18,9 @@ struct ActiveSunSessionView: View {
     @State private var didShowStopAlert = false
     @State private var isShowingSkinCoverage = false
     @State private var isShowingGoalPicker = false
+    @State private var isShowingCancelConfirmation = false
+    @State private var backgroundLiveActivitySyncTask: Task<Void, Never>?
+    @State private var sessionEnded = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -53,8 +58,16 @@ struct ActiveSunSessionView: View {
             .padding(18)
         }
         .onReceive(timer) { _ in
-            guard !isPaused else { return }
+            consumeLiveActivityCommands()
+
+            if Int(elapsedSeconds) % 5 == 0 {
+                persistSessionState()
+            }
+
+            guard !isPaused, !sessionEnded else { return }
             elapsedSeconds += 1
+            syncLiveActivity()
+            BigDoseWidgetReloader.reloadHomeWidget()
             evaluateSafetyAlerts()
             if plan.hasReachedGoal(at: elapsedSeconds) || elapsedSeconds >= plan.durationSeconds {
                 complete()
@@ -62,15 +75,41 @@ struct ActiveSunSessionView: View {
         }
         .task {
             await refreshSessionSafetyNotifications()
+            restoreSessionStateIfNeeded()
+            consumeLiveActivityCommands()
+            guard !sessionEnded else { return }
+            persistSessionState()
+            syncLiveActivity()
+        }
+        .onChange(of: isPaused) { _, _ in
+            persistSessionState()
+            syncLiveActivity()
         }
         .onChange(of: plan.exposedBodySurfaceArea) { _, _ in
+            syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
         }
         .onChange(of: plan.cloudCover) { _, _ in
+            syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
         }
         .onChange(of: plan.targetIU) { _, _ in
+            syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                backgroundLiveActivitySyncTask?.cancel()
+                backgroundLiveActivitySyncTask = nil
+                consumeLiveActivityCommands()
+                syncLiveActivity()
+            case .inactive, .background:
+                syncLiveActivity()
+                startBackgroundLiveActivitySyncIfNeeded()
+            @unknown default:
+                break
+            }
         }
         .alert(item: $activeAlert) { alert in
             switch alert {
@@ -120,13 +159,25 @@ struct ActiveSunSessionView: View {
             SessionGoalPickerView(targetIU: $plan.targetIU)
                 .presentationDetents([.medium])
         }
+        .confirmationDialog(
+            "Cancel sun session?",
+            isPresented: $isShowingCancelConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Cancel Session", role: .destructive) {
+                cancel()
+            }
+            Button("Keep Going", role: .cancel) { }
+        } message: {
+            Text("Are you certain? This won't record this sun session if you cancel.")
+        }
     }
 
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(plan.locationName)
-                    .font(.title2.weight(.semibold))
+                    .font(.bigDoseHeader(.title2).weight(.semibold))
                     .foregroundStyle(.white)
                 Text("\(Int(plan.currentTemperatureFahrenheit.rounded()))° · UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(plan.cloudCover.title)")
                     .font(.caption.weight(.semibold))
@@ -135,11 +186,19 @@ struct ActiveSunSessionView: View {
 
             Spacer()
 
-            Button("End") {
-                complete()
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    isShowingCancelConfirmation = true
+                }
+                .font(.bigDoseHeader(.headline).weight(.semibold))
+                .foregroundStyle(.white.opacity(0.62))
+
+                Button("End") {
+                    complete()
+                }
+                .font(.bigDoseHeader(.headline).weight(.semibold))
+                .foregroundStyle(.solarGold)
             }
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(.solarGold)
         }
     }
 
@@ -169,7 +228,7 @@ struct ActiveSunSessionView: View {
                         .foregroundStyle(.white)
 
                     Text("\(Int(plan.liveIUProductionRatePerMinute.rounded())) IU/min")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.green)
 
                     if let minutesToGoal = plan.minutesToGoal(at: elapsedSeconds) {
@@ -183,7 +242,7 @@ struct ActiveSunSessionView: View {
                     }
 
                     Text("\(Int(goalProgress * 100))% of goal")
-                        .font(.title2.weight(.semibold))
+                        .font(.bigDoseHeader(.title2).weight(.semibold))
                         .foregroundStyle(.solarGold)
                 }
             }
@@ -274,11 +333,11 @@ struct ActiveSunSessionView: View {
     private func sessionRow(_ title: String, _ value: String, _ icon: String) -> some View {
         HStack {
             Label(title, systemImage: icon)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
             Spacer()
             Text(value)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
                 .multilineTextAlignment(.trailing)
             Image(systemName: "chevron.down")
@@ -287,15 +346,109 @@ struct ActiveSunSessionView: View {
         }
     }
 
+    private func restoreSessionStateIfNeeded() {
+        guard let record = ActiveSunSessionStore.load(),
+              record.sessionID == plan.liveActivitySessionID else {
+            return
+        }
+
+        elapsedSeconds = max(elapsedSeconds, record.currentElapsed())
+        isPaused = record.isPaused
+    }
+
+    private func persistSessionState() {
+        ActiveSunSessionPersistence.persist(
+            plan: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused
+        )
+        BigDoseWidgetActiveSessionUpdater.publish(
+            plan: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused
+        )
+    }
+
+    private func syncLiveActivity() {
+        guard !sessionEnded else { return }
+        guard !SunSessionLiveActivityCommandStore.hasPendingEnd(for: plan.liveActivitySessionID) else { return }
+
+        SunSessionLiveActivityCoordinator.shared.sync(
+            plan: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused,
+            optedIn: SunSessionLiveActivityCoordinator.isOptedIn
+        )
+    }
+
+    private func startBackgroundLiveActivitySyncIfNeeded() {
+        guard !isPaused, !sessionEnded else { return }
+
+        backgroundLiveActivitySyncTask?.cancel()
+        backgroundLiveActivitySyncTask = Task { @MainActor in
+            await SunSessionLiveActivityBackgroundPusher.run(
+                shouldContinue: {
+                    !sessionEnded && !isPaused && UIApplication.shared.applicationState != .active
+                },
+                tick: {
+                    syncLiveActivity()
+                }
+            )
+            backgroundLiveActivitySyncTask = nil
+        }
+    }
+
+    private func consumeLiveActivityCommands() {
+        guard let command = SunSessionLiveActivityCommandStore.consume(for: plan.liveActivitySessionID) else {
+            return
+        }
+
+        switch command {
+        case .pause:
+            if !isPaused {
+                isPaused = true
+                persistSessionState()
+                syncLiveActivity()
+            }
+        case .resume:
+            if isPaused {
+                isPaused = false
+                persistSessionState()
+                syncLiveActivity()
+            }
+        case .end:
+            complete()
+        }
+    }
+
     private func complete() {
+        guard !sessionEnded else { return }
+        sessionEnded = true
+
+        backgroundLiveActivitySyncTask?.cancel()
+        backgroundLiveActivitySyncTask = nil
         SessionSafetyNotificationService.cancelSessionNotifications()
+
         let result = SunSessionResult(
             plan: plan,
             endedAt: .now,
             elapsedSeconds: max(elapsedSeconds, 1),
             estimatedIU: estimatedIU
         )
+
+        SunSessionSessionCleanup.finishSession(clearPendingCommandFor: plan.liveActivitySessionID)
         onComplete(result)
+    }
+
+    private func cancel() {
+        guard !sessionEnded else { return }
+        sessionEnded = true
+
+        backgroundLiveActivitySyncTask?.cancel()
+        backgroundLiveActivitySyncTask = nil
+        SessionSafetyNotificationService.cancelSessionNotifications()
+        SunSessionSessionCleanup.finishSession(clearPendingCommandFor: plan.liveActivitySessionID)
+        onCancel()
     }
 
     private func refreshSessionSafetyNotifications() async {

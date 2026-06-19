@@ -50,13 +50,13 @@ struct EducationView: View {
                         GlassCard(cornerRadius: 26) {
                             HStack(alignment: .top, spacing: 14) {
                                 Image(systemName: section.symbolName)
-                                    .font(.title2.weight(.black))
+                                    .font(.bigDoseHeader(.title2).weight(.black))
                                     .foregroundStyle(.solarGold)
                                     .frame(width: 34)
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(section.title)
-                                        .font(.headline.weight(.black))
+                                        .font(.bigDoseHeader(.headline).weight(.black))
                                         .foregroundStyle(.white)
 
                                     Text(section.detail)

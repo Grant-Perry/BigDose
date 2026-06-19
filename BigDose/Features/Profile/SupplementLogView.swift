@@ -56,11 +56,11 @@ struct SupplementLogView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: "pills.fill")
-                    .font(.largeTitle.weight(.semibold))
+                    .font(.bigDoseHeader(.largeTitle).weight(.semibold))
                     .foregroundStyle(.solarGold)
 
                 Text("No supplements logged")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("Use Add to record a dose. Home can also quick-log your default amount.")
@@ -76,7 +76,7 @@ struct SupplementLogView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(dose.takenAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
 
                     Text(dose.note.isEmpty ? dose.source.title : dose.note)
@@ -91,7 +91,7 @@ struct SupplementLogView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("IU")
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }

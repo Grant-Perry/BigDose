@@ -72,7 +72,7 @@ struct ProgressDashboardView: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Today's Estimated D Level")
-                            .font(.title3.weight(.black))
+                            .font(.bigDoseHeader(.title3).weight(.black))
                             .foregroundStyle(.white)
 
                         Text(snapshot.confidence)
@@ -87,7 +87,7 @@ struct ProgressDashboardView: View {
                         .foregroundStyle(estimatedLevel >= 30 ? .solarGold : .red)
 
                     Text("ng/mL")
-                        .font(.headline.weight(.bold))
+                        .font(.bigDoseHeader(.headline).weight(.bold))
                         .foregroundStyle(.white.opacity(0.68))
                 }
 
@@ -106,7 +106,7 @@ struct ProgressDashboardView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Last 7 Days")
-                        .font(.title3.weight(.black))
+                        .font(.bigDoseHeader(.title3).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("Sun, supplements, and food counted against your current daily target.")
@@ -121,7 +121,7 @@ struct ProgressDashboardView: View {
                         .font(.system(size: 38, weight: .black))
                         .foregroundStyle(.solarGold)
                     Text("of \(compactIU(snapshot.targetIU)) IU")
-                        .font(.headline.weight(.bold))
+                        .font(.bigDoseHeader(.headline).weight(.bold))
                         .foregroundStyle(.white.opacity(0.66))
                 }
             }
@@ -132,7 +132,7 @@ struct ProgressDashboardView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Source Split")
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
 
                 ProgressSourceRow(title: "Sun", value: snapshot.sunIU, systemImage: "sun.max.fill")
@@ -153,12 +153,12 @@ struct ProgressDashboardView: View {
         GlassCard {
             HStack(spacing: 14) {
                 Image(systemName: "rosette")
-                    .font(.largeTitle.weight(.black))
+                    .font(.bigDoseHeader(.largeTitle).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Badges")
-                        .font(.title3.weight(.black))
+                        .font(.bigDoseHeader(.title3).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("Streaks, smart timing, and safe exposure wins will unlock here.")
@@ -186,13 +186,13 @@ private struct ProgressSourceRow: View {
     var body: some View {
         HStack {
             Label(title, systemImage: systemImage)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
 
             Spacer()
 
             Text("\(Int(value.rounded())) IU")
-                .font(.headline.weight(.black))
+                .font(.bigDoseHeader(.headline).weight(.black))
                 .foregroundStyle(.solarGold)
         }
     }

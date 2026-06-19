@@ -51,11 +51,11 @@ struct LabResultsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: "testtube.2")
-                    .font(.largeTitle.weight(.semibold))
+                    .font(.bigDoseHeader(.largeTitle).weight(.semibold))
                     .foregroundStyle(.solarGold)
 
                 Text("No lab results yet")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("Add your latest 25(OH)D value when you have one. BigDose will keep estimates clearly labeled until then.")
@@ -71,7 +71,7 @@ struct LabResultsView: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(result.measuredAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
 
                     Text(result.note.isEmpty ? result.source.title : result.note)
@@ -86,7 +86,7 @@ struct LabResultsView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("ng/mL")
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }

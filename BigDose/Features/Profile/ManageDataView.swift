@@ -67,7 +67,7 @@ struct ManageDataView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 Label("iCloud Sync", systemImage: "icloud.fill")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("BigDose syncs your profile, sessions, labs, and imports through iCloud when you're signed in on this device. Rescue exports remain available for manual backup.")
@@ -85,7 +85,7 @@ struct ManageDataView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Export Full Data Stack", systemImage: "square.and.arrow.up")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("\(sessions.count) sessions, \(supplements.count) supplements, \(labs.count) labs, \(importBatches.count) import batches.")
@@ -96,7 +96,7 @@ struct ManageDataView: View {
                     createExport()
                 } label: {
                     Text("Create Rescue File")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -106,7 +106,7 @@ struct ManageDataView: View {
                 if let exportURL {
                     ShareLink(item: exportURL) {
                         Label("Share Export", systemImage: "square.and.arrow.up")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -121,7 +121,7 @@ struct ManageDataView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Restore from Rescue File", systemImage: "externaldrive.badge.plus")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("Import a BigDose JSON export. Restored records are added to the local store and marked by source where applicable.")
@@ -132,7 +132,7 @@ struct ManageDataView: View {
                     isShowingImporter = true
                 } label: {
                     Text("Choose Rescue File")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -166,7 +166,7 @@ struct ManageDataView: View {
                 isShowingClearConfirmation = true
             } label: {
                 Label("Clear All Data", systemImage: "trash.fill")
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
             }

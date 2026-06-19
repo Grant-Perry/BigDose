@@ -73,7 +73,7 @@ struct HealthImportView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 Text("90-day workout lookback")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text("BigDose reads workouts only after permission. Outdoor workouts are imported with a visible confidence note and conservative vitamin D assumptions.")
@@ -91,7 +91,7 @@ struct HealthImportView: View {
                     commitImport()
                 } label: {
                     Label("Import Selected Workouts", systemImage: "checkmark.circle.fill")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -107,7 +107,7 @@ struct HealthImportView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Latest Import")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("\(batch.acceptedExposureCount) accepted • \(batch.skippedCount) skipped")
@@ -126,7 +126,7 @@ struct HealthImportView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("items")
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }
@@ -138,7 +138,7 @@ struct HealthImportView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(candidate.activityName)
-                            .font(.headline.weight(.black))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.white)
 
                         Text(candidate.startedAt.formatted(date: .abbreviated, time: .shortened))
@@ -149,7 +149,7 @@ struct HealthImportView: View {
                     Spacer()
 
                     Text("\(Int(candidate.durationSeconds / 60)) min")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.solarGold)
                 }
 

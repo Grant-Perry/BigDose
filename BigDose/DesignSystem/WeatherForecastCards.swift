@@ -12,7 +12,7 @@ struct BigDoseHourlyForecastStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Hourly Forecast")
-                .font(.headline.weight(.black))
+                .font(.bigDoseHeader(.headline).weight(.black))
                 .foregroundStyle(.white)
 
             ScrollView(.horizontal) {
@@ -39,13 +39,13 @@ private struct BigDoseHourlyForecastItem: View {
                 .foregroundStyle(.white.opacity(0.62))
 
             Image(systemName: forecast.symbolName)
-                .font(.title3.weight(.semibold))
+                .font(.bigDoseHeader(.title3).weight(.semibold))
                 .foregroundStyle(.solarGold)
                 .symbolRenderingMode(.hierarchical)
                 .frame(height: 22)
 
             Text("\(Int(forecast.temperatureFahrenheit.rounded()))°")
-                .font(.headline.weight(.black))
+                .font(.bigDoseHeader(.headline).weight(.black))
                 .foregroundStyle(.white)
         }
         .frame(width: 54)
@@ -116,7 +116,7 @@ private struct BigDoseForecastDayColumn: View {
                 .foregroundStyle(.white.opacity(0.72))
 
             Image(systemName: forecast.symbolName)
-                .font(.title2.weight(.semibold))
+                .font(.bigDoseHeader(.title2).weight(.semibold))
                 .foregroundStyle(.solarGold)
                 .symbolRenderingMode(.hierarchical)
                 .frame(height: 24)
@@ -132,7 +132,7 @@ private struct BigDoseForecastDayColumn: View {
                     .foregroundStyle(.white.opacity(0.52))
 
                 Text("\(Int(forecast.highTemperatureFahrenheit.rounded()))")
-                    .font(.title3.weight(.black))
+                    .font(.bigDoseHeader(.title3).weight(.black))
                     .foregroundStyle(.white)
             }
         }
@@ -182,7 +182,7 @@ struct WeatherNextSixHoursPrecipPanel: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
                     Label("Next 6 Hours", systemImage: "cloud.rain.fill")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("Chance of rain")
@@ -194,7 +194,7 @@ struct WeatherNextSixHoursPrecipPanel: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(totalRainInches.formatted(.number.precision(.fractionLength(2))) + "\"")
-                        .font(.title3.weight(.black))
+                        .font(.bigDoseHeader(.title3).weight(.black))
                         .foregroundStyle(.white)
 
                     Text(totalRainInches > 0.005 ? "Expected rain" : "Staying dry")

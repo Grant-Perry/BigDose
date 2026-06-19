@@ -61,7 +61,7 @@ struct SunArcMeter: View {
                         .contentTransition(.numericText())
 
                     Text(subtitle)
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white.opacity(0.68))
                 }
                 .padding(.top, 52)

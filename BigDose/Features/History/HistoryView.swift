@@ -74,7 +74,7 @@ struct HistoryView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Last 90 Days")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("\(sessions.count) sun sessions • \(supplements.count) supplement doses • \(labs.count) labs")
@@ -89,7 +89,7 @@ struct HistoryView: View {
                     .foregroundStyle(.solarGold)
 
                 Text("IU")
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white.opacity(0.7))
             }
         }
@@ -99,11 +99,11 @@ struct HistoryView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: "sun.horizon.fill")
-                    .font(.largeTitle.weight(.black))
+                    .font(.bigDoseHeader(.largeTitle).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 Text("No sessions yet")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.white)
 
                 Text("Once live tracking lands, your sun sessions will appear as clean timeline cards with UV, duration, estimated IU, and risk margin.")
@@ -130,12 +130,12 @@ struct HistoryView: View {
         GlassCard(cornerRadius: 24) {
             HStack {
                 Image(systemName: "sun.max.fill")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.historySourceTitle)
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text(session.startedAt, style: .time)
@@ -146,7 +146,7 @@ struct HistoryView: View {
                 Spacer()
 
                 Text("\(Int(session.estimatedIU.rounded()))")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 Text("IU")
@@ -160,12 +160,12 @@ struct HistoryView: View {
         GlassCard(cornerRadius: 24) {
             HStack {
                 Image(systemName: "pills.fill")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Supplement")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text(dose.takenAt, style: .date)
@@ -176,7 +176,7 @@ struct HistoryView: View {
                 Spacer()
 
                 Text("\(dose.internationalUnits)")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 Text("IU")
@@ -190,12 +190,12 @@ struct HistoryView: View {
         GlassCard(cornerRadius: 24) {
             HStack {
                 Image(systemName: "testtube.2")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("25(OH)D Result")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text(result.measuredAt, style: .date)
@@ -206,7 +206,7 @@ struct HistoryView: View {
                 Spacer()
 
                 Text("\(Int(result.nanogramsPerMilliliter.rounded()))")
-                    .font(.title2.weight(.black))
+                    .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 Text("ng/mL")
@@ -228,7 +228,7 @@ struct HistoryView: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Apple Health Import")
-                            .font(.headline.weight(.black))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.white)
 
                         Text("\(batch.workoutCount) workouts • \(batch.acceptedExposureCount) accepted")

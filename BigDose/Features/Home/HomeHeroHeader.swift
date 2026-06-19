@@ -2,8 +2,10 @@ import SwiftUI
 
 struct HomeHeroHeader: View {
     @Bindable var profile: UserProfile
+    var todayGoalProgress: Double
+    var todayCollectedIU: Double
+    var targetIU: Int
     var vitaminDWindowDisplay: VitaminDWindowDisplay?
-    var detail: String
 
     var body: some View {
         GlassCard(cornerRadius: 28) {
@@ -11,7 +13,12 @@ struct HomeHeroHeader: View {
                 profileRow
 
                 if let vitaminDWindowDisplay {
-                    NextDOpportunityBanner(display: vitaminDWindowDisplay, detail: detail)
+                    NextDOpportunityBanner(
+                        display: vitaminDWindowDisplay,
+                        todayGoalProgress: todayGoalProgress,
+                        todayCollectedIU: todayCollectedIU,
+                        targetIU: targetIU
+                    )
                 } else {
                     fallbackPanel
                 }
@@ -75,7 +82,7 @@ struct HomeHeroHeader: View {
                 DoseDNAEditorContainer(profile: profile)
             } label: {
                 Image(systemName: "pencil.circle.fill")
-                    .font(.title2.weight(.semibold))
+                    .font(.bigDoseHeader(.title2).weight(.semibold))
                     .foregroundStyle(.solarGold)
                     .symbolRenderingMode(.hierarchical)
             }
@@ -85,9 +92,9 @@ struct HomeHeroHeader: View {
     }
 
     private var fallbackPanel: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             Image(systemName: "sun.max.trianglebadge.exclamationmark.fill")
-                .font(.title2.weight(.bold))
+                .font(.bigDoseHeader(.title2).weight(.bold))
                 .foregroundStyle(.solarGold)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -97,15 +104,25 @@ struct HomeHeroHeader: View {
                     .textCase(.uppercase)
 
                 Text("Ready when the sun is")
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(detail)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.58))
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.48))
             }
+
+            Spacer(minLength: 8)
+
+            SunSessionGoalDialView(
+                goalProgress: todayGoalProgress,
+                goalTimerInterval: nil,
+                isPaused: true,
+                diameter: 58,
+                lineWidth: 4,
+                progressCaption: "today"
+            )
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

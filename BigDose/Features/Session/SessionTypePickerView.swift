@@ -23,7 +23,7 @@ struct SessionTypePickerView: View {
                     Spacer()
 
                     Button("Cancel", action: onCancel)
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.solarGold)
                 }
 
@@ -55,7 +55,7 @@ private struct DoseTypeSecondaryCard: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: type.systemImage)
-                .font(.title2.weight(.semibold))
+                .font(.bigDoseHeader(.title2).weight(.semibold))
                 .foregroundStyle(.solarGold)
 
             Text(type.shortTitle)

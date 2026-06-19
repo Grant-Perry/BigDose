@@ -69,7 +69,7 @@ private struct BigDoseLaunchLoadingView: View {
             BigDoseGradientBackground()
 
             ProgressView("Preparing BigDose")
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .tint(.solarGold)
         }

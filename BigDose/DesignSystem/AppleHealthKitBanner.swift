@@ -24,7 +24,7 @@ struct OnboardingAppleHealthPage: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts, and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -35,7 +35,7 @@ struct OnboardingAppleHealthPage: View {
                                 .tint(.solarOrange)
                         } else {
                             Text("Sync Health Data")
-                                .font(.headline.weight(.semibold))
+                                .font(.bigDoseHeader(.headline).weight(.semibold))
                                 .foregroundStyle(.solarOrange)
                         }
                     }
@@ -48,7 +48,7 @@ struct OnboardingAppleHealthPage: View {
                 .accessibilityLabel(isSyncing ? "Syncing Apple Health data" : "Sync Health Data")
 
                 Button("Skip for Now", action: onSkip)
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -155,7 +155,7 @@ struct AppleHealthNavigationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white)
 
                 Text(detail)

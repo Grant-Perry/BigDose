@@ -119,7 +119,7 @@ struct ProfileAvatarEditorView: View {
                                 .foregroundStyle(.solarGold)
 
                             Text("No photo selected")
-                                .font(.headline.weight(.semibold))
+                                .font(.bigDoseHeader(.headline).weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.72))
                         }
                     }
@@ -140,7 +140,7 @@ struct ProfileAvatarEditorView: View {
             VStack(spacing: 12) {
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Label("Choose from Photos", systemImage: "photo.on.rectangle.angled")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -151,7 +151,7 @@ struct ProfileAvatarEditorView: View {
                     isShowingFileImporter = true
                 } label: {
                     Label("Import Image File", systemImage: "folder")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -163,7 +163,7 @@ struct ProfileAvatarEditorView: View {
                         resetSelection()
                     } label: {
                         Label("Remove Photo", systemImage: "trash")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }

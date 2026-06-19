@@ -49,7 +49,7 @@ struct NotificationSettingsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Permission: \(authorizationStatusTitle)", systemImage: "bell.badge.fill")
-                    .font(.title3.weight(.semibold))
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
                 switch authorizationStatus {
@@ -62,7 +62,7 @@ struct NotificationSettingsView: View {
                         }
                     } label: {
                         Text("Allow Notifications")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -95,7 +95,7 @@ struct NotificationSettingsView: View {
                 Toggle("Milestones", isOn: binding(\.wantsMilestoneAlerts))
                 Toggle("Weather break alerts", isOn: binding(\.wantsWeatherBreakAlerts))
             }
-            .font(.headline.weight(.semibold))
+            .font(.bigDoseHeader(.headline).weight(.semibold))
             .foregroundStyle(.white)
             .tint(.solarGold)
         }
@@ -105,7 +105,7 @@ struct NotificationSettingsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 Toggle("Quiet hours", isOn: binding(\.quietHoursEnabled))
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
                     .tint(.solarGold)
 

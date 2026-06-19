@@ -93,7 +93,7 @@ struct DoseDNAEditorView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(displayName.isEmpty ? "Add your name" : displayName)
-                        .font(.title2.weight(.black))
+                        .font(.bigDoseHeader(.title2).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("Tap the photo to choose, zoom, and crop.")
@@ -117,7 +117,7 @@ struct DoseDNAEditorView: View {
             )
 
             DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .tint(.solarGold)
 
@@ -163,7 +163,7 @@ struct DoseDNAEditorView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Target Vitamin D Blood Level")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
 
                     Spacer()
@@ -196,7 +196,7 @@ struct DoseDNAEditorView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(skinType.title)
-                                .font(.headline.weight(.semibold))
+                                .font(.bigDoseHeader(.headline).weight(.semibold))
                             Text(skinType.subtitle)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.62))
@@ -205,7 +205,7 @@ struct DoseDNAEditorView: View {
                         Spacer()
 
                         Image(systemName: selectedSkinType == skinType ? "checkmark.circle.fill" : "circle")
-                            .font(.title3.weight(.bold))
+                            .font(.bigDoseHeader(.title3).weight(.bold))
                             .foregroundStyle(selectedSkinType == skinType ? .solarGold : .white.opacity(0.35))
                     }
                     .foregroundStyle(.white)
@@ -224,7 +224,7 @@ struct DoseDNAEditorView: View {
                     .font(.system(size: 48, weight: .semibold))
                     .foregroundStyle(.solarGold)
                 Text("% skin exposed")
-                    .font(.headline.weight(.semibold))
+                    .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
             }
 
@@ -232,14 +232,14 @@ struct DoseDNAEditorView: View {
                 .tint(.solarGold)
 
             Toggle("I usually wear sunscreen", isOn: $usuallyUsesSunscreen)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .tint(.solarGold)
 
             Divider().overlay(.white.opacity(0.12))
 
             Text("\(Int(incidentalSunMinutesPerWeek)) minutes per week")
-                .font(.title3.weight(.semibold))
+                .font(.bigDoseHeader(.title3).weight(.semibold))
                 .foregroundStyle(.solarGold)
 
             Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
@@ -259,7 +259,7 @@ struct DoseDNAEditorView: View {
             )
 
             Toggle("Save supplements to Apple Health", isOn: $profile.wantsHealthKitSupplementExport)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .tint(.solarGold)
                 .onChange(of: profile.wantsHealthKitSupplementExport) { _, isEnabled in
@@ -287,7 +287,7 @@ struct DoseDNAEditorView: View {
 
     private func sectionLabel(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(.title3.weight(.semibold))
+            .font(.bigDoseHeader(.title3).weight(.semibold))
             .foregroundStyle(.white)
     }
 
@@ -381,7 +381,7 @@ struct DoseDNAEditorContainer: View {
                         Task { await prepareToLeave() }
                     } label: {
                         Image(systemName: "chevron.left")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                     }
                     .accessibilityLabel("Back")
                 }
@@ -456,7 +456,7 @@ private struct DoseDNATextField: View {
                 .foregroundStyle(.white.opacity(0.6))
 
             TextField(placeholder, text: $text)
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(field == .name ? .words : .never)

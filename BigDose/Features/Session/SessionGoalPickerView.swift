@@ -17,7 +17,7 @@ struct SessionGoalPickerView: View {
                         .foregroundStyle(.solarGold)
 
                     Text("Session goal")
-                        .font(.title3.weight(.semibold))
+                        .font(.bigDoseHeader(.title3).weight(.semibold))
                         .foregroundStyle(.white.opacity(0.68))
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -28,7 +28,7 @@ struct SessionGoalPickerView: View {
                                 }
                             } label: {
                                 Text("\(iu.formatted()) IU")
-                                    .font(.headline.weight(.semibold))
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
                                     .foregroundStyle(Int(targetIU.rounded()) == iu ? .black : .white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
@@ -48,7 +48,7 @@ struct SessionGoalPickerView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.solarGold)
                 }
             }

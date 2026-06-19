@@ -12,7 +12,7 @@ struct ProfileView: View {
                 ZStack {
                     BigDoseGradientBackground()
                     ProgressView("Loading profile")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white)
                         .tint(.solarGold)
                 }
@@ -54,7 +54,7 @@ private struct ProfileContent: View {
                         SettingsView(profile: profile)
                     } label: {
                         Image(systemName: "gearshape.fill")
-                            .font(.headline.weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
                     }
                     .accessibilityLabel("Settings")
                 }
@@ -84,7 +84,7 @@ private struct ProfileContent: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(profile.displayName.isEmpty ? "Add your name" : profile.displayName)
-                            .font(.title2.weight(.black))
+                            .font(.bigDoseHeader(.title2).weight(.black))
                             .foregroundStyle(.white)
 
                         Text(profile.doseDNABiologicalSexSummary)
@@ -99,7 +99,7 @@ private struct ProfileContent: View {
                     Spacer(minLength: 0)
 
                     Image(systemName: "chevron.right")
-                        .font(.headline.weight(.semibold))
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
                         .foregroundStyle(.white.opacity(0.42))
                 }
             }
@@ -112,7 +112,7 @@ private struct ProfileContent: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text("Personal Inputs")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Spacer()
@@ -140,7 +140,7 @@ private struct ProfileContent: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Target Vitamin D")
-                        .font(.headline.weight(.black))
+                        .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
                     Text("Estimate only. Labs are the source of truth.")
@@ -155,7 +155,7 @@ private struct ProfileContent: View {
                     .foregroundStyle(.solarGold)
 
                 Text("ng/mL")
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white.opacity(0.7))
             }
         }
@@ -195,7 +195,7 @@ private struct ProfileContent: View {
         } label: {
             GlassCard(cornerRadius: 24) {
                 Label("How BigDose Works", systemImage: "book.fill")
-                    .font(.headline.weight(.black))
+                    .font(.bigDoseHeader(.headline).weight(.black))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -212,7 +212,7 @@ private struct ProfileRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .font(.headline.weight(.bold))
+                .font(.bigDoseHeader(.headline).weight(.bold))
                 .foregroundStyle(.solarGold)
                 .frame(width: 28)
 
@@ -222,7 +222,7 @@ private struct ProfileRow: View {
                     .foregroundStyle(.white.opacity(0.56))
 
                 Text(value)
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -238,13 +238,13 @@ struct ProfileLinkRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .font(.headline.weight(.bold))
+                .font(.bigDoseHeader(.headline).weight(.bold))
                 .foregroundStyle(.solarGold)
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.headline.weight(.bold))
+                    .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white)
 
                 Text(detail)
@@ -255,7 +255,7 @@ struct ProfileLinkRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.headline.weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.42))
         }
     }

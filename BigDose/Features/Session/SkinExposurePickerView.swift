@@ -15,7 +15,7 @@ struct SkinExposurePickerView: View {
                             .font(.system(size: 56, weight: .semibold))
                             .foregroundStyle(.solarGold)
                         Text("% exposed")
-                            .font(.title3.weight(.semibold))
+                            .font(.bigDoseHeader(.title3).weight(.semibold))
                             .foregroundStyle(.white.opacity(0.68))
                     }
 
@@ -32,7 +32,7 @@ struct SkinExposurePickerView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(preset.title)
-                                            .font(.headline.weight(.semibold))
+                                            .font(.bigDoseHeader(.headline).weight(.semibold))
                                             .foregroundStyle(.white)
                                         Text(preset.detail)
                                             .font(.caption.weight(.semibold))
@@ -42,7 +42,7 @@ struct SkinExposurePickerView: View {
                                     Spacer()
 
                                     Text("\(Int(preset.exposedBodySurfaceArea * 100))%")
-                                        .font(.headline.weight(.semibold))
+                                        .font(.bigDoseHeader(.headline).weight(.semibold))
                                         .foregroundStyle(.solarGold)
                                 }
                                 .padding(.vertical, 10)
