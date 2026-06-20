@@ -1,8 +1,14 @@
 import ActivityKit
 import Foundation
 
+nonisolated enum SunSessionPendingControl: String, Codable, Hashable, Sendable {
+    case none
+    case pause
+    case end
+}
+
 /// Shared between the app (start/update) and the widget extension (presentation).
-struct SunSessionActivityAttributes: ActivityAttributes, Equatable {
+nonisolated struct SunSessionActivityAttributes: ActivityAttributes, Equatable {
     struct ContentState: Codable, Hashable {
         var isPaused: Bool
         /// Total elapsed time accumulated before the current running segment.
@@ -12,6 +18,8 @@ struct SunSessionActivityAttributes: ActivityAttributes, Equatable {
         /// Pushed from the app so IU stays current on the lock screen.
         var estimatedIU: Double
         var goalProgress: Double
+        /// First tap arms pause/end; second tap on the same control executes it.
+        var pendingControl: SunSessionPendingControl
     }
 
     var sessionID: String
@@ -25,12 +33,12 @@ struct SunSessionActivityAttributes: ActivityAttributes, Equatable {
 // MARK: - Deep link
 
 extension SunSessionActivityAttributes {
-    static func appOpenURL(sessionID: String) -> URL? {
+    nonisolated static func appOpenURL(sessionID: String) -> URL? {
         guard !sessionID.isEmpty else { return nil }
         return URL(string: "bigdose://session/\(sessionID)")
     }
 
-    static func sessionID(fromDeepLink url: URL) -> String? {
+    nonisolated static func sessionID(fromDeepLink url: URL) -> String? {
         guard url.scheme == "bigdose", url.host == "session" else { return nil }
         let id = url.lastPathComponent
         return id.isEmpty ? nil : id
@@ -48,7 +56,8 @@ extension SunSessionActivityAttributes.ContentState {
             elapsedOffsetSeconds: 0,
             runningSince: startedAt,
             estimatedIU: estimatedIU,
-            goalProgress: goalProgress
+            goalProgress: goalProgress,
+            pendingControl: .none
         )
     }
 
@@ -68,7 +77,8 @@ extension SunSessionActivityAttributes.ContentState {
             elapsedOffsetSeconds: 0,
             runningSince: Date.now.addingTimeInterval(-elapsedSeconds),
             estimatedIU: estimatedIU,
-            goalProgress: goalProgress
+            goalProgress: goalProgress,
+            pendingControl: .none
         )
     }
 
@@ -88,7 +98,8 @@ extension SunSessionActivityAttributes.ContentState {
             elapsedOffsetSeconds: elapsedSeconds,
             runningSince: nil,
             estimatedIU: estimatedIU,
-            goalProgress: goalProgress
+            goalProgress: goalProgress,
+            pendingControl: .none
         )
     }
 }

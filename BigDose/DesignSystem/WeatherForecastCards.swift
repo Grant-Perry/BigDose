@@ -4,6 +4,9 @@ private enum PrecipitationChartStyle {
     static let precipBlue = Color(red: 0.38, green: 0.72, blue: 0.98)
     static let trackFill = Color.white.opacity(0.10)
     static let trackStroke = Color.white.opacity(0.14)
+    static let dividerColor = Color.white.opacity(0.18)
+    static let barCornerRadius: CGFloat = 12
+    static let barDividerCount = 3
 }
 
 struct BigDoseHourlyForecastStrip: View {
@@ -64,22 +67,47 @@ private struct BigDoseHourlyForecastItem: View {
 struct BigDoseThreeDayForecastRow: View {
     var forecast: [BigDoseDailyForecast]
     var hourlyForecast: [BigDoseHourlyForecast]
+    var hourlyUV: [HourlyUVSnapshot]
+    var latitude: Double
+    var longitude: Double
+    var profile: UserProfile
 
     private var threeDayForecast: [BigDoseDailyForecast] {
         Array(forecast.prefix(3))
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(threeDayForecast) { day in
-                BigDoseForecastDayColumn(
-                    forecast: day,
-                    hourlyChances: Self.hourlyPrecipChances(for: day.date, hourlyForecast: hourlyForecast, dailyChance: day.precipitationChance)
-                )
+        VStack(alignment: .leading, spacing: 12) {
+            Text("3-Day Forecast")
+                .font(.bigDoseHeader(.headline).weight(.black))
+                .foregroundStyle(.white)
+
+            HStack(spacing: 10) {
+                ForEach(threeDayForecast) { day in
+                    BigDoseForecastDayColumn(
+                        forecast: day,
+                        vitaminDAvailability: vitaminDAvailability(for: day.date),
+                        hourlyChances: Self.hourlyPrecipChances(
+                            for: day.date,
+                            hourlyForecast: hourlyForecast,
+                            dailyChance: day.precipitationChance
+                        )
+                    )
+                }
             }
         }
         .padding(14)
         .background(forecastPanelBackground(accent: .gpSideBarLow))
+    }
+
+    private func vitaminDAvailability(for day: Date) -> DailyVitaminDAvailability {
+        DailyVitaminDAvailabilityService.availability(
+            for: day,
+            latitude: latitude,
+            longitude: longitude,
+            profile: profile,
+            hourlyUV: hourlyUV
+        )
     }
 
     static func hourlyPrecipChances(
@@ -107,6 +135,7 @@ struct BigDoseThreeDayForecastRow: View {
 
 private struct BigDoseForecastDayColumn: View {
     var forecast: BigDoseDailyForecast
+    var vitaminDAvailability: DailyVitaminDAvailability
     var hourlyChances: [Double]
 
     var body: some View {
@@ -120,6 +149,16 @@ private struct BigDoseForecastDayColumn: View {
                 .foregroundStyle(.solarGold)
                 .symbolRenderingMode(.hierarchical)
                 .frame(height: 24)
+
+            Text(forecast.conditionText)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .frame(minHeight: 28)
+
+            vitaminDSummary
 
             PrecipDailySparkline(chances: hourlyChances)
                 .frame(height: 34)
@@ -140,6 +179,43 @@ private struct BigDoseForecastDayColumn: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
         .background(.white.opacity(0.05), in: .rect(cornerRadius: 16))
+    }
+
+    private var vitaminDSummary: some View {
+        VStack(spacing: 3) {
+            if vitaminDAvailability.estimatedIU != nil {
+                Text(vitaminDAvailability.primaryLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.solarGold.opacity(0.88))
+            } else if !vitaminDAvailability.hasWindow {
+                Text(vitaminDAvailability.primaryLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+
+            if vitaminDAvailability.showsWindowDuration,
+               let duration = vitaminDAvailability.windowDurationLabel {
+                windowDurationLabel(duration)
+            }
+        }
+        .frame(minHeight: 28)
+    }
+
+    private func windowDurationLabel(_ duration: String) -> some View {
+        HStack(spacing: 3) {
+            Text(duration)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.white.opacity(0.48))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Image(systemName: "window.vertical.open")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.42))
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(duration) vitamin D window")
     }
 
     private var precipSummary: some View {
@@ -242,21 +318,23 @@ private struct PrecipHourlyColumn: View {
     var body: some View {
         VStack(spacing: 8) {
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(hasPrecip ? PrecipitationChartStyle.trackFill : .clear)
+                RoundedRectangle(cornerRadius: PrecipitationChartStyle.barCornerRadius, style: .continuous)
+                    .fill(PrecipitationChartStyle.trackFill)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(PrecipitationChartStyle.trackStroke, lineWidth: hasPrecip ? 0 : 1)
+                        PrecipBarDividers(dividerCount: PrecipitationChartStyle.barDividerCount)
                     }
                     .frame(height: maxHeight)
 
                 if hasPrecip {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: PrecipitationChartStyle.barCornerRadius, style: .continuous)
                         .fill(PrecipitationChartStyle.precipBlue)
                         .frame(height: max(maxHeight * normalizedChance, 6))
                 }
             }
             .frame(maxWidth: .infinity)
+            .clipShape(
+                RoundedRectangle(cornerRadius: PrecipitationChartStyle.barCornerRadius, style: .continuous)
+            )
 
             HStack(spacing: 3) {
                 if hasPrecip {
@@ -277,6 +355,38 @@ private struct PrecipHourlyColumn: View {
                 .foregroundStyle(.white.opacity(0.58))
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct PrecipBarDividers: View {
+    var dividerCount: Int
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<dividerCount, id: \.self) { _ in
+                Spacer(minLength: 0)
+                PrecipBarDottedLine()
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct PrecipBarDottedLine: View {
+    var body: some View {
+        GeometryReader { geometry in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
+                path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
+            }
+            .stroke(
+                PrecipitationChartStyle.dividerColor,
+                style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4])
+            )
+        }
+        .frame(height: 1)
     }
 }
 

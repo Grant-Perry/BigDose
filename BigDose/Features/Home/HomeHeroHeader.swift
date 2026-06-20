@@ -7,6 +7,9 @@ struct HomeHeroHeader: View {
     var targetIU: Int
     var vitaminDWindowDisplay: VitaminDWindowDisplay?
     var now: Date
+    var isSunSessionStartEnabled = true
+    var showsNoUsefulUV = false
+    var onStartSunSession: () -> Void = {}
 
     private let avatarDiameter: CGFloat = 88
 
@@ -25,7 +28,10 @@ struct HomeHeroHeader: View {
                             display: vitaminDWindowDisplay,
                             todayGoalProgress: todayGoalProgress,
                             todayCollectedIU: todayCollectedIU,
-                            targetIU: targetIU
+                            targetIU: targetIU,
+                            isSunSessionStartEnabled: isSunSessionStartEnabled,
+                            showsNoUsefulUV: showsNoUsefulUV,
+                            onStartSunSession: onStartSunSession
                         )
                     } else {
                         fallbackPanel
@@ -137,6 +143,7 @@ struct HomeHeroHeader: View {
             Spacer(minLength: 0)
         }
         .padding(14)
+        .padding(.trailing, goalDialDiameter + 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white.opacity(0.06), in: .rect(cornerRadius: 20, style: .continuous))
         .overlay {
@@ -144,16 +151,30 @@ struct HomeHeroHeader: View {
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         }
         .overlay(alignment: .trailing) {
+            todayGoalDialButton(diameter: goalDialDiameter, showsNoUsefulUV: showsNoUsefulUV)
+                .padding(.trailing, 12)
+        }
+    }
+
+    private func todayGoalDialButton(diameter: CGFloat, showsNoUsefulUV: Bool = false) -> some View {
+        Button(action: onStartSunSession) {
             SunSessionGoalDialView(
                 goalProgress: todayGoalProgress,
                 goalTimerInterval: nil,
                 isPaused: true,
-                diameter: goalDialDiameter,
+                diameter: diameter,
                 lineWidth: 5,
-                progressCaption: "today"
+                progressCaption: "IU goal",
+                showsNoUsefulUV: showsNoUsefulUV
             )
-            .padding(.trailing, 8)
+            .accessibilityHidden(true)
         }
+        .buttonStyle(.plain)
+        .disabled(!isSunSessionStartEnabled)
+        .opacity(isSunSessionStartEnabled ? 1 : 0.48)
+        .accessibilityLabel("Start sun session")
+        .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily IU goal")
+        .accessibilityHint(isSunSessionStartEnabled ? "Starts a new sun session" : "Weather data required to start a sun session")
     }
 
     private var greeting: String {

@@ -86,7 +86,29 @@ struct NotificationSettingsView: View {
     private func alertCard(_ profile: UserProfile) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Toggle("Useful sunlight windows", isOn: binding(\.wantsSolarWindowAlerts))
+                Text("Sun & D Window")
+                    .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+
+                Toggle("D window opening", isOn: binding(\.wantsDWindowOpeningAlerts))
+                Toggle("D window closing", isOn: binding(\.wantsDWindowClosingAlerts))
+                Toggle("Solar noon", isOn: binding(\.wantsSolarNoonAlerts))
+                Toggle("Sunrise & sunset", isOn: binding(\.wantsSunriseSunsetAlerts))
+                Toggle("AM light window (1°–3°)", isOn: binding(\.wantsAMLightWindowAlerts))
+                Toggle("Next D window opportunity", isOn: binding(\.wantsNextDOpportunityAlerts))
+
+                Text("Each sun alert fires 15 minutes before and after the event.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.52))
+                    .padding(.top, 2)
+
+                Divider()
+                    .overlay(.white.opacity(0.18))
+
+                Text("Other Guidance")
+                    .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+
                 Toggle("Session safety guidance", isOn: binding(\.wantsRiskAlerts))
                 Toggle("Supplement reminders", isOn: binding(\.wantsSupplementReminders))
                 Toggle("Lab retest reminders", isOn: binding(\.wantsLabReminders))
@@ -162,7 +184,7 @@ struct NotificationSettingsView: View {
     }
 
     private func saveAndReschedule() {
-        profile?.wantsWindowReminders = profile?.wantsSolarWindowAlerts ?? false
+        profile?.syncLegacySolarAlertPreferences()
         profile?.updatedAt = .now
         try? modelContext.save()
         Task { await reschedule() }

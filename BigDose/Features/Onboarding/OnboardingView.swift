@@ -145,34 +145,40 @@ struct OnboardingView: View {
             acceptedDisclaimer = profile?.hasAcceptedWellnessDisclaimer ?? false
             wantsHealthKitSupplementExport = profile?.wantsHealthKitSupplementExport ?? false
         }
-        .alert(healthAutofillTitle, isPresented: $isShowingHealthAutofillResult) {
-            Button("OK", role: .cancel) {
-                if page == healthPage {
-                    withAnimation(.smooth) {
-                        page = healthPage + 1
+        .bigDoseAlert(
+            healthAutofillTitle,
+            isPresented: $isShowingHealthAutofillResult,
+            message: healthAutofillMessage ?? "",
+            actions: [
+                .cancel("OK") {
+                    if page == healthPage {
+                        withAnimation(.smooth) {
+                            page = healthPage + 1
+                        }
                     }
                 }
-            }
-        } message: {
-            Text(healthAutofillMessage ?? "")
-        }
+            ]
+        )
         .onChange(of: isShowingHealthAutofillResult) { _, isShowing in
             guard isShowing else { return }
             BigDoseAlertFeedback.present(kind: .informational)
         }
-        .alert("Update Apple Health?", isPresented: $isShowingMetricSyncConfirmation) {
-            Button("Update Apple Health") {
-                Task {
-                    await applyPendingMetricUpdate()
+        .bigDoseAlert(
+            "Update Apple Health?",
+            isPresented: $isShowingMetricSyncConfirmation,
+            message: pendingMetricUpdate?.confirmationMessage ?? "",
+            actions: [
+                .default("Update Apple Health") {
+                    Task {
+                        await applyPendingMetricUpdate()
+                        completeMetricSyncNextAction()
+                    }
+                },
+                .cancel("Not Now") {
                     completeMetricSyncNextAction()
                 }
-            }
-            Button("Not Now", role: .cancel) {
-                completeMetricSyncNextAction()
-            }
-        } message: {
-            Text(pendingMetricUpdate?.confirmationMessage ?? "")
-        }
+            ]
+        )
         .onChange(of: isShowingMetricSyncConfirmation) { _, isShowing in
             guard isShowing else { return }
             BigDoseAlertFeedback.present(kind: .informational)
@@ -518,7 +524,7 @@ struct OnboardingView: View {
 
                 GlassCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        Toggle("Useful sunlight timing", isOn: $wantsSolarWindowAlerts)
+                        Toggle("Sun & D window timing", isOn: $wantsSolarWindowAlerts)
                         Toggle("Skin-limit safety guidance", isOn: $wantsRiskAlerts)
                         Toggle("Supplement logging", isOn: $wantsSupplementReminders)
                         Toggle("Lab retest cadence", isOn: $wantsLabReminders)
@@ -638,6 +644,12 @@ struct OnboardingView: View {
         activeProfile.preferredDailyIU = max(defaultSupplementIU, 1_000)
         activeProfile.wantsWindowReminders = wantsSolarWindowAlerts
         activeProfile.wantsSolarWindowAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsDWindowOpeningAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsDWindowClosingAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsSolarNoonAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsSunriseSunsetAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsAMLightWindowAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsNextDOpportunityAlerts = wantsSolarWindowAlerts
         activeProfile.wantsRiskAlerts = wantsRiskAlerts
         activeProfile.wantsSupplementReminders = wantsSupplementReminders
         activeProfile.wantsLabReminders = wantsLabReminders

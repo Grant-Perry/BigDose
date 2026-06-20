@@ -1,6 +1,6 @@
 import Foundation
 
-enum SunSessionLiveActivityMetrics {
+nonisolated enum SunSessionLiveActivityMetrics {
     static func elapsedSeconds(
         state: SunSessionActivityAttributes.ContentState,
         now: Date = .now

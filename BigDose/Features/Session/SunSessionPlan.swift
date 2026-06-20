@@ -12,6 +12,28 @@ struct SunSessionPlan: Equatable {
     var locationName: String
     var targetIU: Double
     var exitLeadFraction: Double
+    var latitude: Double = 0
+    var longitude: Double = 0
+
+    var vitaminDProductionFactor: Double {
+        SunSessionEligibilityService.vitaminDProductionFactor(
+            latitude: latitude,
+            longitude: longitude,
+            now: startedAt
+        )
+    }
+
+    var isOutsideVitaminDWindow: Bool {
+        SunSessionEligibilityService.isOutsideVitaminDWindow(
+            latitude: latitude,
+            longitude: longitude,
+            now: startedAt
+        )
+    }
+
+    var isTraceVitaminDConditions: Bool {
+        vitaminDProductionFactor < 0.95
+    }
 
     var input: SunSessionPlanInput {
         SunSessionPlanInput(
@@ -26,7 +48,9 @@ struct SunSessionPlan: Equatable {
     }
 
     var estimate: VitaminDExposureEstimate {
-        VitaminDCalculator.estimate(input: input.exposureInput(), targetIU: targetIU)
+        var result = VitaminDCalculator.estimate(input: input.exposureInput(), targetIU: targetIU)
+        result.estimatedIU *= vitaminDProductionFactor
+        return result
     }
 
     var iuPerMinute: Double {
@@ -47,12 +71,41 @@ struct SunSessionPlan: Equatable {
         return VitaminDCalculator.estimate(
             input: oneMinuteInput.exposureInput(),
             targetIU: targetIU
-        ).estimatedIU
+        ).estimatedIU * vitaminDProductionFactor
     }
 
     func estimatedIU(at elapsedSeconds: TimeInterval) -> Double {
         guard elapsedSeconds > 0 else { return 0 }
         return liveIUProductionRatePerMinute * (elapsedSeconds / 60)
+    }
+
+    func medUsedFraction(at elapsedSeconds: TimeInterval) -> Double {
+        guard medTimeSeconds > 0 else { return 0 }
+        return elapsedSeconds / medTimeSeconds
+    }
+
+    func medUsedPercent(at elapsedSeconds: TimeInterval) -> Int {
+        Int((medUsedFraction(at: elapsedSeconds) * 100).rounded())
+    }
+
+    func medRemainingMinutes(at elapsedSeconds: TimeInterval) -> Int {
+        max(0, Int(((medTimeSeconds - elapsedSeconds) / 60).rounded()))
+    }
+
+    func safetyAlertMessage(for alert: SunSessionSafetyAlertKind, elapsedSeconds: TimeInterval) -> String {
+        let medPercent = medUsedPercent(at: elapsedSeconds)
+        let skin = skinType.title
+
+        switch alert {
+        case .turnOver:
+            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin at this UV. Flip sides, rotate, or change exposure so one area doesn't take all of it."
+        case .medWarning:
+            return "You are at about \(medPercent)% of your estimated MED — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
+        case .prepareExit(let countdown):
+            return "You are at about \(medPercent)% of MED. Start heading inside — your recommended stop point is in \(countdown)."
+        case .stop:
+            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin. BigDose paused the timer because continued exposure risks exceeding your conservative limit."
+        }
     }
 
     func goalProgress(at elapsedSeconds: TimeInterval) -> Double {
@@ -116,6 +169,13 @@ struct SunSessionPlan: Equatable {
         let secondsPart = total % 60
         return "\(minutes):\(String(format: "%02d", secondsPart))"
     }
+}
+
+enum SunSessionSafetyAlertKind {
+    case turnOver
+    case medWarning
+    case prepareExit(countdown: String)
+    case stop
 }
 
 struct SunSessionResult: Equatable {

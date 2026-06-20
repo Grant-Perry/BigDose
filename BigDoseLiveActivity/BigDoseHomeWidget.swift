@@ -213,7 +213,7 @@ struct BigDoseHomeWidgetEntryView: View {
                     isPaused: true,
                     diameter: 52,
                     lineWidth: 4,
-                    progressCaption: "today"
+                    progressCaption: "IU goal"
                 )
                 Spacer(minLength: 0)
             }
@@ -257,7 +257,7 @@ struct BigDoseHomeWidgetEntryView: View {
                         isPaused: true,
                         diameter: 68,
                         lineWidth: 5,
-                        progressCaption: "today"
+                        progressCaption: "IU goal"
                     )
 
                     Text("Peak UV \(entry.snapshot.peakUVIndex.formatted(.number.precision(.fractionLength(1))))")

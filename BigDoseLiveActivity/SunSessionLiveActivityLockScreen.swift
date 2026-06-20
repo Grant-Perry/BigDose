@@ -1,4 +1,3 @@
-import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -92,34 +91,12 @@ struct SunSessionLiveActivityLockScreenView: View {
     }
 
     private var controlRow: some View {
-        HStack(spacing: 8) {
-            if context.state.isPaused {
-                Button(intent: ResumeSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                    Label("Resume", systemImage: "play.fill")
-                        .font(.caption.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-            } else {
-                Button(intent: PauseSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                    Label("Pause", systemImage: "pause.fill")
-                        .font(.caption.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
-            }
-
-            Button(intent: EndSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                Label("End", systemImage: "stop.fill")
-                    .font(.caption.weight(.bold))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-        }
-        .controlSize(.small)
+        SunSessionLiveActivityControls(
+            sessionID: context.attributes.sessionID,
+            isPaused: context.state.isPaused,
+            pendingControl: context.state.pendingControl,
+            style: .lockScreen
+        )
     }
 }
 

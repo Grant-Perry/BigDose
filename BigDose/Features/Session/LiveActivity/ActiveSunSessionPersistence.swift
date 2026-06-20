@@ -20,6 +20,8 @@ enum ActiveSunSessionPersistence {
             locationName: plan.locationName,
             targetIU: plan.targetIU,
             exitLeadFraction: plan.exitLeadFraction,
+            latitude: plan.latitude,
+            longitude: plan.longitude,
             elapsedSeconds: elapsedSeconds,
             isPaused: isPaused,
             updatedAt: now
@@ -45,7 +47,9 @@ enum ActiveSunSessionPersistence {
             skinType: skinType,
             locationName: record.locationName,
             targetIU: record.targetIU,
-            exitLeadFraction: record.exitLeadFraction
+            exitLeadFraction: record.exitLeadFraction,
+            latitude: record.latitude,
+            longitude: record.longitude
         )
     }
 

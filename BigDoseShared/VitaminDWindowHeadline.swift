@@ -1,7 +1,7 @@
 import Foundation
 
 /// User-facing copy for when the vitamin D synthesis window is open, upcoming, or tomorrow.
-enum VitaminDWindowHeadline {
+nonisolated enum VitaminDWindowHeadline {
     static func isWindowOpenNow(
         windowStart: Date?,
         windowEnd: Date?,

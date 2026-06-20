@@ -105,13 +105,13 @@ final class SunSessionLiveActivityCoordinator {
     }
 
     private func scheduleDebouncedUpdate(state: SunSessionActivityAttributes.ContentState) {
-        if let activity {
-            if activity.content.state == state { return }
-        } else if let last = lastPushedContentState, last == state {
-            return
-        }
-
         guard let activity else { return }
+
+        var mergedState = state
+        mergedState.pendingControl = activity.content.state.pendingControl
+
+        if activity.content.state == mergedState { return }
+        if let last = lastPushedContentState, last == mergedState { return }
 
         pendingContentState = nil
         pendingUpdateTask?.cancel()
@@ -121,9 +121,9 @@ final class SunSessionLiveActivityCoordinator {
             defer { self?.pendingUpdateTask = nil }
             guard let self else { return }
 
-            self.lastPushedContentState = state
-            let staleDate = state.isPaused ? nil : Date.now.addingTimeInterval(1)
-            await activity.update(ActivityContent(state: state, staleDate: staleDate))
+            self.lastPushedContentState = mergedState
+            let staleDate = mergedState.isPaused ? nil : Date.now.addingTimeInterval(1)
+            await activity.update(ActivityContent(state: mergedState, staleDate: staleDate))
         }
     }
 

@@ -45,23 +45,12 @@ struct SunSessionLiveActivityWidget: Widget {
 
                         Spacer()
 
-                        if context.state.isPaused {
-                            Button(intent: ResumeSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                                Image(systemName: "play.fill")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
-                        } else {
-                            Button(intent: PauseSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                                Image(systemName: "pause.fill")
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        Button(intent: EndSunSessionLiveActivityIntent(sessionID: context.attributes.sessionID)) {
-                            Image(systemName: "stop.fill")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
+                        SunSessionLiveActivityControls(
+                            sessionID: context.attributes.sessionID,
+                            isPaused: context.state.isPaused,
+                            pendingControl: context.state.pendingControl,
+                            style: .dynamicIsland
+                        )
                     }
                 }
             } compactLeading: {

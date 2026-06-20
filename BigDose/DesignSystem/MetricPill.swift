@@ -4,6 +4,7 @@ struct MetricPill: View {
     var title: String
     var value: String
     var systemImage: String
+    var infoTopic: BigDoseInfoTopic?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -12,9 +13,15 @@ struct MetricPill: View {
                 .foregroundStyle(.solarGold)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.58))
+                HStack(spacing: 2) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+
+                    if let infoTopic {
+                        InfoCircleButton(topic: infoTopic, compact: true)
+                    }
+                }
 
                 Text(value)
                     .font(.bigDoseHeader(.headline).weight(.black))

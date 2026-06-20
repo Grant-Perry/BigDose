@@ -3,6 +3,7 @@ import UserNotifications
 
 enum BigDoseAlertScheduler {
     private static let managedPrefix = "bigdose.alert."
+    private static let eventOffset: TimeInterval = 15 * 60
 
     static func authorizationStatus() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
@@ -26,29 +27,8 @@ enum BigDoseAlertScheduler {
             return
         }
 
-        if profile.wantsSolarWindowAlerts {
-            if let start = dailyPlan?.nextUsefulStart,
-               start > .now,
-               !isInQuietHours(start, profile: profile) {
-                await scheduleCalendar(
-                    id: "solarWindow.next",
-                    title: "Useful sunlight is coming up",
-                    body: "BigDose found upcoming sunlight that matches your profile.",
-                    date: start
-                )
-            }
-
-            if let best = dailyPlan?.bestWindowStart,
-               best > .now,
-               best != dailyPlan?.nextUsefulStart,
-               !isInQuietHours(best, profile: profile) {
-                await scheduleCalendar(
-                    id: "solarWindow.best",
-                    title: "Strong sunlight window today",
-                    body: "Today's strongest vitamin D window is approaching.",
-                    date: best
-                )
-            }
+        if let dailyPlan {
+            await scheduleSolarEventAlerts(profile: profile, dailyPlan: dailyPlan)
         }
 
         if profile.wantsSupplementReminders {
@@ -89,6 +69,148 @@ enum BigDoseAlertScheduler {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let ids = requests.map(\.identifier).filter { $0.hasPrefix(managedPrefix) }
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    private static func scheduleSolarEventAlerts(profile: UserProfile, dailyPlan: DailySunPlan) async {
+        let events = SolarEventScheduleContext.make(from: dailyPlan)
+        let nextOpportunityDuplicatesOpening = events.nextDOpportunityStart.map { next in
+            guard let opening = events.dWindowOpening else { return false }
+            return abs(next.timeIntervalSince(opening)) < 60
+        } ?? false
+
+        if profile.wantsDWindowOpeningAlerts, let opening = events.dWindowOpening {
+            await scheduleBeforeAfter(
+                idPrefix: "dWindow.opening",
+                beforeTitle: "D window opens soon",
+                beforeBody: "Your vitamin D window opens in 15 minutes.",
+                afterTitle: "D window just opened",
+                afterBody: "The sun is high enough for meaningful vitamin D production.",
+                eventDate: opening,
+                profile: profile
+            )
+        }
+
+        if profile.wantsDWindowClosingAlerts, let closing = events.dWindowClosing {
+            await scheduleBeforeAfter(
+                idPrefix: "dWindow.closing",
+                beforeTitle: "D window closing soon",
+                beforeBody: "Your vitamin D window closes in 15 minutes.",
+                afterTitle: "D window just closed",
+                afterBody: "Today's vitamin D window has ended.",
+                eventDate: closing,
+                profile: profile
+            )
+        }
+
+        if profile.wantsSolarNoonAlerts, let solarNoon = events.solarNoon {
+            await scheduleBeforeAfter(
+                idPrefix: "solarNoon",
+                beforeTitle: "Solar noon approaching",
+                beforeBody: "The sun reaches its highest point in 15 minutes.",
+                afterTitle: "Solar noon",
+                afterBody: "The sun is at its highest point for today.",
+                eventDate: solarNoon,
+                profile: profile
+            )
+        }
+
+        if profile.wantsSunriseSunsetAlerts {
+            if let sunrise = events.sunrise {
+                await scheduleBeforeAfter(
+                    idPrefix: "sunrise",
+                    beforeTitle: "Sunrise soon",
+                    beforeBody: "The sun rises in 15 minutes.",
+                    afterTitle: "Sunrise",
+                    afterBody: "The sun is up.",
+                    eventDate: sunrise,
+                    profile: profile
+                )
+            }
+
+            if let sunset = events.sunset {
+                await scheduleBeforeAfter(
+                    idPrefix: "sunset",
+                    beforeTitle: "Sunset soon",
+                    beforeBody: "The sun sets in 15 minutes.",
+                    afterTitle: "Sunset",
+                    afterBody: "The sun has set.",
+                    eventDate: sunset,
+                    profile: profile
+                )
+            }
+        }
+
+        if profile.wantsAMLightWindowAlerts {
+            if let amLightStart = events.amLightWindowStart {
+                await scheduleBeforeAfter(
+                    idPrefix: "amLight.opening",
+                    beforeTitle: "AM light window soon",
+                    beforeBody: "Low-angle morning sunlight — safe to look at — begins in 15 minutes.",
+                    afterTitle: "AM light window open",
+                    afterBody: "Morning sun is between 1°–3° — gentle light that's safe to look at.",
+                    eventDate: amLightStart,
+                    profile: profile
+                )
+            }
+
+            if let amLightEnd = events.amLightWindowEnd {
+                await scheduleBeforeAfter(
+                    idPrefix: "amLight.closing",
+                    beforeTitle: "AM light window ending soon",
+                    beforeBody: "The low-angle morning window ends in 15 minutes.",
+                    afterTitle: "AM light window ended",
+                    afterBody: "Morning light is no longer at the low, eye-safe angle.",
+                    eventDate: amLightEnd,
+                    profile: profile
+                )
+            }
+        }
+
+        if profile.wantsNextDOpportunityAlerts,
+           !nextOpportunityDuplicatesOpening || !profile.wantsDWindowOpeningAlerts,
+           let nextOpportunity = events.nextDOpportunityStart {
+            await scheduleBeforeAfter(
+                idPrefix: "nextDOpportunity",
+                beforeTitle: "D window opportunity soon",
+                beforeBody: "Your next vitamin D window opens in 15 minutes.",
+                afterTitle: "D window opportunity",
+                afterBody: "Your next vitamin D window is opening now.",
+                eventDate: nextOpportunity,
+                profile: profile
+            )
+        }
+    }
+
+    private static func scheduleBeforeAfter(
+        idPrefix: String,
+        beforeTitle: String,
+        beforeBody: String,
+        afterTitle: String,
+        afterBody: String,
+        eventDate: Date,
+        profile: UserProfile
+    ) async {
+        let beforeDate = eventDate.addingTimeInterval(-eventOffset)
+        let afterDate = eventDate.addingTimeInterval(eventOffset)
+        let suffix = dateIdentifier(for: eventDate)
+
+        if beforeDate > .now, !isInQuietHours(beforeDate, profile: profile) {
+            await scheduleCalendar(
+                id: "\(idPrefix).before.\(suffix)",
+                title: beforeTitle,
+                body: beforeBody,
+                date: beforeDate
+            )
+        }
+
+        if afterDate > .now, !isInQuietHours(afterDate, profile: profile) {
+            await scheduleCalendar(
+                id: "\(idPrefix).after.\(suffix)",
+                title: afterTitle,
+                body: afterBody,
+                date: afterDate
+            )
         }
     }
 
@@ -135,6 +257,16 @@ enum BigDoseAlertScheduler {
         try? await UNUserNotificationCenter.current().add(request)
     }
 
+    private static func dateIdentifier(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        return String(format: "%04d%02d%02d%02d%02d", year, month, day, hour, minute)
+    }
+
     private static func isInQuietHours(_ date: Date, profile: UserProfile) -> Bool {
         guard profile.quietHoursEnabled else { return false }
 
@@ -144,5 +276,39 @@ enum BigDoseAlertScheduler {
         }
 
         return hour >= profile.quietHoursStartHour || hour < profile.quietHoursEndHour
+    }
+}
+
+private struct SolarEventScheduleContext {
+    var dWindowOpening: Date?
+    var dWindowClosing: Date?
+    var solarNoon: Date?
+    var sunrise: Date?
+    var sunset: Date?
+    var amLightWindowStart: Date?
+    var amLightWindowEnd: Date?
+    var nextDOpportunityStart: Date?
+
+    static func make(from plan: DailySunPlan, now: Date = .now) -> SolarEventScheduleContext {
+        let display = DailySunPlanService.vitaminDWindowDisplay(for: plan, now: now)
+        let snapshot = display.snapshot
+        let referenceDay = snapshot.referenceDay
+        let nextOpportunity = DailySunPlanService.nextVitaminDOpportunity(for: plan, now: now)?.date
+        let amLight = SolarGeometryService.amLightWindow(
+            latitude: plan.latitude,
+            longitude: plan.longitude,
+            date: referenceDay
+        )
+
+        return SolarEventScheduleContext(
+            dWindowOpening: snapshot.windowStart,
+            dWindowClosing: snapshot.windowEnd,
+            solarNoon: snapshot.solarNoon,
+            sunrise: snapshot.sunrise,
+            sunset: snapshot.sunset,
+            amLightWindowStart: amLight.start,
+            amLightWindowEnd: amLight.end,
+            nextDOpportunityStart: nextOpportunity
+        )
     }
 }

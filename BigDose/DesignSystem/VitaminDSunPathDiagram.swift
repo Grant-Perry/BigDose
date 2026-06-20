@@ -241,18 +241,36 @@ struct VitaminDSunPathDiagram: View {
                     .foregroundStyle(.white)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(display.snapshot.durationLabel ?? "Unavailable")
-                        .font(.system(size: 34, weight: .black))
-                        .foregroundStyle(.solarGold)
+                    if let components = display.snapshot.durationComponents {
+                        BigDoseDurationText(
+                            components,
+                            font: .system(size: 34, weight: .black),
+                            valueColor: .solarGold
+                        )
                         .contentTransition(.numericText())
+                    } else {
+                        Text("Unavailable")
+                            .font(.system(size: 34, weight: .black))
+                            .foregroundStyle(.solarGold)
+                    }
 
-                    if let remainingLabel = display.remainingWindowDurationLabel(at: now) {
-                        Text("\(remainingLabel) remaining")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .offset(y: -5)
+                    if let remainingComponents = display.remainingWindowDurationComponents(at: now) {
+                        HStack(spacing: 0) {
+                            BigDoseDurationText(
+                                remainingComponents,
+                                font: .caption.weight(.semibold),
+                                valueColor: .secondary
+                            )
+
+                            Text(" remaining")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .offset(y: -5)
                     }
                 }
+
+                InfoCircleButton(topic: .dForDuration, iconSize: 16)
 
                 Spacer(minLength: 0)
             }

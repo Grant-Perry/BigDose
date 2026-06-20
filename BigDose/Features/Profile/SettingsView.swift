@@ -31,50 +31,47 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.inline)
-        .confirmationDialog(
+        .bigDoseAlert(
             "Reset onboarding?",
             isPresented: isPresented(for: .resetOnboarding),
-            titleVisibility: .visible
-        ) {
-            Button("Reset Onboarding", role: .destructive) {
-                resetOnboarding()
-                confirmationStep = .none
-            }
-            Button("Cancel", role: .cancel) {
-                confirmationStep = .none
-            }
-        } message: {
-            Text("This sends you back through setup. Your sessions, labs, supplements, and progress stay on this device.")
-        }
-        .confirmationDialog(
+            message: "This sends you back through setup. Your sessions, labs, supplements, and progress stay on this device.",
+            actions: [
+                .destructive("Reset Onboarding") {
+                    resetOnboarding()
+                    confirmationStep = .none
+                },
+                .cancel("Cancel") {
+                    confirmationStep = .none
+                }
+            ]
+        )
+        .bigDoseAlert(
             "Nuke all BigDose data?",
             isPresented: isPresented(for: .nukeFirstConfirm),
-            titleVisibility: .visible
-        ) {
-            Button("Continue") {
-                confirmationStep = .nukeFinalConfirm
-            }
-            Button("Cancel", role: .cancel) {
-                confirmationStep = .none
-            }
-        } message: {
-            Text("This permanently deletes your profile, sessions, labs, supplements, imports, and progress on this device.")
-        }
-        .confirmationDialog(
+            message: "This permanently deletes your profile, sessions, labs, supplements, imports, and progress on this device.",
+            actions: [
+                .default("Continue") {
+                    confirmationStep = .nukeFinalConfirm
+                },
+                .cancel("Cancel") {
+                    confirmationStep = .none
+                }
+            ]
+        )
+        .bigDoseAlert(
             "Are you absolutely certain?",
             isPresented: isPresented(for: .nukeFinalConfirm),
-            titleVisibility: .visible
-        ) {
-            Button("Nuke All Data", role: .destructive) {
-                nukeAllData()
-                confirmationStep = .none
-            }
-            Button("Cancel", role: .cancel) {
-                confirmationStep = .none
-            }
-        } message: {
-            Text("There is no undo. BigDose will erase everything local and send you through onboarding from scratch.")
-        }
+            message: "There is no undo. BigDose will erase everything local and send you through onboarding from scratch.",
+            actions: [
+                .destructive("Nuke All Data") {
+                    nukeAllData()
+                    confirmationStep = .none
+                },
+                .cancel("Cancel") {
+                    confirmationStep = .none
+                }
+            ]
+        )
         .fullScreenCover(isPresented: $isShowingOnboarding) {
             OnboardingView(profile: onboardingProfile ?? profile, onFinished: completeOnboardingPresentation)
         }

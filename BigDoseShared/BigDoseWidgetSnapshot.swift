@@ -1,6 +1,6 @@
 import Foundation
 
-struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
+nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
     var generatedAt: Date
     var locationLabel: String
     var currentUVIndex: Double

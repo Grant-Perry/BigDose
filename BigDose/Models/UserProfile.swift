@@ -24,6 +24,12 @@ final class UserProfile {
     var incidentalSunMinutesPerWeek: Int = 30
     var defaultSupplementIU: Int = 1_000
     var wantsSolarWindowAlerts: Bool = true
+    var wantsDWindowOpeningAlerts: Bool = true
+    var wantsDWindowClosingAlerts: Bool = true
+    var wantsSolarNoonAlerts: Bool = true
+    var wantsSunriseSunsetAlerts: Bool = true
+    var wantsAMLightWindowAlerts: Bool = true
+    var wantsNextDOpportunityAlerts: Bool = true
     var wantsSupplementReminders: Bool = false
     var wantsLabReminders: Bool = true
     var wantsWeeklyProgressAlerts: Bool = true
@@ -64,6 +70,12 @@ final class UserProfile {
         incidentalSunMinutesPerWeek: Int = 30,
         defaultSupplementIU: Int = 1_000,
         wantsSolarWindowAlerts: Bool = true,
+        wantsDWindowOpeningAlerts: Bool = true,
+        wantsDWindowClosingAlerts: Bool = true,
+        wantsSolarNoonAlerts: Bool = true,
+        wantsSunriseSunsetAlerts: Bool = true,
+        wantsAMLightWindowAlerts: Bool = true,
+        wantsNextDOpportunityAlerts: Bool = true,
         wantsSupplementReminders: Bool = false,
         wantsLabReminders: Bool = true,
         wantsWeeklyProgressAlerts: Bool = true,
@@ -103,6 +115,12 @@ final class UserProfile {
         self.incidentalSunMinutesPerWeek = incidentalSunMinutesPerWeek
         self.defaultSupplementIU = defaultSupplementIU
         self.wantsSolarWindowAlerts = wantsSolarWindowAlerts
+        self.wantsDWindowOpeningAlerts = wantsDWindowOpeningAlerts
+        self.wantsDWindowClosingAlerts = wantsDWindowClosingAlerts
+        self.wantsSolarNoonAlerts = wantsSolarNoonAlerts
+        self.wantsSunriseSunsetAlerts = wantsSunriseSunsetAlerts
+        self.wantsAMLightWindowAlerts = wantsAMLightWindowAlerts
+        self.wantsNextDOpportunityAlerts = wantsNextDOpportunityAlerts
         self.wantsSupplementReminders = wantsSupplementReminders
         self.wantsLabReminders = wantsLabReminders
         self.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
@@ -132,6 +150,20 @@ extension UserProfile {
 
     var prepareExitLeadFraction: Double {
         Double(Self.clampedPrepareExitLeadPercent(prepareExitLeadPercent)) / 100
+    }
+
+    var hasAnySolarEventAlertsEnabled: Bool {
+        wantsDWindowOpeningAlerts
+            || wantsDWindowClosingAlerts
+            || wantsSolarNoonAlerts
+            || wantsSunriseSunsetAlerts
+            || wantsAMLightWindowAlerts
+            || wantsNextDOpportunityAlerts
+    }
+
+    func syncLegacySolarAlertPreferences() {
+        wantsWindowReminders = hasAnySolarEventAlertsEnabled
+        wantsSolarWindowAlerts = hasAnySolarEventAlertsEnabled
     }
 }
 

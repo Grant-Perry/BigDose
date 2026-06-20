@@ -52,7 +52,12 @@ final class HomeViewModel {
         }
     }
 
-    func estimate(for profile: UserProfile, durationSeconds: TimeInterval = 12 * 60) -> VitaminDExposureEstimate {
+    func estimate(
+        for profile: UserProfile,
+        durationSeconds: TimeInterval = 12 * 60,
+        latitude: Double = 0,
+        longitude: Double = 0
+    ) -> VitaminDExposureEstimate {
         guard let weather else {
             return VitaminDExposureEstimate(
                 estimatedIU: 0,
@@ -72,10 +77,15 @@ final class HomeViewModel {
             skinType: profile.skinType
         )
 
-        return VitaminDCalculator.estimate(
+        var result = VitaminDCalculator.estimate(
             input: plan.exposureInput(),
             targetIU: Double(profile.preferredDailyIU)
         )
+        result.estimatedIU *= SunSessionEligibilityService.vitaminDProductionFactor(
+            latitude: latitude,
+            longitude: longitude
+        )
+        return result
     }
 
     private func friendlyMessage(for error: Error) -> String {

@@ -60,13 +60,14 @@ struct WeatherRingMetricCard: View {
     var subtitle: String
     var progress: Double
     var accent: Color
+    var infoTopic: BigDoseInfoTopic?
 
     @State private var animatedProgress = 0.0
 
     var body: some View {
         BigDoseWeatherTile(accent: accent) {
             VStack(spacing: 7) {
-                WeatherTileHeader(icon: icon, title: title, accent: accent)
+                WeatherTileHeader(icon: icon, title: title, accent: accent, infoTopic: infoTopic)
 
                 ZStack {
                     Circle()
@@ -189,10 +190,51 @@ struct BigDoseWeatherTile<Content: View>: View {
     }
 }
 
+struct WeatherUVIBadge: View {
+    var uvIndex: Double
+
+    private var accent: Color {
+        switch uvIndex {
+        case ..<1:
+            .white.opacity(0.55)
+        case ..<3:
+            .green
+        case ..<6:
+            .solarGold
+        case ..<8:
+            .orange
+        default:
+            .red
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("UVI:")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white.opacity(0.52))
+
+            Text(uvIndex.formatted(.number.precision(.fractionLength(1))))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(accent.opacity(0.14), in: Capsule())
+        .overlay {
+            Capsule()
+                .stroke(accent.opacity(0.32), lineWidth: 1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("UV index \(uvIndex.formatted(.number.precision(.fractionLength(1))))")
+    }
+}
+
 struct WeatherTileHeader: View {
     var icon: String
     var title: String
     var accent: Color
+    var infoTopic: BigDoseInfoTopic?
 
     var body: some View {
         HStack(spacing: 5) {
@@ -205,6 +247,10 @@ struct WeatherTileHeader: View {
                 .foregroundStyle(.white.opacity(0.66))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
+
+            if let infoTopic {
+                InfoCircleButton(topic: infoTopic, iconSize: 12, compact: true)
+            }
         }
     }
 }

@@ -30,8 +30,29 @@ struct StartSunSessionActionButton: View {
     }
 
     var isEnabled = true
+    var showsNoUsefulUV = false
     var size: Size
     var action: () -> Void
+
+    private var usesActiveStartStyle: Bool {
+        isEnabled && !showsNoUsefulUV
+    }
+
+    private var availableStartGradient: LinearGradient {
+        LinearGradient(
+            colors: [.gpBtnOn, .gpBtnOnL],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var noUsefulUVGradient: LinearGradient {
+        LinearGradient(
+            colors: [.gpBtnOff, .gpBtnOffL],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
 
     var body: some View {
         Button(action: action) {
@@ -40,6 +61,7 @@ struct StartSunSessionActionButton: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .accessibilityLabel("Start sun session")
+        .accessibilityValue(showsNoUsefulUV ? "No useful UV" : "Use current UV")
     }
 
     @ViewBuilder
@@ -48,9 +70,12 @@ struct StartSunSessionActionButton: View {
         case .compact:
             VStack(spacing: 6) {
                 sunCircle
-                Text("Start")
-                    .font(.caption.weight(.black))
-                    .foregroundStyle(isEnabled ? .white : .white.opacity(0.48))
+
+                if !showsNoUsefulUV {
+                    Text("Start")
+                        .font(.caption.weight(.black))
+                        .foregroundStyle(isEnabled ? .white : .white.opacity(0.48))
+                }
             }
             .frame(maxWidth: .infinity)
 
@@ -65,7 +90,7 @@ struct StartSunSessionActionButton: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
-                    Text("Use current UV")
+                    Text(showsNoUsefulUV ? "No Useful UV" : "Use current UV")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(isEnabled ? 0.64 : 0.38))
                 }
@@ -78,37 +103,46 @@ struct StartSunSessionActionButton: View {
             }
             .frame(maxWidth: .infinity, minHeight: size == .prominent ? 96 : 76, alignment: .leading)
             .padding(size == .prominent ? 16 : 12)
-            .background(
-                LinearGradient(
-                    colors: isEnabled
-                        ? [.gpGreen.opacity(0.38), .gpFlatGreen.opacity(0.26), .solarGold.opacity(0.10)]
-                        : [.white.opacity(0.06), .white.opacity(0.04)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: .rect(cornerRadius: size == .prominent ? 28 : 26)
-            )
+            .background(cardBackground, in: .rect(cornerRadius: size == .prominent ? 28 : 26))
             .overlay(
                 RoundedRectangle(cornerRadius: size == .prominent ? 28 : 26)
-                    .stroke(Color.gpGreen.opacity(isEnabled ? 0.32 : 0.1), lineWidth: 1)
+                    .stroke(cardBorderColor, lineWidth: 1)
             )
+        }
+    }
+
+    private var cardBackground: LinearGradient {
+        if usesActiveStartStyle {
+            return availableStartGradient
+        }
+
+        if isEnabled && showsNoUsefulUV {
+            return noUsefulUVGradient
+        }
+
+        return LinearGradient(
+            colors: [.white.opacity(0.06), .white.opacity(0.04)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var cardBorderColor: Color {
+        if usesActiveStartStyle {
+            .gpBtnOn.opacity(0.55)
+        } else if isEnabled && showsNoUsefulUV {
+            .gpBtnOff.opacity(0.55)
+        } else {
+            .white.opacity(0.1)
         }
     }
 
     private var sunCircle: some View {
         ZStack {
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: isEnabled
-                            ? [.gpGreen, .gpHiGreen.opacity(0.82), .solarGold.opacity(0.78)]
-                            : [.white.opacity(0.14), .white.opacity(0.06)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(sunCircleGradient)
                 .frame(width: size.diameter, height: size.diameter)
-                .shadow(color: .gpGreen.opacity(isEnabled ? 0.72 : 0), radius: isEnabled ? 18 : 0)
+                .shadow(color: sunCircleShadowColor, radius: usesActiveStartStyle || (isEnabled && showsNoUsefulUV) ? 18 : 0)
                 .overlay(
                     Circle()
                         .stroke(.white.opacity(isEnabled ? 0.24 : 0.1), lineWidth: 1)
@@ -118,6 +152,32 @@ struct StartSunSessionActionButton: View {
                 .font(.system(size: size.iconSize, weight: .black))
                 .foregroundStyle(isEnabled ? .white : .white.opacity(0.42))
                 .shadow(color: .deepSpace.opacity(0.35), radius: 3, y: 1)
+        }
+    }
+
+    private var sunCircleGradient: LinearGradient {
+        if usesActiveStartStyle {
+            return availableStartGradient
+        }
+
+        if isEnabled && showsNoUsefulUV {
+            return noUsefulUVGradient
+        }
+
+        return LinearGradient(
+            colors: [.white.opacity(0.14), .white.opacity(0.06)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var sunCircleShadowColor: Color {
+        if usesActiveStartStyle {
+            .gpBtnOn.opacity(0.65)
+        } else if showsNoUsefulUV {
+            .gpBtnOff.opacity(0.65)
+        } else {
+            .clear
         }
     }
 }

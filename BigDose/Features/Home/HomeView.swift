@@ -19,7 +19,12 @@ struct HomeView: View {
     }
 
     private var estimate: VitaminDExposureEstimate {
-        homeViewModel.estimate(for: activeProfile)
+        let plan = currentPlan
+        return homeViewModel.estimate(
+            for: activeProfile,
+            latitude: plan?.latitude ?? 0,
+            longitude: plan?.longitude ?? 0
+        )
     }
 
     var body: some View {
@@ -69,8 +74,8 @@ struct HomeView: View {
 
                 weatherCard
                 solarGuidanceCard(now: now)
-                goalCard
-                recommendationCard
+                goalCard(now: now)
+                recommendationCard(now: now)
                 metricGrid
                 scienceNudge
                 legalFooter
@@ -89,8 +94,31 @@ struct HomeView: View {
             todayCollectedIU: todayCollectedIU,
             targetIU: activeProfile.preferredDailyIU,
             vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
-            now: now
+            now: now,
+            isSunSessionStartEnabled: homeViewModel.weather != nil,
+            showsNoUsefulUV: showsNoUsefulUV(now: now),
+            onStartSunSession: { sessionRoute = .typePicker }
         )
+    }
+
+    private func showsNoUsefulUV(now: Date) -> Bool {
+        guard let plan = currentPlan,
+              plan.latitude != 0 || plan.longitude != 0,
+              Calendar.current.isDateInToday(now) else {
+            return false
+        }
+
+        let todaySnapshot = SolarGeometryService.vitaminDWindow(
+            latitude: plan.latitude,
+            longitude: plan.longitude,
+            date: Calendar.current.startOfDay(for: now)
+        )
+
+        guard let windowEnd = todaySnapshot.windowEnd else {
+            return !todaySnapshot.hasWindow
+        }
+
+        return now > windowEnd
     }
 
     @ViewBuilder
@@ -179,23 +207,25 @@ struct HomeView: View {
     }
 
     private func weatherSummaryHeader(_ weather: BigDoseWeatherSnapshot) -> some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center) {
                 Text(weather.locationName)
                     .font(.bigDoseHeader(.title2).weight(.semibold))
                     .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(weather.displayConditionSummary)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.62))
+                WeatherUVIBadge(uvIndex: weather.uvIndex)
+
+                Image(systemName: weather.symbolName)
+                    .font(.system(size: 38, weight: .semibold))
+                    .foregroundStyle(.solarGold)
+                    .symbolEffect(.pulse, options: .repeating, value: homeViewModel.isLoading)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            Spacer()
-
-            Image(systemName: weather.symbolName)
-                .font(.system(size: 38, weight: .semibold))
-                .foregroundStyle(.solarGold)
-                .symbolEffect(.pulse, options: .repeating, value: homeViewModel.isLoading)
+            Text(weather.displayConditionSummary)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.62))
         }
     }
 
@@ -229,7 +259,11 @@ struct HomeView: View {
             if !weather.dailyForecast.isEmpty {
                 BigDoseThreeDayForecastRow(
                     forecast: weather.dailyForecast,
-                    hourlyForecast: weather.hourlyForecast
+                    hourlyForecast: weather.hourlyForecast,
+                    hourlyUV: weather.hourlyUV,
+                    latitude: currentPlan?.latitude ?? 0,
+                    longitude: currentPlan?.longitude ?? 0,
+                    profile: activeProfile
                 )
             }
         }
@@ -250,7 +284,11 @@ struct HomeView: View {
                         solarStatusChip(plan: plan)
                     }
 
-                    StartSunSessionActionButton(isEnabled: homeViewModel.weather != nil, size: .compact) {
+                    StartSunSessionActionButton(
+                        isEnabled: homeViewModel.weather != nil,
+                        showsNoUsefulUV: showsNoUsefulUV(now: now),
+                        size: .compact
+                    ) {
                         sessionRoute = .typePicker
                     }
 
@@ -271,9 +309,13 @@ struct HomeView: View {
     private func solarGuidanceHeader(plan: DailySunPlan, display: VitaminDWindowDisplay, now: Date) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(display.cardTitle)
-                    .font(.bigDoseHeader(.title3).weight(.black))
-                    .foregroundStyle(.white)
+                HStack(spacing: 4) {
+                    Text(display.cardTitle)
+                        .font(.bigDoseHeader(.title3).weight(.black))
+                        .foregroundStyle(.white)
+
+                    InfoCircleButton(topic: .vitaminDWindowToday, iconSize: 16)
+                }
 
                 Text(plan.locationLabel)
                     .font(.caption.weight(.semibold))
@@ -305,10 +347,14 @@ struct HomeView: View {
 
     private func solarPeakChip(plan: DailySunPlan) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Peak UV")
-                .font(.caption2.weight(.black))
-                .foregroundStyle(.white.opacity(0.58))
-                .textCase(.uppercase)
+            HStack(spacing: 2) {
+                Text("Peak UV")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .textCase(.uppercase)
+
+                InfoCircleButton(topic: .peakUV, iconSize: 11, compact: true)
+            }
 
             Text(plan.peakUVIndex.formatted(.number.precision(.fractionLength(1))))
                 .font(.bigDoseHeader(.title2).weight(.black))
@@ -322,10 +368,14 @@ struct HomeView: View {
 
     private func solarStatusChip(plan: DailySunPlan) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Window")
-                .font(.caption2.weight(.black))
-                .foregroundStyle(.white.opacity(0.58))
-                .textCase(.uppercase)
+            HStack(spacing: 2) {
+                Text("Window")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .textCase(.uppercase)
+
+                InfoCircleButton(topic: .window, iconSize: 11, compact: true)
+            }
 
             Text(formattedRange(start: plan.vitaminDWindowStart, end: plan.vitaminDWindowEnd))
                 .font(.subheadline.weight(.black))
@@ -339,29 +389,42 @@ struct HomeView: View {
         .background(.white.opacity(0.06), in: .rect(cornerRadius: 18, style: .continuous))
     }
 
-    private var goalCard: some View {
+    private func goalCard(now: Date) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
-                Label("Goal", systemImage: "target")
-                    .font(.bigDoseHeader(.title3).weight(.black))
-                    .foregroundStyle(.white)
+                HStack(spacing: 8) {
+                    Image(systemName: "target")
+                        .font(.bigDoseHeader(.title3).weight(.black))
+                        .foregroundStyle(.solarGold)
+
+                    Text("Goal")
+                        .font(.bigDoseHeader(.title3).weight(.black))
+                        .foregroundStyle(.white)
+
+                    InfoCircleButton(topic: .goal, iconSize: 16)
+                }
 
                 SunArcMeter(
                     progress: todayGoalProgress,
                     quality: todayGoalProgress >= 1 ? .prime : estimate.quality,
                     title: goalMeterTitle,
+                    durationTitle: goalMeterDurationTitle,
                     subtitle: goalMeterSubtitle,
                     showsQualityBadge: false
                 )
 
-                StartSunSessionActionButton(isEnabled: homeViewModel.weather != nil, size: .compact) {
+                StartSunSessionActionButton(
+                    isEnabled: homeViewModel.weather != nil,
+                    showsNoUsefulUV: showsNoUsefulUV(now: now),
+                    size: .compact
+                ) {
                     sessionRoute = .typePicker
                 }
             }
         }
     }
 
-    private var recommendationCard: some View {
+    private func recommendationCard(now: Date) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 estimatedIUHeader
@@ -371,7 +434,11 @@ struct HomeView: View {
                     .foregroundStyle(.white.opacity(0.7))
 
                 VStack(spacing: 12) {
-                    StartSunSessionActionButton(isEnabled: homeViewModel.weather != nil, size: .regular) {
+                    StartSunSessionActionButton(
+                        isEnabled: homeViewModel.weather != nil,
+                        showsNoUsefulUV: showsNoUsefulUV(now: now),
+                        size: .regular
+                    ) {
                         sessionRoute = .typePicker
                     }
 
@@ -384,11 +451,13 @@ struct HomeView: View {
                     }
                 }
 
-                HStack(spacing: 0) {
+                HStack(spacing: 2) {
                     Text("*")
                         .foregroundStyle(.solarGold)
                     Text(" Estimated")
                         .foregroundStyle(.white.opacity(0.48))
+
+                    InfoCircleButton(topic: .estimatedIU, iconSize: 11, compact: true)
                 }
                 .font(.caption2.weight(.semibold))
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -416,6 +485,8 @@ struct HomeView: View {
                 .baselineOffset(9)
                 .foregroundStyle(.solarGold)
 
+            InfoCircleButton(topic: .estimatedIU, iconSize: 14, compact: true)
+
             Spacer(minLength: 0)
         }
         .lineLimit(2)
@@ -424,10 +495,10 @@ struct HomeView: View {
 
     private var metricGrid: some View {
         LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
-            MetricPill(title: "UV Index", value: homeViewModel.weather?.uvIndex.formatted(.number.precision(.fractionLength(1))) ?? "Unavailable", systemImage: "sun.max.fill")
-            MetricPill(title: "Risk Used", value: "\(estimate.riskPercent)%", systemImage: "shield.lefthalf.filled")
-            MetricPill(title: "Skin Type", value: activeProfile.skinType.title, systemImage: "person.crop.square")
-            MetricPill(title: "Goal", value: "\(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL", systemImage: "target")
+            MetricPill(title: "UV Index", value: homeViewModel.weather?.uvIndex.formatted(.number.precision(.fractionLength(1))) ?? "Unavailable", systemImage: "sun.max.fill", infoTopic: .uvIndex)
+            MetricPill(title: "Risk Used", value: "\(estimate.riskPercent)%", systemImage: "shield.lefthalf.filled", infoTopic: .med)
+            MetricPill(title: "Skin Type", value: activeProfile.skinType.title, systemImage: "person.crop.square", infoTopic: .skinType)
+            MetricPill(title: "Goal", value: "\(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL", systemImage: "target", infoTopic: .goal)
         }
     }
 
@@ -436,7 +507,7 @@ struct HomeView: View {
             return "BigDose needs current WeatherKit UV data before estimating today’s sunlight dose."
         }
 
-        return "Based on your \(activeProfile.skinType.title), about \(Int(activeProfile.typicalExposedBodySurfaceArea * 100))% skin exposed, and a UV index of \(weather.uvIndex.formatted(.number.precision(.fractionLength(1))))."
+        return "Based on your \(activeProfile.skinType.title) skin, about \(Int(activeProfile.typicalExposedBodySurfaceArea * 100))% skin exposed, and a UV index of \(weather.uvIndex.formatted(.number.precision(.fractionLength(1))))."
     }
 
     private var todayCollectedIU: Double {
@@ -474,13 +545,18 @@ struct HomeView: View {
         ) / 60))
     }
 
+    private var goalMeterDurationTitle: BigDoseDurationComponents? {
+        guard todayGoalProgress < 1, remainingSunMinutesForToday > 0 else { return nil }
+        return BigDoseDurationComponents(minutes: remainingSunMinutesForToday)
+    }
+
     private var goalMeterTitle: String {
         if todayGoalProgress >= 1 {
             return "Done"
         }
 
         if remainingSunMinutesForToday > 0 {
-            return "\(remainingSunMinutesForToday)m"
+            return ""
         }
 
         return "\(Int(todayCollectedIU.rounded()))"
@@ -556,12 +632,20 @@ struct HomeView: View {
             }
 
         case .sunPlanner:
-            if let weather = homeViewModel.weather {
+            if let weather = homeViewModel.weather, let plan = currentPlan {
                 SunSessionPlannerView(
                     profile: activeProfile,
                     weather: weather,
+                    latitude: plan.latitude,
+                    longitude: plan.longitude,
                     onCancel: { sessionRoute = .typePicker },
                     onStart: { plan in sessionRoute = .activeSunSession(plan) }
+                )
+            } else if homeViewModel.weather != nil {
+                HomeUnavailableSheet(
+                    title: "Solar Guidance Required",
+                    message: "BigDose needs today's solar plan before starting a sun session. Pull to refresh on Home.",
+                    onClose: { sessionRoute = nil }
                 )
             } else {
                 HomeUnavailableSheet(

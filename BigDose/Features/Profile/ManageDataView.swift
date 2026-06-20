@@ -41,14 +41,15 @@ struct ManageDataView: View {
         .fileImporter(isPresented: $isShowingImporter, allowedContentTypes: [.json]) { result in
             restore(from: result)
         }
-        .confirmationDialog("Clear all local data?", isPresented: $isShowingClearConfirmation) {
-            Button("Clear All Local Data", role: .destructive) {
-                clearAllData()
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This removes BigDose records on this device. Export a rescue file first if you may need the data later.")
-        }
+        .bigDoseAlert(
+            "Clear all local data?",
+            isPresented: $isShowingClearConfirmation,
+            message: "This removes BigDose records on this device. Export a rescue file first if you may need the data later.",
+            actions: [
+                .destructive("Clear All Local Data") { clearAllData() },
+                .cancel("Cancel")
+            ]
+        )
     }
 
     private var header: some View {

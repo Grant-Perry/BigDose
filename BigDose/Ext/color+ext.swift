@@ -37,10 +37,17 @@ extension Color {
    static let gpProductionOpenBorder = gpProductionOpen.opacity(0.42)
    static let gpProductionCompleteBorder = gpProductionComplete.opacity(0.42)
 
+// button states
+   static let gpBtnOn = Color(#colorLiteral(red: 0.6198272109, green: 0.6509014368, blue: 0.4784618616, alpha: 1))
+   static let gpBtnOnL = Color(#colorLiteral(red: 0.9112716087, green: 1, blue: 0.8066914544, alpha: 1))
+   static let gpBtnOff = Color(#colorLiteral(red: 1, green: 0.1857388616, blue: 0.3251032516, alpha: 1))
+   static let gpBtnOffL = Color(#colorLiteral(red: 0.9147140384, green: 0.2784035206, blue: 0.3166754246, alpha: 1))
 
+ 
 
    static let gpPastelMint = Color(#colorLiteral(red: 0.816, green: 1, blue: 0.647, alpha: 1))
    static let gpGreen = Color(#colorLiteral(red: 0.6198272109, green: 0.6509014368, blue: 0.4784618616, alpha: 1))
+   static let gpGreenL = Color(#colorLiteral(red: 0.9112716087, green: 1, blue: 0.8066914544, alpha: 1))
    static let gpMinty = Color(#colorLiteral(red: 0.5960784314, green: 1, blue: 0.5960784314, alpha: 1))
    static let gpFlatGreen = Color(#colorLiteral(red: 0.03852885208, green: 0.6235294342, blue: 0.3622174664, alpha: 1))
 	  /// Soft teal for selected-plan glow — complements warm gold, reads well on dark
@@ -52,7 +59,6 @@ extension Color {
    static let gpPurple = Color(#colorLiteral(red: 0.5568627715, green: 0.3529411852, blue: 0.9686274529, alpha: 1))
    static let gpDkPurple = Color(#colorLiteral(red: 0.3647058904, green: 0.06666667014, blue: 0.9686274529, alpha: 1))
    static let gpRed = Color(#colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1))
-
 
 	  // Hilight colors
    static let gpHiGreen = Color(#colorLiteral(red: 0.3911147745, green: 0.8800172018, blue: 0.2343971767, alpha: 1))
@@ -78,6 +84,7 @@ extension Color {
    static let gpRedPitch = Color(#colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1))
    static let gpSelectedFav = Color(#colorLiteral(red: 0.2392156869, green: 0.6745098233, blue: 0.9686274529, alpha: 1))
    static let gpRedPink = Color(#colorLiteral(red: 1, green: 0.1857388616, blue: 0.3251032516, alpha: 1))
+   static let gpRedPinkL = Color(#colorLiteral(red: 1, green: 0.4971361174, blue: 0.6821433811, alpha: 1))
    static let gpYellowD = Color(#colorLiteral(red: 0.7254902124, green: 0.4784313738, blue: 0.09803921729, alpha: 1))
    static let gpTan = Color(#colorLiteral(red: 0.4483810227, green: 0.3676018354, blue: 0.1985318112, alpha: 1))
    static let gpGold = Color(#colorLiteral(red: 0.6001003385, green: 0.4902321696, blue: 0.2627026737, alpha: 1))

@@ -29,7 +29,8 @@ extension SunSessionPlan {
                 elapsedOffsetSeconds: elapsedSeconds,
                 runningSince: nil,
                 estimatedIU: estimatedIU,
-                goalProgress: goalProgress
+                goalProgress: goalProgress,
+                pendingControl: .none
             )
         }
 
@@ -39,7 +40,8 @@ extension SunSessionPlan {
             elapsedOffsetSeconds: 0,
             runningSince: startedAt,
             estimatedIU: estimatedIU,
-            goalProgress: goalProgress
+            goalProgress: goalProgress,
+            pendingControl: .none
         )
     }
 }

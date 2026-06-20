@@ -386,21 +386,24 @@ struct DoseDNAEditorContainer: View {
                     .accessibilityLabel("Back")
                 }
             }
-            .alert("Update Apple Health?", isPresented: $isShowingMetricSyncConfirmation) {
-                Button("Update Apple Health") {
-                    Task {
-                        await applyPendingMetricUpdate()
+            .bigDoseAlert(
+                "Update Apple Health?",
+                isPresented: $isShowingMetricSyncConfirmation,
+                message: pendingMetricUpdate?.confirmationMessage ?? "",
+                actions: [
+                    .default("Update Apple Health") {
+                        Task {
+                            await applyPendingMetricUpdate()
+                            pendingMetricUpdate = nil
+                            dismiss()
+                        }
+                    },
+                    .cancel("Not Now") {
                         pendingMetricUpdate = nil
                         dismiss()
                     }
-                }
-                Button("Not Now", role: .cancel) {
-                    pendingMetricUpdate = nil
-                    dismiss()
-                }
-            } message: {
-                Text(pendingMetricUpdate?.confirmationMessage ?? "")
-            }
+                ]
+            )
             .onChange(of: isShowingMetricSyncConfirmation) { _, isShowing in
                 guard isShowing else { return }
                 BigDoseAlertFeedback.present(kind: .informational)

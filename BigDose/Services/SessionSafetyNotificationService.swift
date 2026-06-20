@@ -25,17 +25,19 @@ enum SessionSafetyNotificationService {
 
             center.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
 
+            let skin = plan.skinType.title
+
             await schedule(
                 identifier: turnOverIdentifier,
                 title: "Turn over",
-                body: "You have reached the turn-over point for this sun session.",
+                body: "About 50% of your estimated MED for \(skin) skin — flip sides or rotate exposure.",
                 seconds: plan.turnOverAlertSeconds
             )
 
             await schedule(
                 identifier: medWarningIdentifier,
                 title: "Approaching exposure limit",
-                body: "You are around 75% of the estimated MED window for your skin type and current UV.",
+                body: "About 75% of your estimated MED for \(skin) skin at this UV. Consider wrapping up soon.",
                 seconds: plan.medWarningSeconds
             )
 
@@ -43,14 +45,14 @@ enum SessionSafetyNotificationService {
             await schedule(
                 identifier: prepareExitIdentifier,
                 title: "Get ready to exit sun",
-                body: "Start packing up — you're approaching your exit in \(exitCountdown).",
+                body: "Past 75% of MED — start heading inside. Recommended stop in \(exitCountdown).",
                 seconds: plan.prepareExitAlertSeconds
             )
 
             await schedule(
                 identifier: stopIdentifier,
                 title: "Time to stop",
-                body: "You are approaching your skin-type exposure limit. End this session or get covered.",
+                body: "About 90% of your estimated MED for \(skin) skin. End this session or get covered.",
                 seconds: plan.stopAlertSeconds
             )
         } catch {
@@ -60,6 +62,11 @@ enum SessionSafetyNotificationService {
 
     static func cancelSessionNotifications() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
+    }
+
+    static func cancelOrphanedSessionNotificationsIfNeeded() {
+        guard ActiveSunSessionStore.load() == nil else { return }
+        cancelSessionNotifications()
     }
 
     static func cancelTurnOverNotification() {

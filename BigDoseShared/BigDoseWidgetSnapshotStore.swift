@@ -1,6 +1,6 @@
 import Foundation
 
-enum BigDoseWidgetSnapshotStore {
+nonisolated enum BigDoseWidgetSnapshotStore {
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 

@@ -1,6 +1,6 @@
 import Foundation
 
-struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
+nonisolated struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
     var sessionID: String
     var startedAt: Date
     var durationSeconds: TimeInterval
@@ -13,6 +13,8 @@ struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
     var locationName: String
     var targetIU: Double
     var exitLeadFraction: Double
+    var latitude: Double = 0
+    var longitude: Double = 0
     var elapsedSeconds: TimeInterval
     var isPaused: Bool
     var updatedAt: Date
@@ -42,7 +44,8 @@ struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
                 elapsedOffsetSeconds: elapsedSeconds,
                 runningSince: nil,
                 estimatedIU: estimatedIU,
-                goalProgress: goalProgress
+                goalProgress: goalProgress,
+                pendingControl: .none
             )
         }
 
@@ -51,12 +54,13 @@ struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
             elapsedOffsetSeconds: 0,
             runningSince: startedAt,
             estimatedIU: estimatedIU,
-            goalProgress: goalProgress
+            goalProgress: goalProgress,
+            pendingControl: .none
         )
     }
 }
 
-struct ActiveSessionWidgetState: Codable, Sendable, Equatable {
+nonisolated struct ActiveSessionWidgetState: Codable, Sendable, Equatable {
     var sessionID: String
     var locationName: String
     var isPaused: Bool
@@ -67,7 +71,7 @@ struct ActiveSessionWidgetState: Codable, Sendable, Equatable {
     var sessionStartedAt: Date
 }
 
-enum ActiveSunSessionStore {
+nonisolated enum ActiveSunSessionStore {
     private static let storageKey = "bigdose.activeSunSession"
 
     nonisolated static func load() -> ActiveSunSessionRecord? {

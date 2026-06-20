@@ -71,13 +71,21 @@ struct ProgressDashboardView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Today's Estimated D Level")
-                            .font(.bigDoseHeader(.title3).weight(.black))
-                            .foregroundStyle(.white)
+                        HStack(spacing: 6) {
+                            Text("Estimated Blood Level")
+                                .font(.bigDoseHeader(.title3).weight(.black))
+                                .foregroundStyle(.white)
+
+                            InfoCircleButton(topic: .estimatedBloodLevel, iconSize: 16)
+                        }
 
                         Text(snapshot.confidence)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
+
+                        Text("Based on your last 7 days — not today's IU % on Home.")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.48))
                     }
 
                     Spacer()
@@ -95,7 +103,7 @@ struct ProgressDashboardView: View {
                     progress: levelProgress,
                     quality: estimatedLevel >= 30 ? .prime : .low,
                     title: "\(Int(levelProgress * 100))%",
-                    subtitle: "of today's goal"
+                    subtitle: "of \(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL goal"
                 )
             }
         }

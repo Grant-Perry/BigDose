@@ -1,12 +1,12 @@
 import Foundation
 
-enum SunSessionLiveActivityCommand: String, Codable, Sendable {
+nonisolated enum SunSessionLiveActivityCommand: String, Codable, Sendable {
     case pause
     case resume
     case end
 }
 
-enum SunSessionLiveActivityCommandStore {
+nonisolated enum SunSessionLiveActivityCommandStore {
     private static let commandKey = "bigdose.liveactivity.command"
     private static let sessionIDKey = "bigdose.liveactivity.command.sessionID"
     private static let postedAtKey = "bigdose.liveactivity.command.postedAt"

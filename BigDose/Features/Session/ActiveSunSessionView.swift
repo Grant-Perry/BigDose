@@ -19,6 +19,7 @@ struct ActiveSunSessionView: View {
     @State private var isShowingSkinCoverage = false
     @State private var isShowingGoalPicker = false
     @State private var isShowingCancelConfirmation = false
+    @State private var isShowingStopConfirmation = false
     @State private var backgroundLiveActivitySyncTask: Task<Void, Never>?
     @State private var sessionEnded = false
 
@@ -44,12 +45,23 @@ struct ActiveSunSessionView: View {
         plan.goalProgress(at: elapsedSeconds)
     }
 
+    private var medUsedPercent: Int {
+        plan.medUsedPercent(at: elapsedSeconds)
+    }
+
+    private var iuRateColor: Color {
+        plan.isTraceVitaminDConditions ? .white.opacity(0.45) : .green
+    }
+
     var body: some View {
         ZStack {
             BigDoseGradientBackground()
 
             VStack(spacing: 22) {
                 header
+                if plan.isOutsideVitaminDWindow {
+                    outsideWindowBanner
+                }
                 timerDial
                 controls
                 modifiersCard
@@ -74,11 +86,11 @@ struct ActiveSunSessionView: View {
             }
         }
         .task {
-            await refreshSessionSafetyNotifications()
             restoreSessionStateIfNeeded()
+            persistSessionState()
+            await refreshSessionSafetyNotifications()
             consumeLiveActivityCommands()
             guard !sessionEnded else { return }
-            persistSessionState()
             syncLiveActivity()
         }
         .onChange(of: isPaused) { _, _ in
@@ -111,45 +123,40 @@ struct ActiveSunSessionView: View {
                 break
             }
         }
-        .alert(item: $activeAlert) { alert in
+        .bigDoseAlert(item: $activeAlert) { alert in
             switch alert {
             case .turnOver:
-                Alert(
-                    title: Text("Turn over"),
-                    message: Text("You have reached the turn-over point for this session. Flip sides, rotate, or change exposure."),
-                    dismissButton: .default(Text("Got it"))
+                BigDoseAlertContent(
+                    title: "Turn over",
+                    message: plan.safetyAlertMessage(for: .turnOver, elapsedSeconds: elapsedSeconds),
+                    actions: [.default("Got it")]
                 )
             case .medWarning:
-                Alert(
-                    title: Text("Approaching exposure limit"),
-                    message: Text("You are around 75% of the estimated MED window for your skin type and current UV. Consider wrapping up soon."),
-                    dismissButton: .default(Text("OK"))
+                BigDoseAlertContent(
+                    title: "Approaching exposure limit",
+                    message: plan.safetyAlertMessage(for: .medWarning, elapsedSeconds: elapsedSeconds),
+                    actions: [.default("OK")]
                 )
             case .prepareExit(let countdown):
-                Alert(
-                    title: Text("Get ready to exit sun"),
-                    message: Text("Start getting ready to head inside. You're approaching your exit in \(countdown)."),
-                    dismissButton: .default(Text("Got it"))
+                BigDoseAlertContent(
+                    title: "Get ready to exit sun",
+                    message: plan.safetyAlertMessage(for: .prepareExit(countdown: countdown), elapsedSeconds: elapsedSeconds),
+                    actions: [.default("Got it")]
                 )
             case .stop:
-                Alert(
-                    title: Text("Stop or cover up"),
-                    message: Text("You are near the conservative exposure limit for this skin type and UV level. BigDose paused the timer."),
-                    primaryButton: .destructive(Text("End Session")) {
-                        complete()
-                    },
-                    secondaryButton: .default(Text("Resume")) {
-                        isPaused = false
-                    }
+                BigDoseAlertContent(
+                    title: "Stop or cover up",
+                    message: plan.safetyAlertMessage(for: .stop, elapsedSeconds: elapsedSeconds),
+                    actions: [
+                        .destructive("End Session") { complete() },
+                        .default("Resume") { isPaused = false }
+                    ]
                 )
             }
         }
         .onChange(of: activeAlert) { _, alert in
             guard let alert else { return }
             BigDoseAlertFeedback.present(kind: alert.feedbackKind)
-        }
-        .onDisappear {
-            SessionSafetyNotificationService.cancelSessionNotifications()
         }
         .sheet(isPresented: $isShowingSkinCoverage) {
             SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
@@ -159,18 +166,38 @@ struct ActiveSunSessionView: View {
             SessionGoalPickerView(targetIU: $plan.targetIU)
                 .presentationDetents([.medium])
         }
-        .confirmationDialog(
+        .bigDoseAlert(
             "Cancel sun session?",
             isPresented: $isShowingCancelConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Cancel Session", role: .destructive) {
-                cancel()
-            }
-            Button("Keep Going", role: .cancel) { }
-        } message: {
-            Text("Are you certain? This won't record this sun session if you cancel.")
+            message: "Are you certain? This won't record this sun session if you cancel.",
+            actions: [
+                .destructive("Cancel Session") { cancel() },
+                .cancel("Keep Going")
+            ]
+        )
+        .bigDoseAlert(
+            "Stop sun session?",
+            isPresented: $isShowingStopConfirmation,
+            message: "Save this session with \(Int(estimatedIU.rounded())) IU estimated so far?",
+            actions: [
+                .destructive("Stop & Save") { complete() },
+                .cancel("Keep Going")
+            ]
+        )
+    }
+
+    private var outsideWindowBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "moon.stars.fill")
+                .foregroundStyle(.solarGold)
+            Text(plan.isTraceVitaminDConditions ? "Outside D window — trace vitamin D only" : "Outside D window")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.78))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.08), in: .rect(cornerRadius: 14))
     }
 
     private var header: some View {
@@ -192,12 +219,6 @@ struct ActiveSunSessionView: View {
                 }
                 .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white.opacity(0.62))
-
-                Button("End") {
-                    complete()
-                }
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .foregroundStyle(.solarGold)
             }
         }
     }
@@ -229,7 +250,13 @@ struct ActiveSunSessionView: View {
 
                     Text("\(Int(plan.liveIUProductionRatePerMinute.rounded())) IU/min")
                         .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(iuRateColor)
+
+                    if plan.isTraceVitaminDConditions {
+                        Text("trace D — scaled for low sun angle")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.48))
+                    }
 
                     if let minutesToGoal = plan.minutesToGoal(at: elapsedSeconds) {
                         Text("~\(minutesToGoal) min to goal")
@@ -241,9 +268,19 @@ struct ActiveSunSessionView: View {
                             .foregroundStyle(.solarGold)
                     }
 
-                    Text("\(Int(goalProgress * 100))% of goal")
-                        .font(.bigDoseHeader(.title2).weight(.semibold))
-                        .foregroundStyle(.solarGold)
+                    HStack(spacing: 4) {
+                        Text("\(Int(goalProgress * 100))% of goal")
+                            .font(.bigDoseHeader(.title2).weight(.semibold))
+                            .foregroundStyle(.solarGold)
+                        InfoCircleButton(topic: .sessionGoal, compact: true)
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("MED used: \(medUsedPercent)%")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(medUsedColor)
+                        InfoCircleButton(topic: .medUsed, compact: true)
+                    }
                 }
             }
             .frame(height: 330)
@@ -252,12 +289,27 @@ struct ActiveSunSessionView: View {
         }
     }
 
+    private var medUsedColor: Color {
+        switch medUsedPercent {
+        case 90...:
+            .red
+        case 75...:
+            .solarOrange
+        default:
+            .white.opacity(0.62)
+        }
+    }
+
     private var controls: some View {
-        HStack {
-            VStack(spacing: 2) {
-                Text("\(max(0, Int((plan.medTimeSeconds - elapsedSeconds) / 60)))")
-                    .font(.title.weight(.semibold))
-                    .foregroundStyle(.green)
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    Text("\(plan.medRemainingMinutes(at: elapsedSeconds))")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.green)
+                    InfoCircleButton(topic: .minToMED, compact: true)
+                }
+
                 Text("min to MED")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
@@ -271,23 +323,26 @@ struct ActiveSunSessionView: View {
                 }
             } label: {
                 Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                    .font(.title.weight(.bold))
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
-                    .frame(width: 72, height: 72)
-                    .background(isPaused ? Color.green : Color.red, in: .circle)
+                    .frame(width: 52, height: 52)
+                    .background {
+                        Circle()
+                            .fill(isPaused ? AnyShapeStyle(Color.green) : AnyShapeStyle(.blue.gradient))
+                    }
             }
             .accessibilityLabel(isPaused ? "Resume session" : "Pause session")
 
-            Spacer()
-
-            VStack(spacing: 2) {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.title.weight(.semibold))
-                    .foregroundStyle(Color.gpHiLtBlue)
-                Text("Turn over")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+            Button {
+                isShowingStopConfirmation = true
+            } label: {
+                Image(systemName: "stop.fill")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .background(Color.red, in: .circle)
             }
+            .accessibilityLabel("Stop and save session")
         }
         .padding(.horizontal, 12)
     }

@@ -16,8 +16,12 @@ struct VitaminDWindowSnapshot: Equatable {
     }
 
     var durationLabel: String? {
+        durationComponents?.compactLabel
+    }
+
+    var durationComponents: BigDoseDurationComponents? {
         guard let duration else { return nil }
-        return Self.formattedDuration(duration)
+        return BigDoseDurationComponents(duration: duration)
     }
 
     func remainingDuration(from now: Date = .now) -> TimeInterval? {
@@ -32,24 +36,16 @@ struct VitaminDWindowSnapshot: Equatable {
     }
 
     func remainingDurationLabel(now: Date) -> String? {
+        remainingDurationComponents(now: now)?.compactLabel
+    }
+
+    func remainingDurationComponents(now: Date) -> BigDoseDurationComponents? {
         guard let remainingDuration = remainingDuration(from: now) else { return nil }
-        return Self.formattedDuration(remainingDuration)
+        return BigDoseDurationComponents(duration: remainingDuration)
     }
 
     static func formattedDuration(_ duration: TimeInterval) -> String {
-        let totalMinutes = Int(duration.rounded(.down) / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0, minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-
-        if hours > 0 {
-            return "\(hours)h"
-        }
-
-        return "\(minutes)m"
+        BigDoseDurationComponents(duration: duration).compactLabel
     }
 
     var hasWindow: Bool {
@@ -120,7 +116,11 @@ struct VitaminDWindowDisplay: Equatable {
     }
 
     func remainingWindowDurationLabel(at now: Date) -> String? {
+        remainingWindowDurationComponents(at: now)?.compactLabel
+    }
+
+    func remainingWindowDurationComponents(at now: Date) -> BigDoseDurationComponents? {
         guard isWindowOpenNow else { return nil }
-        return snapshot.remainingDurationLabel(now: now)
+        return snapshot.remainingDurationComponents(now: now)
     }
 }

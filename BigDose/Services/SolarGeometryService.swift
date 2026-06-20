@@ -88,6 +88,30 @@ enum SolarGeometryService {
         )
     }
 
+    static func amLightWindow(
+        latitude: Double,
+        longitude: Double,
+        date: Date,
+        timeZone: TimeZone = .current
+    ) -> (start: Date?, end: Date?) {
+        let lowerCrossing = timesAtAltitude(
+            latitude: latitude,
+            longitude: longitude,
+            date: date,
+            altitudeDegrees: SolarPosition.amLightWindowLowerAltitudeDegrees,
+            timeZone: timeZone
+        )
+        let upperCrossing = timesAtAltitude(
+            latitude: latitude,
+            longitude: longitude,
+            date: date,
+            altitudeDegrees: SolarPosition.amLightWindowUpperAltitudeDegrees,
+            timeZone: timeZone
+        )
+
+        return (lowerCrossing.morning, upperCrossing.morning)
+    }
+
     static func timesAtAltitude(
         latitude: Double,
         longitude: Double,

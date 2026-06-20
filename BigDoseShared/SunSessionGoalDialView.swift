@@ -11,6 +11,7 @@ struct SunSessionGoalDialView: View {
     var progressCaption: String?
     var liveProgressAnchor: Date?
     var iconOverscale: CGFloat = 1.22
+    var showsNoUsefulUV = false
 
     private var clampedProgress: Double {
         min(max(goalProgress, 0), 1)
@@ -39,7 +40,7 @@ struct SunSessionGoalDialView: View {
                 Circle()
                     .trim(from: 0, to: clampedProgress)
                     .stroke(
-                        WidgetBrandColors.solarGold,
+                        progressRingStyle,
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
@@ -58,6 +59,14 @@ struct SunSessionGoalDialView: View {
         .frame(width: diameter, height: diameter)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabelText)
+    }
+
+    private var progressRingStyle: AnyShapeStyle {
+        if showsNoUsefulUV {
+            AnyShapeStyle(WidgetBrandColors.noUsefulUVGradient)
+        } else {
+            AnyShapeStyle(WidgetBrandColors.usefulUVGradient)
+        }
     }
 
     private var iconMaskedCenter: some View {
@@ -90,7 +99,7 @@ struct SunSessionGoalDialView: View {
 
     private var accessibilityLabelText: String {
         if progressCaption != nil {
-            "Today's vitamin D goal \(Int(clampedProgress * 100)) percent complete"
+            "Daily IU goal \(Int(clampedProgress * 100)) percent complete"
         } else {
             "Session goal \(Int(clampedProgress * 100)) percent complete"
         }

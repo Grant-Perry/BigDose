@@ -4,6 +4,7 @@ struct SunArcMeter: View {
     var progress: Double
     var quality: SunWindowQuality
     var title: String
+    var durationTitle: BigDoseDurationComponents?
     var subtitle: String
     var showsQualityBadge = true
 
@@ -52,10 +53,19 @@ struct SunArcMeter: View {
                 }
 
                 VStack(spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 54, weight: .black))
-                        .foregroundStyle(.white)
+                    if let durationTitle {
+                        BigDoseDurationText(
+                            durationTitle,
+                            font: .system(size: 54, weight: .black),
+                            valueColor: .white
+                        )
                         .contentTransition(.numericText())
+                    } else {
+                        Text(title)
+                            .font(.system(size: 54, weight: .black))
+                            .foregroundStyle(.white)
+                            .contentTransition(.numericText())
+                    }
 
                     Text(subtitle)
                         .font(.bigDoseHeader(.headline).weight(.semibold))
@@ -76,7 +86,7 @@ struct SunArcMeter: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Vitamin D meter, \(title), \(subtitle), \(quality.title)")
+        .accessibilityLabel("Vitamin D meter, \(durationTitle?.accessibilityLabel ?? title), \(subtitle), \(quality.title)")
         .onAppear {
             animateMeter()
         }
@@ -206,7 +216,7 @@ private struct ArcTrackInnerShadow: View {
                 )
                 .stroke(
                     .black.opacity(0.38),
-                    style: StrokeStyle(lineWidth: lineWidth * 0.72, lineCap: .butt)
+                    style: StrokeStyle(lineWidth: lineWidth * 0.72, lineCap: .round)
                 )
                 .blur(radius: 5)
                 .blendMode(.multiply)
@@ -243,10 +253,21 @@ private struct ArcRingSegmentShape: Shape {
     func path(in rect: CGRect) -> Path {
         let center = ArcMeterGeometry.center(in: rect)
         let radius = ArcMeterGeometry.radius(in: rect)
-        let outerRadius = radius + lineWidth / 2
-        let innerRadius = max(radius - lineWidth / 2, 0)
+        let halfWidth = lineWidth / 2
+        let outerRadius = radius + halfWidth
+        let innerRadius = max(radius - halfWidth, 0)
 
         var path = Path()
+        path.move(to: point(on: center, radius: innerRadius, angle: startAngle))
+
+        path.addArc(
+            center: point(on: center, radius: radius, angle: startAngle),
+            radius: halfWidth,
+            startAngle: startAngle + .degrees(180),
+            endAngle: startAngle,
+            clockwise: false
+        )
+
         path.addArc(
             center: center,
             radius: outerRadius,
@@ -254,6 +275,15 @@ private struct ArcRingSegmentShape: Shape {
             endAngle: endAngle,
             clockwise: false
         )
+
+        path.addArc(
+            center: point(on: center, radius: radius, angle: endAngle),
+            radius: halfWidth,
+            startAngle: endAngle,
+            endAngle: endAngle + .degrees(180),
+            clockwise: false
+        )
+
         path.addArc(
             center: center,
             radius: innerRadius,
@@ -261,8 +291,16 @@ private struct ArcRingSegmentShape: Shape {
             endAngle: startAngle,
             clockwise: true
         )
+
         path.closeSubpath()
         return path
+    }
+
+    private func point(on center: CGPoint, radius: CGFloat, angle: Angle) -> CGPoint {
+        CGPoint(
+            x: center.x + cos(angle.radians) * radius,
+            y: center.y + sin(angle.radians) * radius
+        )
     }
 }
 

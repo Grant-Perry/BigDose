@@ -30,10 +30,10 @@ enum BigDoseWeatherService {
             pressureInchesMercury: current.pressure.converted(to: .inchesOfMercury).value,
             uvIndex: Double(current.uvIndex.value),
             observedAt: current.date,
-            hourlyUV: upcomingHourly.prefix(12).map {
+            hourlyUV: upcomingHourly.prefix(72).map {
                 HourlyUVSnapshot(date: $0.date, uvIndex: Double($0.uvIndex.value))
             },
-            hourlyForecast: upcomingHourly.prefix(24).map(mapHourlyForecast),
+            hourlyForecast: upcomingHourly.prefix(72).map(mapHourlyForecast),
             dailyForecast: weather.dailyForecast.prefix(10).map(mapDailyForecast),
             attributionText: attribution?.legalAttributionText ?? "Weather data provided by Apple Weather.",
             attributionURL: attribution?.legalPageURL ?? URL(string: "https://weatherkit.apple.com/legal-attribution.html"),
@@ -62,7 +62,7 @@ enum BigDoseWeatherService {
             symbolName: day.symbolName,
             conditionText: day.condition.description,
             precipitationChance: day.precipitationChance,
-            precipitationAmountInches: day.precipitationAmount.converted(to: .inches).value
+            precipitationAmountInches: day.precipitationAmountByType.precipitation.converted(to: .inches).value
         )
     }
 

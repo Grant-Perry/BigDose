@@ -1,7 +1,7 @@
 import Foundation
 import WidgetKit
 
-enum SunSessionSharedWidgetCleanup {
+nonisolated enum SunSessionSharedWidgetCleanup {
     nonisolated static func clearActiveSessionAndReload() {
         guard var snapshot = BigDoseWidgetSnapshotStore.load() else { return }
         snapshot.activeSession = nil

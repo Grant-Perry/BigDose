@@ -18,8 +18,13 @@ struct PauseSunSessionLiveActivityIntent: LiveActivityIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        await SunSessionLiveActivityIntentSupport.pause(sessionID: sessionID)
-        SunSessionLiveActivityCommandStore.request(.pause, sessionID: sessionID)
+        await SunSessionLiveActivityIntentSupport.requestConfirmedControl(
+            sessionID: sessionID,
+            control: .pause
+        ) { sessionID in
+            await SunSessionLiveActivityIntentSupport.pause(sessionID: sessionID)
+            SunSessionLiveActivityCommandStore.request(.pause, sessionID: sessionID)
+        }
         return .result()
     }
 }
@@ -40,6 +45,7 @@ struct ResumeSunSessionLiveActivityIntent: LiveActivityIntent {
     }
 
     func perform() async throws -> some IntentResult {
+        await SunSessionLiveActivityIntentSupport.clearPending(sessionID: sessionID)
         await SunSessionLiveActivityIntentSupport.resume(sessionID: sessionID)
         SunSessionLiveActivityCommandStore.request(.resume, sessionID: sessionID)
         return .result()
@@ -62,14 +68,50 @@ struct EndSunSessionLiveActivityIntent: LiveActivityIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        SunSessionLiveActivityCommandStore.request(.end, sessionID: sessionID)
-        await SunSessionLiveActivityIntentSupport.end(sessionID: sessionID)
-        SunSessionSharedWidgetCleanup.clearActiveSessionAndReload()
+        await SunSessionLiveActivityIntentSupport.requestConfirmedControl(
+            sessionID: sessionID,
+            control: .end
+        ) { sessionID in
+            SunSessionLiveActivityCommandStore.request(.end, sessionID: sessionID)
+            await SunSessionLiveActivityIntentSupport.end(sessionID: sessionID)
+            SunSessionSharedWidgetCleanup.clearActiveSessionAndReload()
+        }
         return .result()
     }
 }
 
 enum SunSessionLiveActivityIntentSupport {
+    static func requestConfirmedControl(
+        sessionID: String,
+        control: SunSessionPendingControl,
+        perform: @Sendable (String) async -> Void
+    ) async {
+        var shouldPerform = false
+
+        await update(sessionID: sessionID) { activity in
+            var state = activity.content.state
+            if state.pendingControl == control {
+                shouldPerform = true
+                state.pendingControl = .none
+            } else {
+                state.pendingControl = control
+            }
+            return state
+        }
+
+        guard shouldPerform else { return }
+        await perform(sessionID)
+    }
+
+    static func clearPending(sessionID: String) async {
+        await update(sessionID: sessionID) { activity in
+            var state = activity.content.state
+            guard state.pendingControl != .none else { return state }
+            state.pendingControl = .none
+            return state
+        }
+    }
+
     static func pause(sessionID: String) async {
         await update(sessionID: sessionID) { activity in
             var state = activity.content.state
