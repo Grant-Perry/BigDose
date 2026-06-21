@@ -467,30 +467,29 @@ struct HomeView: View {
 
     private var estimatedIUHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("\(Int(estimate.estimatedIU.rounded()).formatted())")
-                .font(.system(size: 46, weight: .black))
-                .foregroundStyle(.solarGold)
+            estimatedIUHeaderLabel
+                .lineLimit(2)
+                .minimumScaleFactor(0.78)
                 .contentTransition(.numericText())
-
-            Text("IU")
-                .font(.bigDoseHeader(.headline).weight(.black))
-                .foregroundStyle(.white.opacity(0.72))
-
-            Text("is what you'll get")
-                .font(.bigDoseHeader(.headline).weight(.bold))
-                .foregroundStyle(.white.opacity(0.72))
-
-            Text("*")
-                .font(.caption.weight(.black))
-                .baselineOffset(9)
-                .foregroundStyle(.solarGold)
-
             InfoCircleButton(topic: .estimatedIU, iconSize: 14, compact: true)
-
             Spacer(minLength: 0)
         }
-        .lineLimit(2)
-        .minimumScaleFactor(0.78)
+    }
+
+    private var estimatedIUHeaderLabel: Text {
+        Text("\(Int(estimate.estimatedIU.rounded()).formatted())")
+            .font(.system(size: 46, weight: .black))
+            .foregroundStyle(.solarGold)
+        + Text(" IU")
+            .font(.bigDoseHeader(.headline).weight(.black))
+            .foregroundStyle(.white.opacity(0.72))
+        + Text(" is what you'll get")
+            .font(.bigDoseHeader(.headline).weight(.bold))
+            .foregroundStyle(.white.opacity(0.72))
+        + Text("*")
+            .font(.caption.weight(.black))
+            .baselineOffset(9)
+            .foregroundStyle(.solarGold)
     }
 
     private var metricGrid: some View {

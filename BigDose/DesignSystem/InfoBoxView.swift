@@ -40,6 +40,7 @@ struct InfoBoxView: View {
                 }
 
                 Text(formattedBody)
+                    .lineLimit(nil)
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
             }
