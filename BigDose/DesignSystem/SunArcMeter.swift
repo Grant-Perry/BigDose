@@ -7,6 +7,8 @@ struct SunArcMeter: View {
     var durationTitle: BigDoseDurationComponents?
     var subtitle: String
     var showsQualityBadge = true
+    var subtitleInfoTopic: BigDoseInfoTopic?
+    var qualityInfoTopic: BigDoseInfoTopic?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animatedProgress = 0.0
@@ -67,22 +69,34 @@ struct SunArcMeter: View {
                             .contentTransition(.numericText())
                     }
 
-                    Text(subtitle)
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.68))
+                    HStack(spacing: 4) {
+                        Text(subtitle)
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.68))
+
+                        if let subtitleInfoTopic {
+                            InfoCircleButton(topic: subtitleInfoTopic, iconSize: 11, compact: true)
+                        }
+                    }
                 }
                 .padding(.top, 52)
             }
             .frame(height: 190)
 
             if showsQualityBadge {
-                Text(quality.title.uppercased())
-                    .font(.caption.weight(.black))
-                    .tracking(1.6)
-                    .foregroundStyle(.solarGold)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(.solarGold.opacity(0.15), in: .capsule)
+                HStack(spacing: 6) {
+                    Text(quality.title.uppercased())
+                        .font(.caption.weight(.black))
+                        .tracking(1.6)
+                        .foregroundStyle(.solarGold)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(.solarGold.opacity(0.15), in: .capsule)
+
+                    if let qualityInfoTopic {
+                        InfoCircleButton(topic: qualityInfoTopic, iconSize: 11, compact: true)
+                    }
+                }
             }
         }
         .accessibilityElement(children: .combine)

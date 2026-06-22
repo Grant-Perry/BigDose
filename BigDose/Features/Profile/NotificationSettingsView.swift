@@ -97,7 +97,7 @@ struct NotificationSettingsView: View {
                 Toggle("AM light window (1°–3°)", isOn: binding(\.wantsAMLightWindowAlerts))
                 Toggle("Next D window opportunity", isOn: binding(\.wantsNextDOpportunityAlerts))
 
-                Text("Each sun alert fires 15 minutes before and after the event.")
+                Text("Each sun alert fires 15 minutes before the event and again at the event time.")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.52))
                     .padding(.top, 2)

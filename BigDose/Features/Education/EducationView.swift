@@ -15,17 +15,17 @@ struct EducationView: View {
         EducationSection(
             symbolName: "location.fill",
             title: "Your Place Changes Everything",
-            detail: "Latitude, season, altitude, clouds, and local UV all change how much useful sunlight reaches your skin."
+            detail: "Latitude, season, altitude, clouds and local UV all change how much useful sunlight reaches your skin."
         ),
         EducationSection(
             symbolName: "person.fill",
             title: "Your Body Changes The Estimate",
-            detail: "Skin type, age, sunscreen, clothing, and exposed skin area all change the estimated time. BigDose uses those inputs to personalize the meter."
+            detail: "Skin type, age, sunscreen, clothing and exposed skin area all change the estimated time. BigDose uses those inputs to personalize the meter."
         ),
         EducationSection(
             symbolName: "cross.case.fill",
             title: "Not Medical Grade",
-            detail: "BigDose is informational wellness guidance. It does not diagnose deficiency, prescribe treatment, or replace a 25(OH)D blood test."
+            detail: "BigDose is informational wellness guidance. It does not diagnose deficiency, prescribe treatment or replace a 25(OH)D blood test."
         )
     ]
 

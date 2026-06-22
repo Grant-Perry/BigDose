@@ -60,7 +60,7 @@ enum BigDoseSessionType: CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .sun:
-            "Use current UV, weather, skin exposure, and time."
+            "Use current UV, weather, skin exposure and time."
         case .lamp:
             "Track non-sun exposure later."
         case .supplement:

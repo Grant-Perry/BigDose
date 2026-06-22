@@ -34,7 +34,7 @@ struct SettingsView: View {
         .bigDoseAlert(
             "Reset onboarding?",
             isPresented: isPresented(for: .resetOnboarding),
-            message: "This sends you back through setup. Your sessions, labs, supplements, and progress stay on this device.",
+            message: "This sends you back through setup. Your sessions, labs, supplements and progress stay on this device.",
             actions: [
                 .destructive("Reset Onboarding") {
                     resetOnboarding()
@@ -48,7 +48,7 @@ struct SettingsView: View {
         .bigDoseAlert(
             "Nuke all BigDose data?",
             isPresented: isPresented(for: .nukeFirstConfirm),
-            message: "This permanently deletes your profile, sessions, labs, supplements, imports, and progress on this device.",
+            message: "This permanently deletes your profile, sessions, labs, supplements, imports and progress on this device.",
             actions: [
                 .default("Continue") {
                     confirmationStep = .nukeFinalConfirm
@@ -83,7 +83,7 @@ struct SettingsView: View {
                 .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(.white)
 
-            Text("Control setup, education, and safety framing.")
+            Text("Control setup, education and safety framing.")
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
         }
@@ -198,7 +198,7 @@ struct SettingsView: View {
             NotificationSettingsView(profile: profile)
         } label: {
             GlassCard {
-                ProfileLinkRow(title: "Notifications", detail: "Alert categories, reminders, and quiet hours", systemImage: "bell.badge.fill")
+                ProfileLinkRow(title: "Notifications", detail: "Alert categories, reminders and quiet hours", systemImage: "bell.badge.fill")
             }
         }
         .buttonStyle(.plain)
@@ -209,7 +209,7 @@ struct SettingsView: View {
             ManageDataView(profile: profile)
         } label: {
             GlassCard {
-                ProfileLinkRow(title: "Manage Data", detail: "Export, restore, iCloud, and Apple Health", systemImage: "externaldrive.fill")
+                ProfileLinkRow(title: "Manage Data", detail: "Export, restore, iCloud and Apple Health", systemImage: "externaldrive.fill")
             }
         }
         .buttonStyle(.plain)

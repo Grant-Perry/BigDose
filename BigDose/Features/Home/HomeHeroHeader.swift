@@ -26,6 +26,7 @@ struct HomeHeroHeader: View {
                     if let vitaminDWindowDisplay {
                         NextDOpportunityBanner(
                             display: vitaminDWindowDisplay,
+                            now: now,
                             todayGoalProgress: todayGoalProgress,
                             todayCollectedIU: todayCollectedIU,
                             targetIU: targetIU,

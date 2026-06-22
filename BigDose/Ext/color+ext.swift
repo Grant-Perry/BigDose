@@ -38,12 +38,12 @@ extension Color {
    static let gpProductionCompleteBorder = gpProductionComplete.opacity(0.42)
 
 // button states
-   static let gpBtnOn = Color(#colorLiteral(red: 0.6198272109, green: 0.6509014368, blue: 0.4784618616, alpha: 1))
-   static let gpBtnOnL = Color(#colorLiteral(red: 0.9112716087, green: 1, blue: 0.8066914544, alpha: 1))
+   static let gpBtnOnL = Color(#colorLiteral(red: 0.1960784346, green: 0.3411764801, blue: 0.1019607857, alpha: 1))
+   static let gpBtnOn = Color(#colorLiteral(red: 0.5843137503, green: 0.8235294223, blue: 0.4196078479, alpha: 1))
    static let gpBtnOff = Color(#colorLiteral(red: 1, green: 0.1857388616, blue: 0.3251032516, alpha: 1))
    static let gpBtnOffL = Color(#colorLiteral(red: 0.9147140384, green: 0.2784035206, blue: 0.3166754246, alpha: 1))
 
- 
+
 
    static let gpPastelMint = Color(#colorLiteral(red: 0.816, green: 1, blue: 0.647, alpha: 1))
    static let gpGreen = Color(#colorLiteral(red: 0.6198272109, green: 0.6509014368, blue: 0.4784618616, alpha: 1))

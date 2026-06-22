@@ -16,6 +16,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
     case dWindowOpen
     case estimatedIU
     case estimatedBloodLevel
+    case bloodLevelGoalProgress
+    case bloodLevelBand
+    case last7DaysIntake
 
     var id: String { rawValue }
 
@@ -30,7 +33,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
         case .minToMED:
             "Min to MED"
         case .medUsed:
-            "MED Used"
+            "MED Used (Risk)"
         case .sessionGoal:
             "Session Goal"
         case .skinType:
@@ -51,6 +54,12 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             "Estimated IU"
         case .estimatedBloodLevel:
             "Estimated Blood Level"
+        case .bloodLevelGoalProgress:
+            "Blood Level Goal"
+        case .bloodLevelBand:
+            "Level Band"
+        case .last7DaysIntake:
+            "Last 7 Days Intake"
         }
     }
 
@@ -66,9 +75,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .riskUsed:
             """
-            **What it does:** Shows how much of your personal **MED** a sample exposure would use — based on your **skin type**, **UV**, and about **12 minutes** of sun.
+            **What it does:** Shows how much of your personal **MED** a sample exposure would use — based on your **skin type**, **UV** and about **12 minutes** of sun.
 
-            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED Used** climb in real time instead.
+            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED Used (Risk)** climb in real time instead.
 
             **Tip:** Open the **MED** info panel for the full burn-threshold explainer.
             """
@@ -76,25 +85,25 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **MED (Risk)** — *minimal erythema dose* — is BigDose's estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
 
-            **How BigDose uses it:** During a sun session we count down to MED, show **MED Used %**, and warn at **50%** (turn over), **75%** (wrap up soon), and **90%** (stop or cover up).
+            **How BigDose uses it:** During a sun session we count down to MED, show **MED (Risk) Used %** and warn at **50%** (turn over), **75%** (wrap up soon) and **90%** (stop or cover up).
 
             **What it is not:** A **medical measurement** or a guarantee you will or won't burn. Treat it as **conservative wellness guidance**.
             """
         case .minToMED:
             """
-            **What it does:** Counts down the estimated **minutes until MED** at the current **UV**, **cloud**, and **sunscreen** settings.
+            **What it does:** Counts down the estimated **minutes until MED (risk)** at the current **UV**, **cloud** and **sunscreen** settings.
 
-            **How to use:** Plan to **turn over**, **seek shade**, or **end the session** before this hits zero. BigDose also alerts you earlier — at **75%** and **90%** of MED.
+            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose also alerts you earlier — at **75%** and **90%** of MED.
 
             **Watch for:** When **UV is low**, this number can look very long — that does not mean unlimited safe exposure.
             """
         case .medUsed:
             """
-            **What it does:** Shows how much of your estimated **MED** this session has used so far — based on **elapsed time**, **UV**, **skin type**, and exposure settings.
+            **What it does:** Shows how much of your estimated **MED** this session has used so far — based on **elapsed time**, **UV**, **skin type** and exposure settings.
 
             **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **90%**, the timer **pauses** and asks you to **stop or cover up**.
 
-            **Tip:** Pair this with **Min to MED** — one shows progress, the other shows time remaining.
+            **Tip:** Pair this with **Min to MED (Risk)** — one shows progress, the other shows time remaining.
             """
         case .sessionGoal:
             """
@@ -102,7 +111,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **IU for today**, not your **ng/mL** blood goal on Progress.
 
-            **Good to know:** Goal progress and **MED Used** measure different things — vitamin D gained vs. burn risk consumed.
+            **Good to know:** Goal progress and **MED Used (Risk)** measure different things — vitamin D gained vs. burn risk consumed.
             """
         case .skinType:
             """
@@ -116,7 +125,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Your target **blood vitamin D level** in **ng/mL** (nanograms per milliliter).
 
-            **How to use:** Set it during onboarding or in **Dose DNA**. **Progress** tracks blood-level estimates against this target. **Home** tracks a separate **daily IU goal** for today's sun, supplements, and food.
+            **How to use:** Set it during onboarding or in **Dose DNA**. **Progress** tracks blood-level estimates against this target. **Home** tracks a separate **daily IU goal** for today's sun, supplements and food.
 
             **Good to know:** **ng/mL** and **IU** answer different questions — blood level vs. today's intake.
             """
@@ -138,7 +147,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .vitaminDWindowToday:
             """
-            **What it does:** Today's **solar guidance card** — sun altitude, your **vitamin D window**, and when conditions are best.
+            **What it does:** Today's **solar guidance card** — sun altitude, your **vitamin D window** and when conditions are best.
 
             **How to use:** Read the **arc** and **chips** below. **Tap Start Sun Session** when the window is **open** and **UV** looks right for you.
 
@@ -164,7 +173,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** A **modeled vitamin D estimate** in **international units (IU)** — **not** a blood test result.
 
-            **How to use:** BigDose calculates this from your **skin type**, **exposed skin**, **UV**, and **session length**. **Outside the D window**, estimates are **scaled down** to reflect trace production.
+            **How to use:** BigDose calculates this from your **skin type**, **exposed skin**, **UV** and **session length**. **Outside the D window**, estimates are **scaled down** to reflect trace production.
 
             **What it is not:** A lab measurement. Treat it as **guidance**, not medical advice.
             """
@@ -172,9 +181,33 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** A **modeled blood vitamin D level** in **ng/mL**, anchored to your latest **lab or baseline** and adjusted by recent intake.
 
-            **How to use:** This is different from the **IU %** on Home, which only tracks **today's sun, supplement, and food IU** against your daily IU target. **Progress** estimates whether your blood level is moving toward your **ng/mL goal** over the last **7 days**.
+            **How to use:** This is different from the **IU %** on Home, which only tracks **today's sun, supplement and food IU** against your daily IU target. **Progress** estimates whether your blood level is moving toward your **ng/mL goal** over the last **7 days**.
 
             **Tip:** A fresh **lab result** in BigDose improves this estimate more than any single sun session.
+            """
+        case .bloodLevelGoalProgress:
+            """
+            **What it does:** Shows how close your **estimated blood level** is to your personal **ng/mL goal**.
+
+            **How to use:** The **%** and arc fill use your **Progress estimate** divided by the **ng/mL target** in **Dose DNA**. **100%** means you are at or above that goal on paper — not that you should stop supplementing or sun.
+
+            **Good to know:** This tracks **blood level**, not today's **IU intake** on Home.
+            """
+        case .bloodLevelBand:
+            """
+            **What it does:** A quick label for where your **estimated blood level** sits on Progress.
+
+            **How to use:** **Low** means below **30 ng/mL**. **Prime** means **30 ng/mL or above**. These bands reflect your **blood-level estimate**, not sun or UV quality on Home.
+
+            **Good to know:** A fresh **lab result** in BigDose sharpens the estimate more than any single week of logging.
+            """
+        case .last7DaysIntake:
+            """
+            **What it does:** Total **vitamin D intake** in **IU** from **sun sessions**, **supplements** and **food** logged over the **last 7 days**.
+
+            **How to use:** Compare this to your **7-day intake target** — your **daily IU goal × 7**. Steady weeks near that target help your **blood-level estimate** trend the right way.
+
+            **Good to know:** This is **intake**, not your **ng/mL** blood goal on the card above.
             """
         }
     }

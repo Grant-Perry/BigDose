@@ -4,6 +4,7 @@ struct InfoBoxView: View {
     var title: String
     var bodyText: String
     var width: CGFloat = 280
+    var maxBodyHeight: CGFloat = 340
     var titleIcon: String?
     var titleIconColor: Color = .cyan
     var onClose: (() -> Void)?
@@ -39,10 +40,15 @@ struct InfoBoxView: View {
                     }
                 }
 
-                Text(formattedBody)
-                    .lineLimit(nil)
-                    .lineSpacing(5)
-                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView {
+                    Text(formattedBody)
+                        .lineLimit(nil)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxHeight: maxBodyHeight)
             }
             .padding(18)
             .frame(width: width, alignment: .leading)

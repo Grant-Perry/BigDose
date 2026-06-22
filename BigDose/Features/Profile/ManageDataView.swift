@@ -15,7 +15,7 @@ struct ManageDataView: View {
     @State private var exportURL: URL?
     @State private var isShowingImporter = false
     @State private var isShowingClearConfirmation = false
-    @State private var statusMessage = "Export, restore, sync, and Apple Health import tools live here."
+    @State private var statusMessage = "Export, restore, sync and Apple Health import tools live here."
     var profile: UserProfile?
 
     var body: some View {
@@ -71,7 +71,7 @@ struct ManageDataView: View {
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("BigDose syncs your profile, sessions, labs, and imports through iCloud when you're signed in on this device. Rescue exports remain available for manual backup.")
+                Text("BigDose syncs your profile, sessions, labs and imports through iCloud when you're signed in on this device. Rescue exports remain available for manual backup.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
@@ -220,7 +220,7 @@ struct ManageDataView: View {
         for item in importBatches { modelContext.delete(item) }
         for item in importItems { modelContext.delete(item) }
         try? modelContext.save()
-        statusMessage = "Local activity, import, lab, and supplement data was cleared."
+        statusMessage = "Local activity, import, lab and supplement data was cleared."
     }
 }
 

@@ -1,0 +1,19 @@
+---
+description: Gp writing style for user-facing copy and info boxes
+alwaysApply: true
+---
+
+# Writing Style
+
+## Serial Lists (NOC)
+
+Do not use the Oxford comma. In lists of three or more items, never place a comma before the final conjunction (`and` or `or`).
+
+- Preferred: `sun, supplements and food`
+- Avoid: `sun, supplements, and food`
+- Preferred: `salmon, fortified milk, eggs or other sources`
+- Avoid: `salmon, fortified milk, eggs, or other sources`
+
+Apply this to **all user-facing copy**: UI labels, alerts, notifications, widget descriptions, Info.plist permission strings, education cards, onboarding, and every `BigDoseInfoTopic` info box.
+
+Do not apply to code comments or internal developer docs unless they are user-visible.

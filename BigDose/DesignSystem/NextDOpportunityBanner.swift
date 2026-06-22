@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NextDOpportunityBanner: View {
     var display: VitaminDWindowDisplay
+    var now: Date
     var todayGoalProgress: Double
     var todayCollectedIU: Double
     var targetIU: Int
@@ -12,36 +13,23 @@ struct NextDOpportunityBanner: View {
     private let goalDialDiameter: CGFloat = 96 * 0.85
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            Image(systemName: bannerSymbol)
-                .font(.bigDoseHeader(.title2).weight(.bold))
-                .foregroundStyle(.solarGold)
-                .symbolEffect(.pulse, options: .repeating, value: display.nextOpportunityStart != nil)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .center, spacing: 6) {
+                Text(display.bannerEyebrow)
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(.solarGold)
+                    .textCase(.uppercase)
 
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(display.bannerEyebrow)
-                        .font(.caption.weight(.black))
-                        .foregroundStyle(.solarGold)
-                        .textCase(.uppercase)
+                Spacer(minLength: 0)
 
-                    InfoCircleButton(topic: .dWindowOpen, iconSize: 11, compact: true)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(display.bannerTitleLead)
-                    Text(display.bannerTitleDetail)
-                }
-                .font(.bigDoseHeader(.headline).weight(.black))
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
-
-                Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.48))
+                InfoCircleButton(topic: .dWindowOpen, iconSize: 11, compact: true)
             }
 
-            Spacer(minLength: 0)
+            bannerTitleBlock
+
+            Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white.opacity(0.48))
         }
         .padding(14)
         .padding(.trailing, goalDialDiameter + 10)
@@ -56,6 +44,38 @@ struct NextDOpportunityBanner: View {
                 .padding(.trailing, 12)
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var bannerTitleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(display.bannerTitleLead)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(display.bannerTitleDetail)
+
+                if let remainingLabel = openNowRemainingLabel {
+                    Text("·")
+                        .foregroundStyle(.white.opacity(0.42))
+
+                    Text(remainingLabel)
+                        .font(.subheadline.weight(.black))
+                        .foregroundStyle(.solarGold)
+                }
+            }
+        }
+        .font(.bigDoseHeader(.headline).weight(.black))
+        .foregroundStyle(.white)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var openNowRemainingLabel: String? {
+        guard display.isWindowOpenNow,
+              let remaining = display.remainingWindowDurationComponents(at: now),
+              remaining.hours > 0 || remaining.minutes > 0 else {
+            return nil
+        }
+
+        return "\(remaining.compactLabel) left"
     }
 
     private var todayGoalDialButton: some View {
@@ -77,13 +97,5 @@ struct NextDOpportunityBanner: View {
         .accessibilityLabel("Start sun session")
         .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily IU goal")
         .accessibilityHint(isSunSessionStartEnabled ? "Starts a new sun session" : "Weather data required to start a sun session")
-    }
-
-    private var bannerSymbol: String {
-        if display.nextOpportunityStart == nil, display.isToday {
-            return "sun.max.circle.fill"
-        }
-
-        return "sun.max.fill"
     }
 }

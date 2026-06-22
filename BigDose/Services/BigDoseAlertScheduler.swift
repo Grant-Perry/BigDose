@@ -59,7 +59,7 @@ enum BigDoseAlertScheduler {
             await scheduleCalendar(
                 id: "levelTrend",
                 title: "Your estimate is below target",
-                body: "Review recent sunlight, supplements, and lab data in BigDose.",
+                body: "Review recent sunlight, supplements and lab data in BigDose.",
                 date: Calendar.current.date(byAdding: .hour, value: 2, to: .now) ?? .now
             )
         }
@@ -192,7 +192,6 @@ enum BigDoseAlertScheduler {
         profile: UserProfile
     ) async {
         let beforeDate = eventDate.addingTimeInterval(-eventOffset)
-        let afterDate = eventDate.addingTimeInterval(eventOffset)
         let suffix = dateIdentifier(for: eventDate)
 
         if beforeDate > .now, !isInQuietHours(beforeDate, profile: profile) {
@@ -204,12 +203,12 @@ enum BigDoseAlertScheduler {
             )
         }
 
-        if afterDate > .now, !isInQuietHours(afterDate, profile: profile) {
+        if eventDate > .now, !isInQuietHours(eventDate, profile: profile) {
             await scheduleCalendar(
-                id: "\(idPrefix).after.\(suffix)",
+                id: "\(idPrefix).at.\(suffix)",
                 title: afterTitle,
                 body: afterBody,
-                date: afterDate
+                date: eventDate
             )
         }
     }
@@ -245,7 +244,7 @@ enum BigDoseAlertScheduler {
     private static func scheduleWeeklyProgress() async {
         let content = UNMutableNotificationContent()
         content.title = "Weekly BigDose check-in"
-        content.body = "See how sunlight, supplements, and labs are tracking against your goal."
+        content.body = "See how sunlight, supplements and labs are tracking against your goal."
         content.sound = .default
 
         var components = DateComponents()
@@ -293,7 +292,14 @@ private struct SolarEventScheduleContext {
         let display = DailySunPlanService.vitaminDWindowDisplay(for: plan, now: now)
         let snapshot = display.snapshot
         let referenceDay = snapshot.referenceDay
-        let nextOpportunity = DailySunPlanService.nextVitaminDOpportunity(for: plan, now: now)?.date
+        // Only alert for a future opening — never while today's window is already open.
+        let nextOpportunity: Date? = if display.isWindowOpenNow {
+            nil
+        } else if let start = display.nextOpportunityStart, start > now {
+            start
+        } else {
+            nil
+        }
         let amLight = SolarGeometryService.amLightWindow(
             latitude: plan.latitude,
             longitude: plan.longitude,

@@ -59,7 +59,7 @@ struct OnboardingView: View {
                         symbolName: "sun.max.fill",
                         eyebrow: "BigDose",
                         title: "Find your best sunlight window.",
-                        detail: "We look at your location, the sun angle, UV index, and your profile to estimate useful vitamin D time."
+                        detail: "We look at your location, the sun angle, UV index and your profile to estimate useful vitamin D time."
                     )
                     .tag(0)
 
@@ -499,7 +499,7 @@ struct OnboardingView: View {
                         Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
                             .tint(.solarGold)
 
-                        Text("Incidental outdoor time means casual exposure: walking, errands, yard work, or lunch outside.")
+                        Text("Incidental outdoor time means casual exposure: walking, errands, yard work or lunch outside.")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
                     }

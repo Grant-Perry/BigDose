@@ -96,7 +96,7 @@ struct DoseDNAEditorView: View {
                         .font(.bigDoseHeader(.title2).weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("Tap the photo to choose, zoom, and crop.")
+                    Text("Tap the photo to choose, zoom and crop.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
                 }

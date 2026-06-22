@@ -23,7 +23,7 @@ struct OnboardingAppleHealthPage: View {
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts, and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
+                Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
@@ -130,7 +130,7 @@ struct AppleHealthKitActionSection: View {
 
 struct AppleHealthKitAttributionView: View {
     var body: some View {
-        Text("Health data is accessed through Apple HealthKit and the Apple Health app. Apple, Health, and HealthKit are trademarks of Apple Inc., registered in the U.S. and other countries.")
+        Text("Health data is accessed through Apple HealthKit and the Apple Health app. Apple, Health and HealthKit are trademarks of Apple Inc., registered in the U.S. and other countries.")
             .font(.caption2.weight(.medium))
             .foregroundStyle(.white.opacity(0.48))
             .multilineTextAlignment(.leading)

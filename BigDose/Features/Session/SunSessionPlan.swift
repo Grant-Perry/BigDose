@@ -98,7 +98,7 @@ struct SunSessionPlan: Equatable {
 
         switch alert {
         case .turnOver:
-            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin at this UV. Flip sides, rotate, or change exposure so one area doesn't take all of it."
+            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin at this UV. Flip sides, rotate or change exposure so one area doesn't take all of it."
         case .medWarning:
             return "You are at about \(medPercent)% of your estimated MED — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
         case .prepareExit(let countdown):

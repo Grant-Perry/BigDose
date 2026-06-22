@@ -103,7 +103,9 @@ struct ProgressDashboardView: View {
                     progress: levelProgress,
                     quality: estimatedLevel >= 30 ? .prime : .low,
                     title: "\(Int(levelProgress * 100))%",
-                    subtitle: "of \(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL goal"
+                    subtitle: "of \(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL goal",
+                    subtitleInfoTopic: .bloodLevelGoalProgress,
+                    qualityInfoTopic: .bloodLevelBand
                 )
             }
         }
@@ -117,20 +119,24 @@ struct ProgressDashboardView: View {
                         .font(.bigDoseHeader(.title3).weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("Sun, supplements, and food counted against your current daily target.")
+                    Text("Total vitamin D logged over the last 7 days — sun, supplements and food combined.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(compactIU(snapshot.totalIU))
-                        .font(.system(size: 38, weight: .black))
-                        .foregroundStyle(.solarGold)
-                    Text("of \(compactIU(snapshot.targetIU)) IU")
-                        .font(.bigDoseHeader(.headline).weight(.bold))
-                        .foregroundStyle(.white.opacity(0.66))
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(compactIU(snapshot.totalIU))
+                            .font(.system(size: 38, weight: .black))
+                            .foregroundStyle(.solarGold)
+                        Text("of \(compactIU(snapshot.targetIU)) IU")
+                            .font(.bigDoseHeader(.headline).weight(.bold))
+                            .foregroundStyle(.white.opacity(0.66))
+                    }
+
+                    InfoCircleButton(topic: .last7DaysIntake, iconSize: 12, compact: true)
                 }
             }
         }
@@ -169,7 +175,7 @@ struct ProgressDashboardView: View {
                         .font(.bigDoseHeader(.title3).weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("Streaks, smart timing, and safe exposure wins will unlock here.")
+                    Text("Streaks, smart timing and safe exposure wins will unlock here.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
                 }

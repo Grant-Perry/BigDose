@@ -310,7 +310,7 @@ struct ActiveSunSessionView: View {
                     InfoCircleButton(topic: .minToMED, compact: true)
                 }
 
-                Text("min to MED")
+                Text("min to MED (Risk)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
             }

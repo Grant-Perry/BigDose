@@ -7,7 +7,7 @@ import Observation
 final class HomeViewModel {
     var weather: BigDoseWeatherSnapshot?
     var dailyPlan: DailySunPlan?
-    var isLoading = false
+    var isLoading = true
     var statusMessage = "Loading current location and Apple Weather."
 
     private let locationService = BigDoseLocationService()

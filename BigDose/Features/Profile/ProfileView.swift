@@ -181,6 +181,14 @@ private struct ProfileContent: View {
                 Divider().overlay(.white.opacity(0.12))
 
                 NavigationLink {
+                    FoodLogView()
+                } label: {
+                    ProfileLinkRow(title: "Food", detail: "Log vitamin D from meals", systemImage: "fork.knife")
+                }
+
+                Divider().overlay(.white.opacity(0.12))
+
+                NavigationLink {
                     RiskProfileView(profile: profile)
                 } label: {
                     ProfileLinkRow(title: "Risk Snapshot", detail: "See current guidance inputs", systemImage: "shield.lefthalf.filled")

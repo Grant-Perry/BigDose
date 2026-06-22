@@ -183,6 +183,8 @@ struct HomeView: View {
                 .animation(.smooth(duration: 0.32), value: isShowingMoreWeather)
                 .clipped()
             }
+        } else if homeViewModel.isLoading {
+            weatherLoadingCard
         } else {
             unavailableCard(
                 title: "Weather unavailable",
@@ -196,6 +198,45 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    private var weatherLoadingCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .center) {
+                    Text("Weather")
+                        .font(.bigDoseHeader(.title2).weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.72))
+
+                    Spacer()
+
+                    ProgressView()
+                        .controlSize(.regular)
+                        .tint(.solarGold)
+                }
+
+                LazyVGrid(columns: weatherColumns, spacing: 9) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(.white.opacity(0.06))
+                            .frame(height: 118)
+                            .overlay {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.solarGold.opacity(0.72))
+                            }
+                    }
+                }
+
+                Text(homeViewModel.statusMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.52))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading weather")
+        .accessibilityValue(homeViewModel.statusMessage)
     }
 
     private var weatherColumns: [GridItem] {
@@ -506,7 +547,7 @@ struct HomeView: View {
             return "BigDose needs current WeatherKit UV data before estimating today’s sunlight dose."
         }
 
-        return "Based on your \(activeProfile.skinType.title) skin, about \(Int(activeProfile.typicalExposedBodySurfaceArea * 100))% skin exposed, and a UV index of \(weather.uvIndex.formatted(.number.precision(.fractionLength(1))))."
+        return "Based on your \(activeProfile.skinType.title) skin, about \(Int(activeProfile.typicalExposedBodySurfaceArea * 100))% skin exposed and a UV index of \(weather.uvIndex.formatted(.number.precision(.fractionLength(1))))."
     }
 
     private var todayCollectedIU: Double {

@@ -57,7 +57,7 @@ struct RiskProfileView: View {
                 .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(.white)
 
-            Text("Wellness guidance based on your profile, recent intake, and current solar data.")
+            Text("Wellness guidance based on your profile, recent intake and current solar data.")
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
         }

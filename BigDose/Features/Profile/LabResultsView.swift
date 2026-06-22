@@ -32,6 +32,7 @@ struct LabResultsView: View {
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
+            .bigDoseSwipeActionsContainer()
         }
         .navigationTitle("Lab Results")
         .toolbarTitleDisplayMode(.inline)
@@ -90,11 +91,9 @@ struct LabResultsView: View {
                     .foregroundStyle(.white.opacity(0.68))
             }
         }
-        .contextMenu {
-            Button("Delete", role: .destructive) {
-                modelContext.delete(result)
-                try? modelContext.save()
-            }
+        .bigDoseDeletable {
+            modelContext.delete(result)
+            try? modelContext.save()
         }
     }
 }

@@ -15,7 +15,7 @@ struct BigDoseHomeWidget: Widget {
                 .widgetURL(entry.snapshot.widgetDeepLinkURL)
         }
         .configurationDisplayName("Vitamin D Window")
-        .description("Next sun window, UV, and today's D progress.")
+        .description("Next sun window, UV and today's D progress.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryInline, .accessoryCircular])
     }
 }
