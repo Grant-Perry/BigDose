@@ -162,9 +162,12 @@ struct DoseDNAEditorView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Target Vitamin D Blood Level")
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .foregroundStyle(.white)
+                    HStack(spacing: 4) {
+                        Text("Target Vitamin D Blood Level")
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+                        InfoCircleButton(topic: .goal, compact: true)
+                    }
 
                     Spacer()
 
@@ -249,6 +252,13 @@ struct DoseDNAEditorView: View {
 
     private var supplementCard: some View {
         sectionCard(title: "Daily Supplement", systemImage: "pills.fill") {
+            RecommendedDailyIUCard(
+                recommendation: doseDNADailyIURecommendation,
+                showsSunTarget: true
+            )
+
+            Divider().overlay(.white.opacity(0.12))
+
             DoseDNATextField(
                 title: "Default Supplement",
                 text: $defaultSupplementIUText,
@@ -265,6 +275,16 @@ struct DoseDNAEditorView: View {
                 .onChange(of: profile.autoApplyDailySupplementIU) { _, _ in persistProfile() }
 
             Text("When on, BigDose adds this default to each day's total. When off, you log supplements yourself.")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.56))
+
+            Toggle("Include supplements in daily total", isOn: $profile.includesSupplementsInDailyProgress)
+                .font(.bigDoseHeader(.headline).weight(.semibold))
+                .foregroundStyle(.white)
+                .tint(.solarGold)
+                .onChange(of: profile.includesSupplementsInDailyProgress) { _, _ in persistProfile() }
+
+            Text("When on, logged supplement IU counts toward your daily progress percentage. Sun, supplements and food stay tracked separately.")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.56))
 
@@ -337,7 +357,7 @@ struct DoseDNAEditorView: View {
         profile.incidentalSunMinutesPerWeek = Int(incidentalSunMinutesPerWeek)
         profile.usuallyUsesSunscreen = usuallyUsesSunscreen
         profile.defaultSupplementIU = defaultSupplementIU
-        profile.preferredDailyIU = max(defaultSupplementIU, 1_000)
+        profile.preferredDailyIU = doseDNADailyIURecommendation.sunSessionTargetIU
         profile.updatedAt = Date.now
 
         try? modelContext.save()
@@ -357,6 +377,19 @@ struct DoseDNAEditorView: View {
         }
 
         return pounds / 2.20462
+    }
+
+    private var doseDNADailyIURecommendation: OptimalDailyIURecommendation {
+        OptimalDailyIUService.recommend(
+            dateOfBirth: dateOfBirth,
+            biologicalSex: biologicalSex,
+            weightKilograms: weightKilograms,
+            goalNanogramsPerMilliliter: goalNanogramsPerMilliliter,
+            baselineNanogramsPerMilliliter: profile.baselineNanogramsPerMilliliter,
+            levelKnowledge: profile.levelKnowledge,
+            incidentalSunMinutesPerWeek: Int(incidentalSunMinutesPerWeek),
+            defaultSupplementIU: defaultSupplementIU
+        )
     }
 
     private var defaultSupplementIU: Int {

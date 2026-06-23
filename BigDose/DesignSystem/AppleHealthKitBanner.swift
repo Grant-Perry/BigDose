@@ -10,52 +10,43 @@ struct OnboardingAppleHealthPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Image("AppleHealthAppIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .clipShape(.rect(cornerRadius: 16, style: .continuous))
-                    .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
-                    .accessibilityLabel("Apple Health app icon")
-
-                Text("Automatically sync your data with\nApple Health.")
-                    .font(.system(.largeTitle, weight: .semibold))
+                Text("Automatically sync your data with Apple Health.")
+                    .font(.bigDoseHeader(.largeTitle))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
-                    .font(.bigDoseHeader(.title3).weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button(action: onSync) {
-                    Group {
-                        if isSyncing {
-                            ProgressView()
-                                .tint(.solarOrange)
-                        } else {
-                            Text("Sync Health Data")
-                                .font(.bigDoseHeader(.headline).weight(.semibold))
-                                .foregroundStyle(.solarOrange)
+                    HStack(spacing: 12) {
+                        Group {
+                            if isSyncing {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image("AppleHealthAppIcon")
+                                    .resizable()
+                                    .scaledToFit()
+                            }
                         }
+                        .frame(width: 44, height: 44)
+                        .clipShape(.rect(cornerRadius: 10, style: .continuous))
+                        .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
+
+                        Text("Sync Now")
+                            .font(.bigDoseHeader(.title2).weight(.black))
+                            .foregroundStyle(.white)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.white, Color.white.opacity(0.92)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .shadow(color: .white.opacity(0.45), radius: 14, y: 6)
-                    }
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .disabled(isSyncing)
-                .accessibilityLabel(isSyncing ? "Syncing Apple Health data" : "Sync Health Data")
+                .accessibilityLabel(isSyncing ? "Syncing Apple Health data" : "Sync Apple Health data now")
 
                 Button("Skip for Now", action: onSkip)
                     .font(.bigDoseHeader(.headline).weight(.semibold))

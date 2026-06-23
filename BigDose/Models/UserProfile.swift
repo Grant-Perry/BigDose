@@ -25,6 +25,7 @@ final class UserProfile {
     var incidentalSunMinutesPerWeek: Int = 30
     var defaultSupplementIU: Int = 1_000
     var autoApplyDailySupplementIU: Bool = true
+    var includesSupplementsInDailyProgress: Bool = true
     var wantsSolarWindowAlerts: Bool = true
     var wantsDWindowOpeningAlerts: Bool = true
     var wantsDWindowClosingAlerts: Bool = true
@@ -73,6 +74,7 @@ final class UserProfile {
         incidentalSunMinutesPerWeek: Int = 30,
         defaultSupplementIU: Int = 1_000,
         autoApplyDailySupplementIU: Bool = true,
+        includesSupplementsInDailyProgress: Bool = true,
         wantsSolarWindowAlerts: Bool = true,
         wantsDWindowOpeningAlerts: Bool = true,
         wantsDWindowClosingAlerts: Bool = true,
@@ -120,6 +122,7 @@ final class UserProfile {
         self.incidentalSunMinutesPerWeek = incidentalSunMinutesPerWeek
         self.defaultSupplementIU = defaultSupplementIU
         self.autoApplyDailySupplementIU = autoApplyDailySupplementIU
+        self.includesSupplementsInDailyProgress = includesSupplementsInDailyProgress
         self.wantsSolarWindowAlerts = wantsSolarWindowAlerts
         self.wantsDWindowOpeningAlerts = wantsDWindowOpeningAlerts
         self.wantsDWindowClosingAlerts = wantsDWindowClosingAlerts

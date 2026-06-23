@@ -30,6 +30,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
     case typicalSkinExposure
     case usualSunscreen
     case casualOutdoorTime
+    case dailyIUTarget
 
     var id: String { rawValue }
 
@@ -40,11 +41,11 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
         case .riskUsed:
             "Risk Used"
         case .med:
-            "MED - Risk"
+            "MED (burn risk)"
         case .minToMED:
-            "Min to MED"
+            "Min to MED (burn risk)"
         case .medUsed:
-            "MED Used (Risk)"
+            "MED Used (burn risk)"
         case .sessionGoal:
             "Session Goal"
         case .skinType:
@@ -93,6 +94,8 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             "Usual Sunscreen"
         case .casualOutdoorTime:
             "Casual Outdoor Time"
+        case .dailyIUTarget:
+            "Daily IU Target"
         }
     }
 
@@ -108,35 +111,35 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .riskUsed:
             """
-            **What it does:** Shows how much of your personal **MED** a sample exposure would use — based on your **skin type**, **UV** and about **12 minutes** of sun.
+            **What it does:** Shows how much of your personal **MED (burn risk)** a sample exposure would use — based on your **skin type**, **UV** and about **12 minutes** of sun.
 
-            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED Used (Risk)** climb in real time instead.
+            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED Used (burn risk)** climb in real time instead.
 
-            **Tip:** Open the **MED** info panel for the full burn-threshold explainer.
+            **Tip:** Open the **MED (burn risk)** info panel for the full burn-threshold explainer.
             """
         case .med:
             """
-            **What it is:** **MED (Risk)** — *minimal erythema dose* — is BigDose's estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
+            **What it is:** **MED (burn risk)** — *minimal erythema dose* — is Science-based estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
 
-            **How BigDose uses it:** During a sun session we count down to MED, show **MED Used (Risk) %** and warn at **50%** (turn over), **75%** (wrap up soon) and **90%** onward (escalating reminders every percent while you stay out).
+            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED Used (burn risk) %** and warn at **50%** (turn over), **75%** (wrap up soon) and **95%** (guidance limit). **Nanny** adds one extra reminder at **98%** while you stay out.
 
             **What it is not:** A **medical measurement** or a guarantee you will or won't burn. BigDose warns — **only you stop the session**.
             """
         case .minToMED:
             """
-            **What it does:** Counts down the estimated **minutes until MED (risk)** at the current **UV**, **cloud** and **sunscreen** settings.
+            **What it does:** Counts down the estimated **minutes until MED (burn risk)** at the current **UV**, **cloud** and **sunscreen** settings.
 
-            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose also alerts you earlier — at **75%** and **90%** of MED.
+            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose also alerts you earlier — at **75%** and **95%** of MED (burn risk).
 
             **Watch for:** When **UV is low**, this number can look very long — that does not mean unlimited safe exposure.
             """
         case .medUsed:
             """
-            **What it does:** Shows how much of your estimated **MED** this session has used so far — based on **elapsed time**, **UV**, **skin type** and exposure settings.
+            **What it does:** Shows how much of your estimated **MED (burn risk)** this session has used so far — based on **elapsed time**, **UV**, **skin type** and exposure settings.
 
-            **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **90%**, reminders escalate **every percent** while the session keeps running — **only you stop it**.
+            **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **95%**, you are at the guidance limit — **only you stop it**. Exposure past **100%** counts toward **Sun risk today** on Home.
 
-            **Tip:** Past-limit exposure counts toward **Sun risk today** on Home.
+            **Tip:** Goal progress and **MED Used (burn risk)** measure different things — vitamin D gained vs. burn risk consumed.
             """
         case .sessionGoal:
             """
@@ -144,7 +147,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
 
-            **Good to know:** Goal progress and **MED Used (Risk)** measure different things — vitamin D gained vs. burn risk consumed.
+            **Good to know:** Goal progress and **MED Used (burn risk)** measure different things — vitamin D gained vs. burn risk consumed.
             """
         case .skinType:
             """
@@ -152,7 +155,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** Pick the type that matches your **sunburn history**, not your tan goals. **Type I–II** burn easily. **Type III–IV** are moderate. **Type V–VI** rarely burn but still need vitamin D and still carry skin cancer risk.
 
-            **How BigDose uses it:** Drives **MED**, **time-to-IU** and session safety milestones. Change anytime in **Profile → Dose DNA**.
+            **How BigDose uses it:** Drives **MED (burn risk)**, **time-to-IU** and session safety milestones. Change anytime in **Profile → Dose DNA**.
 
             **Tip:** When unsure, choose the **more burn-prone** type — BigDose errs conservative.
             """
@@ -216,7 +219,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Sets a **planned guide** for this sun session. BigDose **never auto-ends** — you stop when you are ready.
 
-            **How to use:** Use the slider or tap **To goal** or **Safe max**. **Safe max** caps the plan at about **90%** of MED for today's **UV**, **skin type** and **exposure** settings.
+            **How to use:** Use the slider or tap **To goal** or **Safe max**. **Safe max** caps the plan at about **95%** of MED (burn risk) for today's **UV**, **skin type** and **exposure** settings.
 
             **Good to know:** Shorter planned time is fine if you only need a few minutes of D. Longer is not safer — **Safe max** is the ceiling.
             """
@@ -230,9 +233,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .safeMax:
             """
-            **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **90%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
+            **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **95%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
 
-            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose still alerts earlier at **50%**, **75%** and every percent from **90%** onward while you stay out.
+            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose still alerts earlier at **50%**, **75%** and **95%** while you stay out.
 
             **What it is not:** A guarantee you will or won't burn. Use **Your Limits Today** for turn-over and exit milestones.
             """
@@ -272,9 +275,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **UVB** triggers **vitamin D production** in your skin. Sun exposure also **burns skin**, contributes to **photoaging** and raises **long-term skin cancer risk** with repeated overexposure.
 
-            **How BigDose protects you:** We estimate your personal **MED (burn threshold)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED Used**, warn at **50%**, **75%** and **90%** and stay vigilant about when to come out of the sun — **only you stop the session**.
+            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED Used (burn risk)**, warn at **50%**, **75%** and **95%** and stay vigilant about when to come out of the sun — **only you stop the session**.
 
-            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and reminds you every percent past **90% MED (Risk)** while you stay out. Turn it off anytime for the **90%** alert only — over-limit tracking still applies.
+            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds one extra reminder at **98% MED (burn risk)** while you stay out. Turn it off anytime for the **95%** guidance alert only — over-limit tracking still applies past **100%**.
 
             **What it is not:** Medical-grade sun protection or a guarantee you will or won't burn. Use shade, clothing and sunscreen beyond what BigDose models.
             """
@@ -284,7 +287,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** Keep this **on** unless you are confident tracking burn risk yourself. BigDose uses your **skin type** and live **UV** to personalize every threshold.
 
-            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for repeat reminders every percent past **90% MED (Risk)**. **Nanny** defaults **on** and can be turned off anytime.
+            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for one extra reminder at **98% MED (burn risk)**. **Nanny** defaults **on** and can be turned off anytime.
             """
         case .labResult25OHD:
             """
@@ -302,9 +305,22 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** Enter your typical dose (e.g. **1000 IU**). Use **0** if you do not supplement daily. One tap logs it from Dashboard when amounts match.
 
-            **How BigDose uses it:** Sets your starting **daily IU target** and optional **supplement reminders**. You can still log one-off doses when amounts change.
+            **How BigDose uses it:** Sets your **daily sun IU target** on Home and optional **supplement reminders**. BigDose also calculates a **recommended total daily IU** from your age, weight, blood level goal and starting level — see **Daily IU Target** for the breakdown. You can still log one-off doses when amounts change.
 
             **Good to know:** This is **intake**, not your **25(OH)D** blood level on Progress.
+            """
+        case .dailyIUTarget:
+            """
+            **What it is:** BigDose's **recommended daily vitamin D intake** in **IU** — modeled from your **age**, **weight**, **blood level goal** and **starting level** (lab, baseline or conservative estimate).
+
+            **How we calculate it:** Three pieces stack together, then we round to the nearest **100 IU** (minimum **400 IU**).
+            ▸ **Maintenance** — **600 IU** under age 70, **800 IU** at 70+. Targeting **40 ng/mL or higher**? We use at least **1,500 IU**.
+            ▸ **Level correction** — closes the gap from your starting level to goal over about **90 days** (**111 IU** per ng/mL gap per day).
+            ▸ **Weight adjustment** — **+25 IU** per **10 kg** above **70 kg**.
+
+            **How to use:** **Home** tracks **sun IU** against the **sun session target** — total recommended minus your default supplement (minimum **400 IU** from sun for tracking). Supplements and food log separately. Tap any **IU goal** badge for this explainer.
+
+            **What it is not:** A prescription or lab result. Adjust with your clinician if you have deficiency, kidney disease or other conditions.
             """
         case .sunHabitOverview:
             """

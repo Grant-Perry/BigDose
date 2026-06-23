@@ -76,7 +76,7 @@ struct SunSessionCompleteView: View {
                             .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
 
-                        Text("MED used: \(result.medUsedPercent)%")
+                        Text("MED used (burn risk): \(result.medUsedPercent)%")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(safetyRecapTint)
                     }
@@ -96,7 +96,7 @@ struct SunSessionCompleteView: View {
 
     private var safetyRecapTint: Color {
         switch result.medUsedPercent {
-        case 90...:
+        case 95...:
             .red
         case 75...:
             .solarOrange
@@ -112,9 +112,9 @@ struct SunSessionCompleteView: View {
             VStack(spacing: 12) {
                 summaryRow("Duration", durationText(result.elapsedSeconds))
                 Divider().overlay(.white.opacity(0.12))
-                summaryRow("MED used", "\(result.medUsedPercent)%", highlight: result.medOverLimitPercent > 0)
+                summaryRow("MED used (burn risk)", "\(result.medUsedPercent)%", highlight: result.medOverLimitPercent > 0)
                 if result.medOverLimitPercent > 0 {
-                    summaryRow("Past guidance limit", "+\(result.medOverLimitPercent)%", highlight: true)
+                    summaryRow("Past 100% MED (burn risk)", "+\(result.medOverLimitPercent)%", highlight: true)
                 }
                 Divider().overlay(.white.opacity(0.12))
                 summaryRow("Average Rate", "\(Int(result.averageRate.rounded())) IU/min")

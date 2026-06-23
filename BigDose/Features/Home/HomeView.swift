@@ -91,7 +91,7 @@ struct HomeView: View {
     private func header(now: Date) -> some View {
         HomeHeroHeader(
             profile: profile ?? activeProfile,
-            todayGoalProgress: todaySunGoalProgress,
+            todayGoalProgress: todayDailyGoalProgress,
             todaySunIU: todayIUIntake.sunIU,
             targetIU: activeProfile.preferredDailyIU,
             vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
@@ -451,8 +451,8 @@ struct HomeView: View {
                 }
 
                 SunArcMeter(
-                    progress: todaySunGoalProgress,
-                    quality: todaySunGoalProgress >= 1 ? .prime : estimate.quality,
+                    progress: todayDailyGoalProgress,
+                    quality: todayDailyGoalProgress >= 1 ? .prime : estimate.quality,
                     title: goalMeterTitle,
                     durationTitle: goalMeterDurationTitle,
                     subtitle: goalMeterSubtitle,
@@ -574,10 +574,10 @@ struct HomeView: View {
         let sessionLabel = summary.liveSessionCount == 1 ? "1 session" : "\(summary.liveSessionCount) sessions"
 
         if summary.hasOverLimitExposure {
-            return "MED exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% today, including \(summary.totalMedOverLimitPercent)% past BigDose's 90% guidance limit."
+            return "MED (burn risk) exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% today, including \(summary.totalMedOverLimitPercent)% past 100% MED (burn risk)."
         }
 
-        return "MED exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% of BigDose's guidance budget today."
+        return "MED (burn risk) exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% of BigDose's guidance budget today."
     }
 
     private var metricGrid: some View {
@@ -605,9 +605,15 @@ struct HomeView: View {
         )
     }
 
-    private var todaySunGoalProgress: Double {
-        todayIUIntake.sunGoalProgress(
-            dailyTargetIU: Double(max(activeProfile.preferredDailyIU, 1))
+    private var dailyIURecommendation: OptimalDailyIURecommendation {
+        OptimalDailyIUService.recommend(for: activeProfile)
+    }
+
+    private var todayDailyGoalProgress: Double {
+        todayIUIntake.dailyGoalProgress(
+            sunTargetIU: Double(max(activeProfile.preferredDailyIU, 1)),
+            totalDailyTargetIU: Double(max(dailyIURecommendation.totalDailyIU, 1)),
+            includesSupplements: activeProfile.includesSupplementsInDailyProgress
         )
     }
 
@@ -629,12 +635,12 @@ struct HomeView: View {
     }
 
     private var goalMeterDurationTitle: BigDoseDurationComponents? {
-        guard todaySunGoalProgress < 1, remainingSunMinutesForToday > 0 else { return nil }
+        guard todayDailyGoalProgress < 1, remainingSunMinutesForToday > 0 else { return nil }
         return BigDoseDurationComponents(minutes: remainingSunMinutesForToday)
     }
 
     private var goalMeterTitle: String {
-        if todaySunGoalProgress >= 1 {
+        if todayDailyGoalProgress >= 1 {
             return "Done"
         }
 
@@ -646,8 +652,8 @@ struct HomeView: View {
     }
 
     private var goalMeterSubtitle: String {
-        if todaySunGoalProgress >= 1 {
-            return "sun goal reached"
+        if todayDailyGoalProgress >= 1 {
+            return "daily goal reached"
         }
 
         if remainingSunMinutesForToday > 0 {
@@ -808,11 +814,14 @@ struct HomeView: View {
     }
 
     private func publishWidgetSnapshot() {
+        let recommendation = OptimalDailyIUService.recommend(for: activeProfile)
         BigDoseWidgetPublisher.publishFromStores(
             profile: activeProfile,
             plan: currentPlan,
             weather: homeViewModel.weather,
-            todaySunIU: todayIUIntake.sunIU
+            todaySunIU: todayIUIntake.sunIU,
+            todaySupplementIU: todayIUIntake.supplementIU,
+            totalDailyTargetIU: recommendation.totalDailyIU
         )
     }
 

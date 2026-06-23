@@ -10,8 +10,11 @@ enum SessionSafetyNotificationService {
         "bigdose.session.overLimit.\(percent)"
     }
 
-    private static var overLimitPercents: ClosedRange<Int> {
-        SunSessionSafetyThresholds.guidanceLimitPercent...SunSessionSafetyThresholds.overLimitNotificationUpperPercent
+    private static var overLimitPercents: [Int] {
+        [
+            SunSessionSafetyThresholds.guidanceLimitPercent,
+            SunSessionSafetyThresholds.nannyReminderPercent
+        ]
     }
 
     private static var sessionIdentifiers: [String] {
@@ -39,14 +42,14 @@ enum SessionSafetyNotificationService {
             await schedule(
                 identifier: turnOverIdentifier,
                 title: "Turn over",
-                body: "About 50% of your estimated MED for \(skin) skin — flip sides or rotate exposure.",
+                body: "About 50% of your estimated MED (burn risk) for \(skin) skin — flip sides or rotate exposure.",
                 seconds: plan.turnOverAlertSeconds
             )
 
             await schedule(
                 identifier: medWarningIdentifier,
                 title: "Approaching exposure limit",
-                body: "About 75% of your estimated MED for \(skin) skin at this UV. Consider wrapping up soon.",
+                body: "About 75% of your estimated MED (burn risk) for \(skin) skin at this UV. Consider wrapping up soon.",
                 seconds: plan.medWarningSeconds
             )
 
@@ -54,7 +57,7 @@ enum SessionSafetyNotificationService {
             await schedule(
                 identifier: prepareExitIdentifier,
                 title: "Get ready to exit sun",
-                body: "Past 75% of MED — start heading inside. Guidance limit in \(exitCountdown).",
+                body: "Past 75% of MED (burn risk) — start heading inside. Guidance limit in \(exitCountdown).",
                 seconds: plan.prepareExitAlertSeconds
             )
 
@@ -99,8 +102,10 @@ enum SessionSafetyNotificationService {
     private static func overLimitNotificationTitle(for percent: Int) -> String {
         if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
             "Past guidance limit"
+        } else if percent == SunSessionSafetyThresholds.nannyReminderPercent {
+            "Still in the sun — 98% MED (burn risk)"
         } else {
-            "Still in the sun — \(percent)% MED"
+            "Still in the sun — \(percent)% MED (burn risk)"
         }
     }
 

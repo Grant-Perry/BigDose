@@ -40,7 +40,9 @@ struct BigDoseRootView: View {
             await ensureProfileExists()
         }
         .task(id: profile?.persistentModelID) {
-            guard let profile, profile.isOnboardingComplete else { return }
+            guard let profile else { return }
+            OptimalDailyIUMigration.applyIfNeeded(to: profile, modelContext: modelContext)
+            guard profile.isOnboardingComplete else { return }
             await BigDoseNotificationCoordinator.refreshManagedAlerts(
                 profile: profile,
                 modelContext: modelContext

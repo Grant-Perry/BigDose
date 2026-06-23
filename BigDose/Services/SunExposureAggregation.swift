@@ -3,11 +3,12 @@ import Foundation
 enum SunSessionSafetyThresholds {
     static let turnOverPercent = 50
     static let wrapUpPercent = 75
-    static let guidanceLimitPercent = 90
-    static let overLimitNotificationUpperPercent = 110
+    static let guidanceLimitPercent = 95
+    static let nannyReminderPercent = 98
+    static let overLimitBaselinePercent = 100
 
     static func medOverLimitPercent(for peakMedUsedPercent: Int) -> Int {
-        max(0, peakMedUsedPercent - guidanceLimitPercent)
+        max(0, peakMedUsedPercent - overLimitBaselinePercent)
     }
 }
 

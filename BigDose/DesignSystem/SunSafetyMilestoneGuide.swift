@@ -14,20 +14,20 @@ struct SunSafetyMilestoneGuide: View {
                 milestoneRow(
                     icon: "arrow.triangle.2.circlepath",
                     title: "Turn over",
-                    detail: "~50% of MED",
+                    detail: "~50% of MED (burn risk)",
                     note: "Flip sides or rotate so one area does not take all the UV."
                 )
                 milestoneRow(
                     icon: "figure.walk",
                     title: "Wrap up",
-                    detail: "~75% of MED",
+                    detail: "~75% of MED (burn risk)",
                     note: "Start heading inside or into shade."
                 )
                 milestoneRow(
                     icon: "hand.raised.fill",
                     title: "Stop or cover up",
-                    detail: "~90% of MED",
-                    note: "BigDose warns every percent from here while you stay out. Only you stop the session.",
+                    detail: "~95% of MED (burn risk)",
+                    note: "BigDose's guidance limit. Nanny adds one reminder at 98% while you stay out. Only you stop the session.",
                     tint: .solarOrange
                 )
             }

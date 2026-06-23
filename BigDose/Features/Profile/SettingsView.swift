@@ -174,7 +174,7 @@ struct SettingsView: View {
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
-                    Text("When on, BigDose keeps warning every percent past 90% MED (Risk) while you stay out. When off, you still get the 90% guidance alert and over-limit tracking — just not the repeat nagging.")
+                    Text("When on, BigDose adds one extra reminder at 98% MED (burn risk) while you stay out. When off, you still get the 95% guidance alert and over-limit tracking past 100% — just not the extra reminder.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
 
@@ -212,6 +212,15 @@ struct SettingsView: View {
                     Text("When on, BigDose logs your \(profile.defaultSupplementIU) IU default toward each day's total. When off, nothing is counted until you log manually.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
+
+                    Toggle("Include supplements in daily total", isOn: includesSupplementsInDailyProgressBinding)
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+
+                    Text("When on, logged supplement IU counts toward your daily progress percentage. Sun, supplements and food stay tracked separately.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.56))
                 }
             }
         }
@@ -222,6 +231,16 @@ struct SettingsView: View {
             profile?.autoApplyDailySupplementIU ?? true
         } set: { value in
             profile?.autoApplyDailySupplementIU = value
+            profile?.updatedAt = .now
+            try? modelContext.save()
+        }
+    }
+
+    private var includesSupplementsInDailyProgressBinding: Binding<Bool> {
+        Binding {
+            profile?.includesSupplementsInDailyProgress ?? true
+        } set: { value in
+            profile?.includesSupplementsInDailyProgress = value
             profile?.updatedAt = .now
             try? modelContext.save()
         }

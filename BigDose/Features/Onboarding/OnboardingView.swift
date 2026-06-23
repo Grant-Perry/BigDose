@@ -248,7 +248,7 @@ struct OnboardingView: View {
                     }
                 }
 
-                Text("Age and biological sex can affect vitamin D metabolism. We keep this local in SwiftData.")
+                Text("Age and biological sex can affect vitamin D metabolism.")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
             }
@@ -276,9 +276,12 @@ struct OnboardingView: View {
 
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .firstTextBaseline) {
-                                Text("Goal Vitamin D Blood Level")
-                                    .font(.bigDoseHeader(.headline).weight(.semibold))
-                                    .foregroundStyle(.white)
+                                HStack(spacing: 4) {
+                                    Text("Goal Vitamin D Blood Level")
+                                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                                        .foregroundStyle(.white)
+                                    InfoCircleButton(topic: .goal, compact: true)
+                                }
 
                                 Spacer()
 
@@ -373,7 +376,7 @@ struct OnboardingView: View {
                     infoTopic: .sunSafetyOverview
                 )
 
-                GlassCard {
+                CollapsibleGlassCard {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("UVB triggers vitamin D production in your skin. But too much sun exposure also burns skin, contributes to photoaging and raises long-term skin cancer risk with repeated overexposure.")
                             .font(.subheadline.weight(.medium))
@@ -387,31 +390,29 @@ struct OnboardingView: View {
                     }
                 }
 
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack(spacing: 4) {
-                            Text("During a sun session")
-                                .font(.bigDoseHeader(.headline).weight(.semibold))
-                                .foregroundStyle(.white)
-                            InfoCircleButton(topic: .med, compact: true)
-                        }
-
-                        SunSafetyMilestoneGuide()
+                CollapsibleGlassCard(style: .hidden) {
+                    HStack(spacing: 4) {
+                        Text("During a sun session")
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+                        InfoCircleButton(topic: .med, compact: true)
                     }
+                } content: {
+                    SunSafetyMilestoneGuide()
                 }
 
-                GlassCard {
+                CollapsibleGlassCard(style: .hidden) {
+                    Label("We stay vigilant", systemImage: "bell.badge.fill")
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.solarGold)
+                } content: {
                     VStack(alignment: .leading, spacing: 10) {
-                        Label("We stay vigilant", systemImage: "bell.badge.fill")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .foregroundStyle(.solarGold)
-
                         Text("During a live sun session, BigDose warns you when it is time to turn over, wrap up and come out of the sun — including background notifications when the app is closed. Only you stop the session.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("**Nanny in Settings → Session Safety** is on by default. She's the responsible adult who keeps reminding you every percent past 90% MED (Risk) while you stay out. Turn **Nanny** off anytime if you only want the 90% guidance alert without repeat reminders — over-limit tracking still applies.")
+                        Text("**Nanny in Settings → Session Safety** is on by default. She adds one extra reminder at **98% MED (burn risk)** while you stay out. Turn **Nanny** off anytime if you only want the **95%** guidance alert without the extra reminder — over-limit tracking still applies past **100%**.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -527,6 +528,14 @@ struct OnboardingView: View {
 
                 GlassCard {
                     VStack(alignment: .leading, spacing: 16) {
+                        RecommendedDailyIUCard(
+                            recommendation: onboardingDailyIURecommendation,
+                            showsSunTarget: true
+                        )
+
+                        Divider()
+                            .overlay(.white.opacity(0.12))
+
                         OnboardingTextField(
                             title: "Default Supplement",
                             text: $defaultSupplementIUText,
@@ -928,7 +937,7 @@ struct OnboardingView: View {
         activeProfile.usuallyUsesSunscreen = usuallyUsesSunscreen
         activeProfile.defaultSupplementIU = defaultSupplementIU
         activeProfile.autoApplyDailySupplementIU = autoApplyDailySupplementIU
-        activeProfile.preferredDailyIU = max(defaultSupplementIU, 1_000)
+        activeProfile.preferredDailyIU = onboardingDailyIURecommendation.sunSessionTargetIU
         activeProfile.wantsDWindowOpeningAlerts = wantsDWindowOpeningAlerts
         activeProfile.wantsDWindowClosingAlerts = wantsDWindowClosingAlerts
         activeProfile.wantsSolarNoonAlerts = wantsSolarNoonAlerts
@@ -1113,6 +1122,19 @@ struct OnboardingView: View {
         return Double(baselineNanogramsText)
     }
 
+    private var onboardingDailyIURecommendation: OptimalDailyIURecommendation {
+        OptimalDailyIUService.recommend(
+            dateOfBirth: dateOfBirth,
+            biologicalSex: biologicalSex,
+            weightKilograms: weightKilograms,
+            goalNanogramsPerMilliliter: goalNanogramsPerMilliliter,
+            baselineNanogramsPerMilliliter: baselineNanogramsPerMilliliter,
+            levelKnowledge: levelKnowledge,
+            incidentalSunMinutesPerWeek: Int(incidentalSunMinutesPerWeek),
+            defaultSupplementIU: defaultSupplementIU
+        )
+    }
+
     private var defaultSupplementIU: Int {
         max(Int(defaultSupplementIUText) ?? 0, 0)
     }
@@ -1149,7 +1171,7 @@ private struct OnboardingPageView: View {
             OnboardingHeader(symbolName: symbolName, eyebrow: eyebrow, title: title)
 
             Text(detail)
-                .font(.bigDoseHeader(.title3).weight(.semibold))
+                .font(.subheadline.weight(.medium))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.72))
                 .padding(.horizontal, 24)
@@ -1191,7 +1213,7 @@ private struct OnboardingHeader: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(title)
-                    .font(.system(.largeTitle, weight: .semibold))
+                    .font(.bigDoseHeader(.largeTitle))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)

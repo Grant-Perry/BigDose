@@ -11,8 +11,23 @@ struct DailyIUIntakeSummary: Equatable, Sendable {
 
     /// Progress toward the daily IU target from sun exposure only — excludes supplements and food.
     func sunGoalProgress(dailyTargetIU: Double) -> Double {
-        guard dailyTargetIU > 0 else { return 0 }
-        return min(max(sunIU / dailyTargetIU, 0), 1)
+        dailyGoalProgress(
+            sunTargetIU: dailyTargetIU,
+            totalDailyTargetIU: dailyTargetIU,
+            includesSupplements: false
+        )
+    }
+
+    /// Progress toward the daily IU target. Optionally counts logged supplement IU against the recommended total.
+    func dailyGoalProgress(
+        sunTargetIU: Double,
+        totalDailyTargetIU: Double,
+        includesSupplements: Bool
+    ) -> Double {
+        let numerator = includesSupplements ? sunIU + supplementIU : sunIU
+        let denominator = includesSupplements ? totalDailyTargetIU : sunTargetIU
+        guard denominator > 0 else { return 0 }
+        return min(max(numerator / denominator, 0), 1)
     }
 
     func remainingSunIUForGoal(dailyTargetIU: Double) -> Double {

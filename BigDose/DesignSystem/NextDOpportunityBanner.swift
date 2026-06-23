@@ -30,6 +30,13 @@ struct NextDOpportunityBanner: View {
             Text("\(Int(todaySunIU.rounded())) / \(targetIU) IU sun")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white.opacity(0.48))
+
+            HStack(spacing: 4) {
+                Text("Recommended sun target")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+                InfoCircleButton(topic: .dailyIUTarget, iconSize: 10, compact: true)
+            }
         }
         .padding(14)
         .padding(.trailing, goalDialDiameter + 10)
@@ -95,7 +102,7 @@ struct NextDOpportunityBanner: View {
         .disabled(!isSunSessionStartEnabled)
         .opacity(isSunSessionStartEnabled ? 1 : 0.48)
         .accessibilityLabel("Start sun session")
-        .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily sun IU goal")
+        .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily goal")
         .accessibilityHint(isSunSessionStartEnabled ? "Starts a new sun session" : "Weather data required to start a sun session")
     }
 }

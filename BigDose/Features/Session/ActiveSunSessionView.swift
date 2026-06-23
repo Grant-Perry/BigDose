@@ -16,7 +16,8 @@ struct ActiveSunSessionView: View {
     @State private var didShowTurnOverAlert = false
     @State private var didShowMedWarningAlert = false
     @State private var didShowPrepareExitAlert = false
-    @State private var highestOverLimitAlertPercentShown = SunSessionSafetyThresholds.guidanceLimitPercent - 1
+    @State private var didShowGuidanceLimitAlert = false
+    @State private var didShowNannyReminderAlert = false
     @State private var isShowingSkinCoverage = false
     @State private var isShowingGoalPicker = false
     @State private var isShowingCancelConfirmation = false
@@ -294,7 +295,7 @@ struct ActiveSunSessionView: View {
                     }
 
                     HStack(spacing: 4) {
-                        Text("MED used: \(medUsedPercent)%")
+                        Text("MED used (burn risk): \(medUsedPercent)%")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(medUsedColor)
                         if medUsedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
@@ -314,7 +315,7 @@ struct ActiveSunSessionView: View {
 
     private var medUsedColor: Color {
         switch medUsedPercent {
-        case 90...:
+        case 95...:
             .red
         case 75...:
             .solarOrange
@@ -333,7 +334,7 @@ struct ActiveSunSessionView: View {
                     InfoCircleButton(topic: .minToMED, compact: true)
                 }
 
-                Text("min to MED (Risk)")
+                Text("min to MED (burn risk)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
             }
@@ -558,30 +559,34 @@ struct ActiveSunSessionView: View {
         }
 
         let currentMedPercent = medUsedPercent
-        guard currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent else { return }
         guard activeAlert == nil else { return }
 
-        if wantsNannyMode {
-            guard currentMedPercent > highestOverLimitAlertPercentShown else { return }
-            highestOverLimitAlertPercentShown = currentMedPercent
-            activeAlert = .overLimit(percent: currentMedPercent)
-            SessionSafetyNotificationService.cancelOverLimitNotification(for: currentMedPercent)
+        if !didShowGuidanceLimitAlert, currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
+            didShowGuidanceLimitAlert = true
+            activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+            SessionSafetyNotificationService.cancelOverLimitNotification(
+                for: SunSessionSafetyThresholds.guidanceLimitPercent
+            )
             return
         }
 
-        guard highestOverLimitAlertPercentShown < SunSessionSafetyThresholds.guidanceLimitPercent else { return }
-        highestOverLimitAlertPercentShown = SunSessionSafetyThresholds.guidanceLimitPercent
-        activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+        guard wantsNannyMode else { return }
+        guard !didShowNannyReminderAlert, currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent else { return }
+
+        didShowNannyReminderAlert = true
+        activeAlert = .overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
         SessionSafetyNotificationService.cancelOverLimitNotification(
-            for: SunSessionSafetyThresholds.guidanceLimitPercent
+            for: SunSessionSafetyThresholds.nannyReminderPercent
         )
     }
 
     private func overLimitAlertTitle(for percent: Int) -> String {
         if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
             "Past guidance limit"
+        } else if percent == SunSessionSafetyThresholds.nannyReminderPercent {
+            "Still in the sun — 98% MED (burn risk)"
         } else {
-            "Still in the sun — \(percent)% MED"
+            "Still in the sun — \(percent)% MED (burn risk)"
         }
     }
 

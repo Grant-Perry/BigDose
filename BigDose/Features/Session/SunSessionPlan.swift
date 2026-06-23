@@ -98,11 +98,11 @@ struct SunSessionPlan: Equatable {
 
         switch alert {
         case .turnOver:
-            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin at this UV. Flip sides, rotate or change exposure so one area doesn't take all of it."
+            return "You are at about \(medPercent)% of your estimated MED (burn risk) for \(skin) skin at this UV. Flip sides, rotate or change exposure so one area doesn't take all of it."
         case .medWarning:
-            return "You are at about \(medPercent)% of your estimated MED — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
+            return "You are at about \(medPercent)% of your estimated MED (burn risk) — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
         case .prepareExit(let countdown):
-            return "You are at about \(medPercent)% of MED. Start heading inside — your recommended stop point is in \(countdown)."
+            return "You are at about \(medPercent)% of MED (burn risk). Start heading inside — your recommended stop point is in \(countdown)."
         case .overLimit(let percent):
             return overLimitAlertMessage(for: percent)
         }
@@ -111,9 +111,9 @@ struct SunSessionPlan: Equatable {
     func overLimitAlertMessage(for percent: Int) -> String {
         let skin = skinType.title
         if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
-            return "You are at about \(percent)% of your estimated MED for \(skin) skin — BigDose's conservative guidance limit. Ending now is the safer call, but only you can stop this session."
+            return "You are at about \(percent)% of your estimated MED (burn risk) for \(skin) skin — BigDose's conservative guidance limit. Ending now is the safer call, but only you can stop this session."
         }
-        return "You are at about \(percent)% of your estimated MED for \(skin) skin — past BigDose's guidance limit. Continued exposure adds burn and skin cancer risk. Only you can stop this session."
+        return "You are at about \(percent)% of your estimated MED (burn risk) for \(skin) skin — past BigDose's guidance limit. Continued exposure adds burn and skin cancer risk. Only you can stop this session."
     }
 
     func secondsToReachMedPercent(_ percent: Int) -> TimeInterval {
@@ -188,7 +188,7 @@ struct SunSessionPlan: Equatable {
 
     var stopAlertSeconds: TimeInterval {
         guard medTimeSeconds > 0 else { return durationSeconds }
-        return medTimeSeconds * 0.9
+        return medTimeSeconds * Double(SunSessionSafetyThresholds.guidanceLimitPercent) / 100
     }
 
     static let defaultExitLeadFraction = 0.20
@@ -282,10 +282,10 @@ struct SunSessionResult: Equatable {
             "Comfortable headroom"
         case 50..<75:
             "Moderate exposure"
-        case 75..<90:
+        case 75..<95:
             "Near your guidance limit"
         default:
-            medOverLimitPercent > 0 ? "Past guidance limit" : "At the guidance limit"
+            medOverLimitPercent > 0 ? "Past full MED (burn risk)" : "At the guidance limit"
         }
     }
 
@@ -295,13 +295,13 @@ struct SunSessionResult: Equatable {
             "You stayed well inside BigDose's conservative burn-risk estimate for today's UV and skin type."
         case 50..<75:
             "You used about half of today's safe UV budget. Turn-over reminders help spread exposure across skin areas."
-        case 75..<90:
+        case 75..<95:
             "You used most of today's safe budget. Consider shorter sessions, more coverage or an earlier exit next time."
         default:
             if medOverLimitPercent > 0 {
-                "You went \(medOverLimitPercent)% past BigDose's 90% guidance limit. That overage is counted in today's sun risk totals."
+                "You went \(medOverLimitPercent)% past 100% MED (burn risk). That overage is counted in today's sun risk totals."
             } else {
-                "You reached BigDose's 90% guidance limit. Shorter sessions or more shade breaks are safer next time."
+                "You reached BigDose's 95% MED (burn risk) guidance limit. Shorter sessions or more shade breaks are safer next time."
             }
         }
     }
