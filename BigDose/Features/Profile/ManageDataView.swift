@@ -93,16 +93,9 @@ struct ManageDataView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
 
-                Button {
+                BigDosePrimaryButton(title: "Create Rescue File") {
                     createExport()
-                } label: {
-                    Text("Create Rescue File")
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.solarOrange)
 
                 if let exportURL {
                     ShareLink(item: exportURL) {

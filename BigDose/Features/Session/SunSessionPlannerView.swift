@@ -5,6 +5,7 @@ struct SunSessionPlannerView: View {
     var weather: BigDoseWeatherSnapshot
     var latitude: Double
     var longitude: Double
+    var isFirstLiveSunSession: Bool = false
     var onCancel: () -> Void
     var onStart: (SunSessionPlan) -> Void
 
@@ -19,6 +20,7 @@ struct SunSessionPlannerView: View {
         weather: BigDoseWeatherSnapshot,
         latitude: Double,
         longitude: Double,
+        isFirstLiveSunSession: Bool = false,
         onCancel: @escaping () -> Void,
         onStart: @escaping (SunSessionPlan) -> Void
     ) {
@@ -26,6 +28,7 @@ struct SunSessionPlannerView: View {
         self.weather = weather
         self.latitude = latitude
         self.longitude = longitude
+        self.isFirstLiveSunSession = isFirstLiveSunSession
         self.onCancel = onCancel
         self.onStart = onStart
         _exposedBodySurfaceArea = State(initialValue: profile.typicalExposedBodySurfaceArea)
@@ -94,6 +97,12 @@ struct SunSessionPlannerView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     header
                     windowStatusCard
+                    if isFirstLiveSunSession {
+                        SunSafetyIntroBanner(
+                            goalMinutes: goalMinutes,
+                            safeMaxMinutes: safeExitMinutes
+                        )
+                    }
                     controls
                     safetyTimelineCard
                     estimateCard
@@ -271,6 +280,12 @@ struct SunSessionPlannerView: View {
                     InfoCircleButton(topic: .minToMED, compact: true)
                 }
 
+                if isFirstLiveSunSession {
+                    Text("BigDose alerts you at each milestone during your session.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+
                 if let timeline = plan.safetyTimelineMinutes {
                     Text("\(profile.skinType.title) skin · UV \(weather.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(Int(exposedBodySurfaceArea * 100))% exposed")
                         .font(.caption.weight(.semibold))
@@ -394,17 +409,19 @@ struct SunSessionPlannerView: View {
     }
 
     private var startButton: some View {
-        Button {
-            attemptStart()
-        } label: {
-            Label(startButtonTitle, systemImage: "play.fill")
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(startButtonTint)
-        .disabled(isStartBlocked)
+        BigDosePrimaryButton(
+            title: startButtonTitle,
+            systemImage: isStartBlocked ? nil : "play.fill",
+            style: startButtonStyle,
+            isEnabled: !isStartBlocked,
+            action: attemptStart
+        )
+    }
+
+    private var startButtonStyle: BigDosePrimaryButton.Style {
+        if case .warn = startGate { return .prominent }
+        if case .blocked = startGate { return .prominent }
+        return .success
     }
 
     private var isStartBlocked: Bool {
@@ -416,11 +433,6 @@ struct SunSessionPlannerView: View {
         if case .blocked = startGate { return "Session Unavailable" }
         if case .warn = startGate { return "Start Anyway" }
         return "Start Session"
-    }
-
-    private var startButtonTint: Color {
-        if case .warn = startGate { return .solarOrange }
-        return .green
     }
 
     private func attemptStart() {

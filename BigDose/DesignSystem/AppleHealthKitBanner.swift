@@ -18,7 +18,7 @@ struct OnboardingAppleHealthPage: View {
                     .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
                     .accessibilityLabel("Apple Health app icon")
 
-                Text("Automatically sync your data with Apple Health.")
+                Text("Automatically sync your data with\nApple Health.")
                     .font(.system(.largeTitle, weight: .semibold))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
@@ -41,7 +41,17 @@ struct OnboardingAppleHealthPage: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(.white, in: .capsule)
+                    .background {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white, Color.white.opacity(0.92)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .shadow(color: .white.opacity(0.45), radius: 14, y: 6)
+                    }
                 }
                 .buttonStyle(.plain)
                 .disabled(isSyncing)

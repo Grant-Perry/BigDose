@@ -36,6 +36,7 @@ struct BigDoseAlertView: View {
     var message: String
     var actions: [BigDoseAlertAction]
     var cornerRadius: CGFloat = 22
+    var trailingImageName: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -76,8 +77,18 @@ struct BigDoseAlertView: View {
         .padding(20)
         .bigDoseGlass(cornerRadius: cornerRadius)
         .overlay(alignment: .topTrailing) {
-            AppLogoMark(size: 34)
-                .padding(14)
+            if let trailingImageName {
+                Image(trailingImageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 36, height: 36)
+                    .clipShape(.rect(cornerRadius: 8, style: .continuous))
+                    .padding(14)
+                    .accessibilityLabel("Apple Health app icon")
+            } else {
+                AppLogoMark(size: 34)
+                    .padding(14)
+            }
         }
         .padding(.horizontal, 36)
         .accessibilityElement(children: .contain)
@@ -107,14 +118,18 @@ extension View {
         _ title: String,
         isPresented: Binding<Bool>,
         message: String = "",
-        actions: [BigDoseAlertAction]
+        actions: [BigDoseAlertAction],
+        backdropOpacity: Double = 0.35,
+        trailingImageName: String? = nil
     ) -> some View {
         modifier(
             BigDoseAlertPresentationModifier(
                 isPresented: isPresented,
                 title: title,
                 message: message,
-                actions: actions
+                actions: actions,
+                backdropOpacity: backdropOpacity,
+                trailingImageName: trailingImageName
             )
         )
     }
@@ -134,6 +149,8 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
     var title: String
     var message: String
     var actions: [BigDoseAlertAction]
+    var backdropOpacity: Double
+    var trailingImageName: String?
 
     func body(content: Content) -> some View {
         content.overlay {
@@ -141,7 +158,9 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
                 BigDoseAlertOverlay(
                     title: title,
                     message: message,
-                    actions: wrappedActions
+                    actions: wrappedActions,
+                    backdropOpacity: backdropOpacity,
+                    trailingImageName: trailingImageName
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 .zIndex(1)
@@ -194,16 +213,19 @@ private struct BigDoseAlertOverlay: View {
     var title: String
     var message: String
     var actions: [BigDoseAlertAction]
+    var backdropOpacity: Double = 0.35
+    var trailingImageName: String?
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35)
+            Color.black.opacity(backdropOpacity)
                 .ignoresSafeArea()
 
             BigDoseAlertView(
                 title: title,
                 message: message,
-                actions: actions
+                actions: actions,
+                trailingImageName: trailingImageName
             )
         }
         .accessibilityAddTraits(.isModal)

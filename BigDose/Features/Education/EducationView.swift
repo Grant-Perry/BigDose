@@ -23,6 +23,21 @@ struct EducationView: View {
             detail: "Skin type, age, sunscreen, clothing and exposed skin area all change the estimated time. BigDose uses those inputs to personalize the meter."
         ),
         EducationSection(
+            symbolName: "exclamationmark.triangle.fill",
+            title: "UV Does Two Jobs",
+            detail: "UVB triggers vitamin D production in your skin. High UV also burns skin, ages it and raises long-term skin cancer risk. More sun is not better — timing and limits matter."
+        ),
+        EducationSection(
+            symbolName: "shield.lefthalf.filled",
+            title: "What MED Means",
+            detail: "MED — minimal erythema dose — is BigDose's estimate of the UV exposure that would start to redden your skin. Your Fitzpatrick skin type sets the baseline. BigDose tracks MED Used during every live session."
+        ),
+        EducationSection(
+            symbolName: "bell.badge.fill",
+            title: "How BigDose Limits Sessions",
+            detail: "Safe max caps planned time at about 90% of MED. Turn-over alerts fire near 50%, wrap-up near 75% and reminders escalate every percent from 90% onward while you stay out. Only you stop the session."
+        ),
+        EducationSection(
             symbolName: "cross.case.fill",
             title: "Not Medical Grade",
             detail: "BigDose is informational wellness guidance. It does not diagnose deficiency, prescribe treatment or replace a 25(OH)D blood test."

@@ -103,9 +103,22 @@ struct SunSessionPlan: Equatable {
             return "You are at about \(medPercent)% of your estimated MED — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
         case .prepareExit(let countdown):
             return "You are at about \(medPercent)% of MED. Start heading inside — your recommended stop point is in \(countdown)."
-        case .stop:
-            return "You are at about \(medPercent)% of your estimated MED for \(skin) skin. BigDose paused the timer because continued exposure risks exceeding your conservative limit."
+        case .overLimit(let percent):
+            return overLimitAlertMessage(for: percent)
         }
+    }
+
+    func overLimitAlertMessage(for percent: Int) -> String {
+        let skin = skinType.title
+        if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
+            return "You are at about \(percent)% of your estimated MED for \(skin) skin — BigDose's conservative guidance limit. Ending now is the safer call, but only you can stop this session."
+        }
+        return "You are at about \(percent)% of your estimated MED for \(skin) skin — past BigDose's guidance limit. Continued exposure adds burn and skin cancer risk. Only you can stop this session."
+    }
+
+    func secondsToReachMedPercent(_ percent: Int) -> TimeInterval {
+        guard medTimeSeconds > 0 else { return 0 }
+        return medTimeSeconds * Double(percent) / 100
     }
 
     func goalProgress(at elapsedSeconds: TimeInterval) -> Double {
@@ -236,7 +249,7 @@ enum SunSessionSafetyAlertKind {
     case turnOver
     case medWarning
     case prepareExit(countdown: String)
-    case stop
+    case overLimit(percent: Int)
 }
 
 struct SunSessionResult: Equatable {
@@ -253,5 +266,43 @@ struct SunSessionResult: Equatable {
     var percentOfTarget: Double {
         guard plan.targetIU > 0 else { return 0 }
         return min(estimatedIU / plan.targetIU, 1)
+    }
+
+    var medUsedPercent: Int {
+        plan.medUsedPercent(at: elapsedSeconds)
+    }
+
+    var medOverLimitPercent: Int {
+        SunSessionSafetyThresholds.medOverLimitPercent(for: medUsedPercent)
+    }
+
+    var safetyRecapTitle: String {
+        switch medUsedPercent {
+        case ..<50:
+            "Comfortable headroom"
+        case 50..<75:
+            "Moderate exposure"
+        case 75..<90:
+            "Near your guidance limit"
+        default:
+            medOverLimitPercent > 0 ? "Past guidance limit" : "At the guidance limit"
+        }
+    }
+
+    var safetyRecapMessage: String {
+        switch medUsedPercent {
+        case ..<50:
+            "You stayed well inside BigDose's conservative burn-risk estimate for today's UV and skin type."
+        case 50..<75:
+            "You used about half of today's safe UV budget. Turn-over reminders help spread exposure across skin areas."
+        case 75..<90:
+            "You used most of today's safe budget. Consider shorter sessions, more coverage or an earlier exit next time."
+        default:
+            if medOverLimitPercent > 0 {
+                "You went \(medOverLimitPercent)% past BigDose's 90% guidance limit. That overage is counted in today's sun risk totals."
+            } else {
+                "You reached BigDose's 90% guidance limit. Shorter sessions or more shade breaks are safer next time."
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \LabResult.measuredAt, order: .reverse) private var labResults: [LabResult]
+    @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
     @FocusState private var focusedField: OnboardingField?
     var profile: UserProfile?
     var onFinished: (() -> Void)? = nil
@@ -23,13 +24,21 @@ struct OnboardingView: View {
     @State private var incidentalSunMinutesPerWeek = 30.0
     @State private var usuallyUsesSunscreen = false
     @State private var defaultSupplementIUText = "1000"
-    @State private var wantsSolarWindowAlerts = true
+    @State private var wantsDWindowOpeningAlerts = true
+    @State private var wantsDWindowClosingAlerts = true
+    @State private var wantsSolarNoonAlerts = true
+    @State private var wantsSunriseSunsetAlerts = true
+    @State private var wantsAMLightWindowAlerts = true
+    @State private var wantsNextDOpportunityAlerts = true
     @State private var wantsRiskAlerts = true
     @State private var wantsSupplementReminders = false
     @State private var wantsLabReminders = true
     @State private var wantsWeeklyProgressAlerts = true
+    @State private var wantsLevelTrendAlerts = true
+    @State private var wantsMilestoneAlerts = true
+    @State private var wantsWeatherBreakAlerts = false
+    @State private var autoApplyDailySupplementIU = true
     @State private var selectedSkinType: FitzpatrickSkinType = .typeII
-    @State private var acceptedDisclaimer = false
     @State private var wantsHealthKitSupplementExport = false
     @State private var didPrefillSupplementFromHealth = false
     @State private var page = 0
@@ -47,7 +56,9 @@ struct OnboardingView: View {
     private let healthPage = 2
     private let bodyPageIndex = 4
     private let levelPageIndex = 5
-    private let lastPage = 10
+    private let firstResultPageIndex = 11
+    private let disclaimerPageIndex = 12
+    private let onboardingPageCount = 13
 
     var body: some View {
         ZStack {
@@ -66,7 +77,7 @@ struct OnboardingView: View {
                     OnboardingPageView(
                         symbolName: "shield.lefthalf.filled",
                         eyebrow: "Not Medical Advice",
-                        title: "Useful guidance. Not a diagnosis.",
+                        title: "Useful guidance...\nNot a diagnosis.",
                         detail: "BigDose is wellness information you can choose to use. Labs and clinicians are the source of truth for vitamin D deficiency."
                     )
                     .tag(1)
@@ -99,18 +110,27 @@ struct OnboardingView: View {
                     skinTypePage
                         .tag(7)
 
-                    exposurePage
+                    sunSafetyPage
                         .tag(8)
 
-                    alertsPage
+                    exposurePage
                         .tag(9)
 
-                    firstResultPage
+                    alertsPage
                         .tag(10)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
 
-                if page != healthPage {
+                    firstResultPage
+                        .tag(11)
+
+                    disclaimerPage
+                        .tag(12)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                onboardingPageDots
+                    .padding(.bottom, 4)
+
+                if page != healthPage && page != disclaimerPageIndex {
                     primaryButton
                         .padding(.horizontal, 22)
                         .padding(.bottom, 18)
@@ -136,13 +156,21 @@ struct OnboardingView: View {
             incidentalSunMinutesPerWeek = Double(profile?.incidentalSunMinutesPerWeek ?? 30)
             usuallyUsesSunscreen = profile?.usuallyUsesSunscreen ?? false
             defaultSupplementIUText = String(profile?.defaultSupplementIU ?? 1_000)
-            wantsSolarWindowAlerts = profile?.wantsSolarWindowAlerts ?? true
+            wantsDWindowOpeningAlerts = profile?.wantsDWindowOpeningAlerts ?? true
+            wantsDWindowClosingAlerts = profile?.wantsDWindowClosingAlerts ?? true
+            wantsSolarNoonAlerts = profile?.wantsSolarNoonAlerts ?? true
+            wantsSunriseSunsetAlerts = profile?.wantsSunriseSunsetAlerts ?? true
+            wantsAMLightWindowAlerts = profile?.wantsAMLightWindowAlerts ?? true
+            wantsNextDOpportunityAlerts = profile?.wantsNextDOpportunityAlerts ?? true
             wantsRiskAlerts = profile?.wantsRiskAlerts ?? true
             wantsSupplementReminders = profile?.wantsSupplementReminders ?? false
             wantsLabReminders = profile?.wantsLabReminders ?? true
             wantsWeeklyProgressAlerts = profile?.wantsWeeklyProgressAlerts ?? true
+            wantsLevelTrendAlerts = profile?.wantsLevelTrendAlerts ?? true
+            wantsMilestoneAlerts = profile?.wantsMilestoneAlerts ?? true
+            wantsWeatherBreakAlerts = profile?.wantsWeatherBreakAlerts ?? false
+            autoApplyDailySupplementIU = profile?.autoApplyDailySupplementIU ?? true
             selectedSkinType = profile?.skinType ?? .typeII
-            acceptedDisclaimer = profile?.hasAcceptedWellnessDisclaimer ?? false
             wantsHealthKitSupplementExport = profile?.wantsHealthKitSupplementExport ?? false
         }
         .bigDoseAlert(
@@ -157,7 +185,9 @@ struct OnboardingView: View {
                         }
                     }
                 }
-            ]
+            ],
+            backdropOpacity: healthAutofillTitle == "Apple Health Connected" ? 0.58 : 0.35,
+            trailingImageName: healthAutofillTitle == "Apple Health Connected" ? "AppleHealthAppIcon" : nil
         )
         .onChange(of: isShowingHealthAutofillResult) { _, isShowing in
             guard isShowing else { return }
@@ -286,8 +316,14 @@ struct OnboardingView: View {
                 OnboardingHeader(
                     symbolName: "person.crop.square.fill",
                     eyebrow: "Skin Type",
-                    title: "What sounds closest?"
+                    title: "What sounds closest?",
+                    infoTopic: .skinType
                 )
+
+                Text("The Fitzpatrick scale runs Type I (very fair, burns easily) through Type VI (deep brown, least likely to burn). Pick the type that matches your sunburn history — not your tan goals.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
 
                 VStack(spacing: 10) {
                     ForEach(FitzpatrickSkinType.allCases) { skinType in
@@ -318,6 +354,73 @@ struct OnboardingView: View {
                         .buttonStyle(.plain)
                     }
                 }
+
+                Text("Your skin type sets BigDose's burn-risk and vitamin D time estimates. When unsure, choose the more burn-prone type.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
+    }
+
+    private var sunSafetyPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "shield.lefthalf.filled",
+                    eyebrow: "Sun Safety - READ THIS!",
+                    title: "BigDose watches your burn risk.",
+                    infoTopic: .sunSafetyOverview
+                )
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("UVB triggers vitamin D production in your skin. But too much sun exposure also burns skin, contributes to photoaging and raises long-term skin cancer risk with repeated overexposure.")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("BigDose estimates your personal burn threshold from your skin type, UV, clouds and sunscreen. We track risk in real time, warn you at each milestone and never stop the session for you.")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 4) {
+                            Text("During a sun session")
+                                .font(.bigDoseHeader(.headline).weight(.semibold))
+                                .foregroundStyle(.white)
+                            InfoCircleButton(topic: .med, compact: true)
+                        }
+
+                        SunSafetyMilestoneGuide()
+                    }
+                }
+
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("We stay vigilant", systemImage: "bell.badge.fill")
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.solarGold)
+
+                        Text("During a live sun session, BigDose warns you when it is time to turn over, wrap up and come out of the sun — including background notifications when the app is closed. Only you stop the session.")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("**Nanny in Settings → Session Safety** is on by default. She's the responsible adult who keeps reminding you every percent past 90% MED (Risk) while you stay out. Turn **Nanny** off anytime if you only want the 90% guidance alert without repeat reminders — over-limit tracking still applies.")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Text("These are conservative wellness estimates, not medical guarantees. Review the full explainer anytime in Profile → Science.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
             }
             .padding(22)
         }
@@ -329,7 +432,8 @@ struct OnboardingView: View {
                 OnboardingHeader(
                     symbolName: "testtube.2",
                     eyebrow: "Starting Level",
-                    title: "Do you have a recent 25(OH)D result?"
+                    title: "Do you have a recent 25(OH)D result?",
+                    infoTopic: .labResult25OHD
                 )
 
                 VStack(spacing: 10) {
@@ -417,7 +521,8 @@ struct OnboardingView: View {
                 OnboardingHeader(
                     symbolName: "pills.fill",
                     eyebrow: "Daily Intake",
-                    title: "Do supplements belong in your baseline?"
+                    title: "Do supplements belong in your baseline?",
+                    infoTopic: .supplementBaseline
                 )
 
                 GlassCard {
@@ -462,55 +567,102 @@ struct OnboardingView: View {
     }
 
     private var exposurePage: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            OnboardingHeader(
-                symbolName: "sun.horizon.fill",
-                eyebrow: "Sun Habit",
-                title: "What does ordinary sun look like?"
-            )
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "tshirt.fill",
+                    eyebrow: "Sun Habit",
+                    title: "What's usually uncovered?",
+                    infoTopic: .sunHabitOverview
+                )
 
-            GlassCard {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("\(Int(exposedBodySurfaceArea * 100))")
-                            .font(.system(size: 48, weight: .semibold))
-                            .foregroundStyle(.solarGold)
-                        Text("% exposed")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.72))
-                    }
+                Text("Set your usual daily walk-around outfit — how much skin is normally uncovered when you're outside, not how much do you have on right now. Long sleeves and pants mean less; shorts and a tee mean more. These are general habits that pre-fill sun sessions — not settings you re-enter for each session.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    Slider(value: $exposedBodySurfaceArea, in: 0.05...0.65, step: 0.05)
-                        .tint(.solarGold)
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 4) {
+                                Text("Typical skin exposure")
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white)
+                                InfoCircleButton(topic: .typicalSkinExposure, compact: true)
+                            }
 
-                    Toggle("I usually wear sunscreen", isOn: $usuallyUsesSunscreen)
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .foregroundStyle(.white)
-                        .tint(.solarGold)
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("\(Int(exposedBodySurfaceArea * 100))")
+                                    .font(.system(size: 48, weight: .semibold))
+                                    .foregroundStyle(.solarGold)
+                                Text("% uncovered")
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.72))
+                            }
 
-                    Divider()
-                        .overlay(.white.opacity(0.12))
+                            Text(SkinExposurePreset.coverageLabel(for: exposedBodySurfaceArea))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.solarGold)
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("\(Int(incidentalSunMinutesPerWeek)) minutes per week")
-                            .font(.bigDoseHeader(.title2).weight(.semibold))
-                            .foregroundStyle(.solarGold)
+                            Slider(value: $exposedBodySurfaceArea, in: 0.05...0.65, step: 0.05)
+                                .tint(.solarGold)
 
-                        Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
-                            .tint(.solarGold)
+                            Text("Your usual outfit default — change per session in the planner if today is different.")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
 
-                        Text("Incidental outdoor time means casual exposure: walking, errands, yard work or lunch outside.")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.62))
+                        Divider()
+                            .overlay(.white.opacity(0.12))
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 4) {
+                                Toggle("I usually wear sunscreen", isOn: $usuallyUsesSunscreen)
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .tint(.solarGold)
+                                InfoCircleButton(topic: .usualSunscreen, compact: true)
+                            }
+
+                            Text("Your general sunscreen habit — not a per-session choice.")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Divider()
+                            .overlay(.white.opacity(0.12))
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 4) {
+                                Text("Casual outdoor time")
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white)
+                                InfoCircleButton(topic: .casualOutdoorTime, compact: true)
+                            }
+
+                            Text("\(Int(incidentalSunMinutesPerWeek)) minutes per week")
+                                .font(.bigDoseHeader(.title2).weight(.semibold))
+                                .foregroundStyle(.solarGold)
+
+                            Slider(value: $incidentalSunMinutesPerWeek, in: 0...180, step: 5)
+                                .tint(.solarGold)
+
+                            Text("Background outdoor time in general — not tracked sun sessions.")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
-            }
 
-            Text("More exposed skin usually means less time needed. Sunscreen reduces UVB transmission, so BigDose adjusts the estimate.")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.62))
+                Text("General habits live in Dose DNA and prefill the planner. Each sun session can still use different coverage or conditions.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
         }
-        .padding(22)
     }
 
     private var alertsPage: some View {
@@ -524,11 +676,43 @@ struct OnboardingView: View {
 
                 GlassCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        Toggle("Sun & D window timing", isOn: $wantsSolarWindowAlerts)
-                        Toggle("Skin-limit safety guidance", isOn: $wantsRiskAlerts)
-                        Toggle("Supplement logging", isOn: $wantsSupplementReminders)
-                        Toggle("Lab retest cadence", isOn: $wantsLabReminders)
+                        Text("Sun & D Window")
+                            .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+
+                        Toggle("D window opening", isOn: $wantsDWindowOpeningAlerts)
+                        Toggle("D window closing", isOn: $wantsDWindowClosingAlerts)
+                        Toggle("Solar noon", isOn: $wantsSolarNoonAlerts)
+                        Toggle("Sunrise & sunset", isOn: $wantsSunriseSunsetAlerts)
+                        Toggle("AM light window (1°–3°)", isOn: $wantsAMLightWindowAlerts)
+                        Toggle("Next D window opportunity", isOn: $wantsNextDOpportunityAlerts)
+
+                        Text("Each sun alert fires 15 minutes before the event and again at the event time.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.52))
+
+                        Divider()
+                            .overlay(.white.opacity(0.18))
+
+                        Text("Other Guidance")
+                            .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Toggle("Session safety guidance", isOn: $wantsRiskAlerts)
+
+                            Text("Turn-over, wrap-up and stop alerts during live sun sessions — plus background notifications.")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Toggle("Supplement reminders", isOn: $wantsSupplementReminders)
+                        Toggle("Lab retest reminders", isOn: $wantsLabReminders)
                         Toggle("Weekly progress", isOn: $wantsWeeklyProgressAlerts)
+                        Toggle("Level trend notices", isOn: $wantsLevelTrendAlerts)
+                        Toggle("Milestones", isOn: $wantsMilestoneAlerts)
+                        Toggle("Weather break alerts", isOn: $wantsWeatherBreakAlerts)
                     }
                     .font(.bigDoseHeader(.headline).weight(.semibold))
                     .foregroundStyle(.white)
@@ -544,61 +728,145 @@ struct OnboardingView: View {
     }
 
     private var firstResultPage: some View {
-        VStack(spacing: 20) {
-            OnboardingHeader(
-                symbolName: "sparkles",
-                eyebrow: "Your First Read",
-                title: "A smarter sun session starts here."
-            )
-
-            GlassCard {
-                SunArcMeter(
-                    progress: min(Double(defaultSupplementIU) / Double(max(defaultSupplementIU, 1_000)), 1),
-                    quality: defaultSupplementIU > 0 ? .prime : .low,
-                    title: "\(defaultSupplementIU)",
-                    subtitle: "IU supplement baseline"
+        ScrollView {
+            VStack(spacing: 20) {
+                OnboardingHeader(
+                    symbolName: "sparkles",
+                    eyebrow: "Your First Read",
+                    title: "A smarter sun session starts here."
                 )
-            }
 
-            Toggle(isOn: $acceptedDisclaimer) {
-                Text("I understand BigDose is informational wellness guidance, not medical advice.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-            }
-            .toggleStyle(.switch)
-            .tint(.solarGold)
-            .padding(18)
-            .bigDoseGlass(cornerRadius: 24)
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 16) {
+                        SunArcMeter(
+                            progress: autoApplyDailySupplementIU
+                                ? min(Double(defaultSupplementIU) / Double(max(defaultSupplementIU, 1_000)), 1)
+                                : 0,
+                            quality: autoApplyDailySupplementIU && defaultSupplementIU > 0 ? .prime : .low,
+                            title: autoApplyDailySupplementIU ? "\(defaultSupplementIU)" : "0",
+                            subtitle: autoApplyDailySupplementIU
+                                ? "IU toward today"
+                                : "Log manually or turn on auto-apply",
+                            subtitleInfoTopic: .supplementBaseline
+                        )
 
-            if !acceptedDisclaimer {
-                Text("Required before entering BigDose.")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.solarGold)
+                        Toggle(isOn: $autoApplyDailySupplementIU) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Auto-apply daily supplement IU")
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white)
+
+                                Text("When on, BigDose adds your \(defaultSupplementIU) IU default to each day's total. When off, you log supplements yourself.")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.58))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .toggleStyle(.switch)
+                        .tint(.solarGold)
+                    }
+                }
+
+                Text("This is your saved default from setup — not a medical prescription. You can change the amount and this toggle anytime in Settings.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
+    }
+
+    private var disclaimerPage: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    OnboardingHeader(
+                        symbolName: "exclamationmark.shield.fill",
+                        eyebrow: "Before You Enter",
+                        title: "Use BigDose at your own risk."
+                    )
+
+                    GlassCard {
+                        VStack(alignment: .leading, spacing: 14) {
+                            disclaimerSection(
+                                title: "Wellness guidance only",
+                                body: "BigDose provides informational wellness guidance about sunlight, supplements and vitamin D habits. It does not diagnose, treat, cure or prevent any disease and is not a substitute for professional medical advice, diagnosis or treatment."
+                            )
+
+                            disclaimerSection(
+                                title: "Your responsibility",
+                                body: "Sun exposure carries real risks including sunburn, skin damage and skin cancer. Supplement and food estimates are approximations. You alone decide how you use BigDose and any actions you take based on it."
+                            )
+
+                            disclaimerSection(
+                                title: "No warranties",
+                                body: "BigDose is provided \"as is\" without warranties of any kind, express or implied, including accuracy, fitness for a particular purpose or non-infringement."
+                            )
+
+                            disclaimerSection(
+                                title: "Limitation of liability",
+                                body: "To the fullest extent permitted by law, Cre8v Planet, BigRoll and their affiliates, officers, employees and partners accept no responsibility or liability for any injury, loss, damage or adverse outcome arising from your use of BigDose or reliance on its estimates, alerts or content — whether or not we were advised such outcomes were possible."
+                            )
+
+                            Text("If you have a medical condition, take medications or are unsure about sun or supplement choices, consult a qualified healthcare professional before changing your routine.")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(22)
+                .padding(.bottom, 12)
+            }
+            .scrollIndicators(.hidden)
+
+            BigDosePrimaryButton(
+                title: "Accept & Enter BigDose",
+                isEnabled: !isFinishingOnboarding && !isCheckingMetricSync
+            ) {
+                acceptDisclaimerAndFinish()
+            }
+            .padding(.horizontal, 22)
+            .padding(.bottom, 18)
+        }
+    }
+
+    private func disclaimerSection(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.bigDoseHeader(.headline).weight(.semibold))
+                .foregroundStyle(.solarGold)
+
+            Text(body)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var onboardingPageDots: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<onboardingPageCount, id: \.self) { index in
+                Circle()
+                    .fill(index == page ? Color.white : Color.white.opacity(0.28))
+                    .frame(width: index == page ? 7 : 5, height: index == page ? 7 : 5)
             }
         }
-        .padding(22)
+        .animation(.smooth, value: page)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step \(page + 1) of \(onboardingPageCount)")
     }
 
     private var primaryButton: some View {
-        Button {
+        BigDosePrimaryButton(
+            title: "Continue",
+            isEnabled: !isPrimaryButtonDisabled
+        ) {
             advance()
-        } label: {
-            Text(page == lastPage ? "Enter BigDose" : "Continue")
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.solarOrange)
-        .disabled(isPrimaryButtonDisabled)
     }
 
     private var isPrimaryButtonDisabled: Bool {
         if isFinishingOnboarding || isCheckingMetricSync {
-            return true
-        }
-
-        if page == lastPage, !acceptedDisclaimer {
             return true
         }
 
@@ -612,23 +880,41 @@ struct OnboardingView: View {
     private func advance() {
         focusedField = nil
 
-        if page == lastPage && !acceptedDisclaimer {
-            return
-        }
-
         if page == bodyPageIndex {
             offerMetricSyncBeforeContinuing(nextAction: .advancePage)
             return
         }
 
-        guard page == lastPage else {
+        if page == firstResultPageIndex {
             withAnimation(.smooth) {
-                page += 1
+                page = disclaimerPageIndex
             }
             return
         }
 
+        withAnimation(.smooth) {
+            page += 1
+        }
+    }
+
+    private func acceptDisclaimerAndFinish() {
+        focusedField = nil
+
         let activeProfile = profile ?? UserProfile()
+        applyOnboardingValues(to: activeProfile)
+
+        if profile == nil {
+            modelContext.insert(activeProfile)
+        }
+
+        saveBaselineLabIfNeeded()
+        try? modelContext.save()
+
+        isFinishingOnboarding = true
+        offerMetricSyncBeforeContinuing(nextAction: .finishOnboarding(activeProfile))
+    }
+
+    private func applyOnboardingValues(to activeProfile: UserProfile) {
         activeProfile.displayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         activeProfile.dateOfBirth = dateOfBirth
         activeProfile.biologicalSex = biologicalSex
@@ -641,34 +927,27 @@ struct OnboardingView: View {
         activeProfile.incidentalSunMinutesPerWeek = Int(incidentalSunMinutesPerWeek)
         activeProfile.usuallyUsesSunscreen = usuallyUsesSunscreen
         activeProfile.defaultSupplementIU = defaultSupplementIU
+        activeProfile.autoApplyDailySupplementIU = autoApplyDailySupplementIU
         activeProfile.preferredDailyIU = max(defaultSupplementIU, 1_000)
-        activeProfile.wantsWindowReminders = wantsSolarWindowAlerts
-        activeProfile.wantsSolarWindowAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsDWindowOpeningAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsDWindowClosingAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsSolarNoonAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsSunriseSunsetAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsAMLightWindowAlerts = wantsSolarWindowAlerts
-        activeProfile.wantsNextDOpportunityAlerts = wantsSolarWindowAlerts
+        activeProfile.wantsDWindowOpeningAlerts = wantsDWindowOpeningAlerts
+        activeProfile.wantsDWindowClosingAlerts = wantsDWindowClosingAlerts
+        activeProfile.wantsSolarNoonAlerts = wantsSolarNoonAlerts
+        activeProfile.wantsSunriseSunsetAlerts = wantsSunriseSunsetAlerts
+        activeProfile.wantsAMLightWindowAlerts = wantsAMLightWindowAlerts
+        activeProfile.wantsNextDOpportunityAlerts = wantsNextDOpportunityAlerts
         activeProfile.wantsRiskAlerts = wantsRiskAlerts
         activeProfile.wantsSupplementReminders = wantsSupplementReminders
         activeProfile.wantsLabReminders = wantsLabReminders
         activeProfile.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
+        activeProfile.wantsLevelTrendAlerts = wantsLevelTrendAlerts
+        activeProfile.wantsMilestoneAlerts = wantsMilestoneAlerts
+        activeProfile.wantsWeatherBreakAlerts = wantsWeatherBreakAlerts
         activeProfile.wantsHealthKitSupplementExport = wantsHealthKitSupplementExport
         activeProfile.skinType = selectedSkinType
-        activeProfile.hasAcceptedWellnessDisclaimer = acceptedDisclaimer
+        activeProfile.hasAcceptedWellnessDisclaimer = true
         activeProfile.isOnboardingComplete = true
         activeProfile.updatedAt = .now
-
-        if profile == nil {
-            modelContext.insert(activeProfile)
-        }
-
-        saveBaselineLabIfNeeded()
-        try? modelContext.save()
-
-        isFinishingOnboarding = true
-        offerMetricSyncBeforeContinuing(nextAction: .finishOnboarding(activeProfile))
+        activeProfile.syncLegacySolarAlertPreferences()
     }
 
     private func offerMetricSyncBeforeContinuing(nextAction: MetricSyncNextAction) {
@@ -713,6 +992,12 @@ struct OnboardingView: View {
 
     private func finishOnboarding(profile: UserProfile) {
         isFinishingOnboarding = false
+
+        DailySupplementAutoApplyService.applyIfNeeded(
+            profile: profile,
+            supplements: supplements,
+            modelContext: modelContext
+        )
 
         Task {
             await BigDoseNotificationCoordinator.refreshManagedAlerts(
@@ -878,6 +1163,19 @@ private struct OnboardingHeader: View {
     var symbolName: String
     var eyebrow: String
     var title: String
+    var infoTopic: BigDoseInfoTopic?
+
+    init(
+        symbolName: String,
+        eyebrow: String,
+        title: String,
+        infoTopic: BigDoseInfoTopic? = nil
+    ) {
+        self.symbolName = symbolName
+        self.eyebrow = eyebrow
+        self.title = title
+        self.infoTopic = infoTopic
+    }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -891,14 +1189,20 @@ private struct OnboardingHeader: View {
                 .tracking(1.8)
                 .foregroundStyle(.solarGold)
 
-            Text(title)
-                .font(.system(.largeTitle, weight: .semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-                .minimumScaleFactor(0.82)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(title)
+                    .font(.system(.largeTitle, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.82)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let infoTopic {
+                    InfoCircleButton(topic: infoTopic, compact: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 }

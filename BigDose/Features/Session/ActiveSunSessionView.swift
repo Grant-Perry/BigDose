@@ -4,6 +4,7 @@ import UIKit
 
 struct ActiveSunSessionView: View {
     var wantsSessionSafetyAlerts: Bool
+    var wantsNannyMode: Bool
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
 
@@ -15,24 +16,29 @@ struct ActiveSunSessionView: View {
     @State private var didShowTurnOverAlert = false
     @State private var didShowMedWarningAlert = false
     @State private var didShowPrepareExitAlert = false
-    @State private var didShowStopAlert = false
+    @State private var highestOverLimitAlertPercentShown = SunSessionSafetyThresholds.guidanceLimitPercent - 1
     @State private var isShowingSkinCoverage = false
     @State private var isShowingGoalPicker = false
     @State private var isShowingCancelConfirmation = false
     @State private var isShowingStopConfirmation = false
+    @State private var isShowingFirstSessionGuide = false
     @State private var backgroundLiveActivitySyncTask: Task<Void, Never>?
     @State private var sessionEnded = false
+
+    @AppStorage("hasSeenFirstSunSessionGuide") private var hasSeenFirstSunSessionGuide = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(
         plan: SunSessionPlan,
         wantsSessionSafetyAlerts: Bool,
+        wantsNannyMode: Bool = true,
         onCancel: @escaping () -> Void,
         onComplete: @escaping (SunSessionResult) -> Void
     ) {
         _plan = State(initialValue: plan)
         self.wantsSessionSafetyAlerts = wantsSessionSafetyAlerts
+        self.wantsNannyMode = wantsNannyMode
         self.onCancel = onCancel
         self.onComplete = onComplete
     }
@@ -81,9 +87,6 @@ struct ActiveSunSessionView: View {
             syncLiveActivity()
             BigDoseWidgetReloader.reloadHomeWidget()
             evaluateSafetyAlerts()
-            if plan.hasReachedGoal(at: elapsedSeconds) || elapsedSeconds >= plan.durationSeconds {
-                complete()
-            }
         }
         .task {
             restoreSessionStateIfNeeded()
@@ -92,6 +95,10 @@ struct ActiveSunSessionView: View {
             consumeLiveActivityCommands()
             guard !sessionEnded else { return }
             syncLiveActivity()
+
+            if !hasSeenFirstSunSessionGuide {
+                isShowingFirstSessionGuide = true
+            }
         }
         .onChange(of: isPaused) { _, _ in
             persistSessionState()
@@ -143,19 +150,24 @@ struct ActiveSunSessionView: View {
                     message: plan.safetyAlertMessage(for: .prepareExit(countdown: countdown), elapsedSeconds: elapsedSeconds),
                     actions: [.default("Got it")]
                 )
-            case .stop:
+            case .overLimit(let percent):
                 BigDoseAlertContent(
-                    title: "Safe exposure reached",
-                    message: plan.safetyAlertMessage(for: .stop, elapsedSeconds: elapsedSeconds),
-                    actions: [
-                        .default("End Session") { complete() }
-                    ]
+                    title: overLimitAlertTitle(for: percent),
+                    message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
+                    actions: [.default("I'm Still Out Here")]
                 )
             }
         }
         .onChange(of: activeAlert) { _, alert in
             guard let alert else { return }
             BigDoseAlertFeedback.present(kind: alert.feedbackKind)
+        }
+        .sheet(isPresented: $isShowingFirstSessionGuide) {
+            FirstSunSessionGuideView {
+                hasSeenFirstSunSessionGuide = true
+                isShowingFirstSessionGuide = false
+            }
+            .interactiveDismissDisabled()
         }
         .sheet(isPresented: $isShowingSkinCoverage) {
             SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
@@ -244,7 +256,7 @@ struct ActiveSunSessionView: View {
                         .foregroundStyle(.white)
 
                     if plan.medTimeSeconds > 0 {
-                        Text("\(Int(plan.durationSeconds / 60)) min planned · exit by \(Int(plan.stopAlertSeconds / 60)) min")
+                        Text("\(Int(plan.durationSeconds / 60)) min planned · guidance limit ~\(Int(plan.stopAlertSeconds / 60)) min")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.solarOrange)
                             .multilineTextAlignment(.center)
@@ -285,6 +297,11 @@ struct ActiveSunSessionView: View {
                         Text("MED used: \(medUsedPercent)%")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(medUsedColor)
+                        if medUsedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
+                            Text("OVER")
+                                .font(.caption2.weight(.black))
+                                .foregroundStyle(.red)
+                        }
                         InfoCircleButton(topic: .medUsed, compact: true)
                     }
                 }
@@ -513,7 +530,11 @@ struct ActiveSunSessionView: View {
     }
 
     private func refreshSessionSafetyNotifications() async {
-        await SessionSafetyNotificationService.schedule(for: plan, enabled: wantsSessionSafetyAlerts)
+        await SessionSafetyNotificationService.schedule(
+            for: plan,
+            enabled: wantsSessionSafetyAlerts,
+            wantsNannyMode: wantsNannyMode
+        )
     }
 
     private func evaluateSafetyAlerts() {
@@ -536,11 +557,31 @@ struct ActiveSunSessionView: View {
             SessionSafetyNotificationService.cancelPrepareExitNotification()
         }
 
-        if !didShowStopAlert, elapsedSeconds >= plan.stopAlertSeconds {
-            didShowStopAlert = true
-            isPaused = true
-            activeAlert = .stop
-            SessionSafetyNotificationService.cancelStopNotification()
+        let currentMedPercent = medUsedPercent
+        guard currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent else { return }
+        guard activeAlert == nil else { return }
+
+        if wantsNannyMode {
+            guard currentMedPercent > highestOverLimitAlertPercentShown else { return }
+            highestOverLimitAlertPercentShown = currentMedPercent
+            activeAlert = .overLimit(percent: currentMedPercent)
+            SessionSafetyNotificationService.cancelOverLimitNotification(for: currentMedPercent)
+            return
+        }
+
+        guard highestOverLimitAlertPercentShown < SunSessionSafetyThresholds.guidanceLimitPercent else { return }
+        highestOverLimitAlertPercentShown = SunSessionSafetyThresholds.guidanceLimitPercent
+        activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+        SessionSafetyNotificationService.cancelOverLimitNotification(
+            for: SunSessionSafetyThresholds.guidanceLimitPercent
+        )
+    }
+
+    private func overLimitAlertTitle(for percent: Int) -> String {
+        if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
+            "Past guidance limit"
+        } else {
+            "Still in the sun — \(percent)% MED"
         }
     }
 
@@ -555,7 +596,7 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
     case turnOver
     case medWarning
     case prepareExit(countdown: String)
-    case stop
+    case overLimit(percent: Int)
 
     var id: String {
         switch self {
@@ -565,8 +606,8 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
             "medWarning"
         case .prepareExit:
             "prepareExit"
-        case .stop:
-            "stop"
+        case .overLimit(let percent):
+            "overLimit.\(percent)"
         }
     }
 
@@ -574,7 +615,7 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
         switch self {
         case .turnOver, .medWarning, .prepareExit:
             .warning
-        case .stop:
+        case .overLimit:
             .critical
         }
     }

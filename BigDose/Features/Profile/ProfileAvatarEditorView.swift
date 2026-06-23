@@ -143,9 +143,20 @@ struct ProfileAvatarEditorView: View {
                         .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
+                        .foregroundStyle(.white)
+                        .background {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.solarOrange, Color(red: 1.0, green: 0.58, blue: 0.14), .solarGold],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: .solarOrange.opacity(0.5), radius: 14, y: 6)
+                        }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.solarOrange)
+                .buttonStyle(.plain)
 
                 Button {
                     isShowingFileImporter = true

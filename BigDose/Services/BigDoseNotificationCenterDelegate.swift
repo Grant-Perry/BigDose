@@ -38,7 +38,7 @@ final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCente
     }
 
     nonisolated private static func feedbackKind(for identifier: String) -> BigDoseAlertFeedback.Kind {
-        if identifier.contains("stop") || identifier.contains("levelTrend") {
+        if identifier.contains("overLimit") || identifier.contains("stop") || identifier.contains("levelTrend") {
             return .critical
         }
 

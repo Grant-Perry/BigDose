@@ -75,6 +75,7 @@ struct HomeView: View {
                 weatherCard
                 solarGuidanceCard(now: now)
                 goalCard(now: now)
+                sunRiskCard
                 recommendationCard(now: now)
                 metricGrid
                 scienceNudge
@@ -537,6 +538,48 @@ struct HomeView: View {
             .foregroundStyle(.solarGold)
     }
 
+    private var todaySunRiskSummary: TodaySunRiskSummary {
+        SunExposureAggregation.todayLiveSessionRisk(from: sessions)
+    }
+
+    @ViewBuilder
+    private var sunRiskCard: some View {
+        let summary = todaySunRiskSummary
+        if summary.liveSessionCount > 0 {
+            GlassCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "shield.lefthalf.filled")
+                            .foregroundStyle(summary.hasOverLimitExposure ? .red : .solarGold)
+
+                        Text("Sun risk today")
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+
+                        Spacer(minLength: 0)
+
+                        InfoCircleButton(topic: .medUsed, compact: true)
+                    }
+
+                    Text(sunRiskSummaryText(summary))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func sunRiskSummaryText(_ summary: TodaySunRiskSummary) -> String {
+        let sessionLabel = summary.liveSessionCount == 1 ? "1 session" : "\(summary.liveSessionCount) sessions"
+
+        if summary.hasOverLimitExposure {
+            return "MED exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% today, including \(summary.totalMedOverLimitPercent)% past BigDose's 90% guidance limit."
+        }
+
+        return "MED exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% of BigDose's guidance budget today."
+    }
+
     private var metricGrid: some View {
         LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
             MetricPill(title: "UV Index", value: homeViewModel.weather?.uvIndex.formatted(.number.precision(.fractionLength(1))) ?? "Unavailable", systemImage: "sun.max.fill", infoTopic: .uvIndex)
@@ -682,6 +725,7 @@ struct HomeView: View {
                     weather: weather,
                     latitude: plan.latitude,
                     longitude: plan.longitude,
+                    isFirstLiveSunSession: isFirstLiveSunSession,
                     onCancel: { sessionRoute = .typePicker },
                     onStart: { plan in sessionRoute = .activeSunSession(plan) }
                 )
@@ -709,6 +753,7 @@ struct HomeView: View {
             ActiveSunSessionView(
                 plan: plan,
                 wantsSessionSafetyAlerts: activeProfile.wantsRiskAlerts,
+                wantsNannyMode: activeProfile.wantsNannyMode,
                 onCancel: { sessionRoute = nil },
                 onComplete: { result in sessionRoute = .completion(result) }
             )
@@ -730,6 +775,8 @@ struct HomeView: View {
             averageUVIndex: result.plan.input.effectiveUVIndex,
             maxUVIndex: result.plan.uvIndex,
             estimatedIU: result.estimatedIU,
+            peakMedUsedPercent: result.medUsedPercent,
+            medOverLimitPercent: result.medOverLimitPercent,
             exposedBodySurfaceArea: result.plan.exposedBodySurfaceArea,
             sunscreenFactor: result.plan.sunscreenTransmission,
             source: .liveTracked,
@@ -741,11 +788,20 @@ struct HomeView: View {
         SunSessionSessionCleanup.finishSession(clearPendingCommandFor: result.plan.liveActivitySessionID)
     }
 
+    private var isFirstLiveSunSession: Bool {
+        !sessions.contains { $0.source == .liveTracked }
+    }
+
     private var currentPlan: DailySunPlan? {
         homeViewModel.dailyPlan ?? dailyPlans.first { Calendar.current.isDateInToday($0.date) }
     }
 
     private func refreshHome() async {
+        DailySupplementAutoApplyService.applyIfNeeded(
+            profile: activeProfile,
+            supplements: supplements,
+            modelContext: modelContext
+        )
         await homeViewModel.refresh(profile: activeProfile)
         persistDailyPlanIfNeeded()
         publishWidgetSnapshot()
@@ -949,10 +1005,7 @@ private struct HomeUnavailableSheet: View {
                     .foregroundStyle(.white.opacity(0.68))
                     .multilineTextAlignment(.center)
 
-                Button("Close", action: onClose)
-                    .font(.bigDoseHeader(.headline).weight(.semibold))
-                    .buttonStyle(.borderedProminent)
-                    .tint(.solarOrange)
+                BigDosePrimaryButton(title: "Close", action: onClose)
                     .padding(.top, 8)
             }
             .padding(24)

@@ -7,6 +7,7 @@ struct SunArcMeter: View {
     var durationTitle: BigDoseDurationComponents?
     var subtitle: String
     var showsQualityBadge = true
+    var showsOrbitingSun = true
     var subtitleInfoTopic: BigDoseInfoTopic?
     var qualityInfoTopic: BigDoseInfoTopic?
 
@@ -18,7 +19,7 @@ struct SunArcMeter: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 12) {
             ZStack {
                 ArcGaugeRing(
                     startAngle: .degrees(200),
@@ -50,8 +51,10 @@ struct SunArcMeter: View {
                     showsInnerShadow: false
                 )
 
-                ArcOrbitingSun(progress: animatedProgress) {
-                    sun
+                if showsOrbitingSun, clampedProgress > 0.01 {
+                    ArcOrbitingSun(progress: animatedProgress) {
+                        sun
+                    }
                 }
 
                 VStack(spacing: 2) {
@@ -68,20 +71,25 @@ struct SunArcMeter: View {
                             .foregroundStyle(.white)
                             .contentTransition(.numericText())
                     }
-
-                    HStack(spacing: 4) {
-                        Text(subtitle)
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.68))
-
-                        if let subtitleInfoTopic {
-                            InfoCircleButton(topic: subtitleInfoTopic, iconSize: 11, compact: true)
-                        }
-                    }
                 }
                 .padding(.top, 52)
             }
             .frame(height: 190)
+
+            HStack(alignment: .top, spacing: 4) {
+                Text(subtitle)
+                    .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let subtitleInfoTopic {
+                    InfoCircleButton(topic: subtitleInfoTopic, iconSize: 11, compact: true)
+                        .padding(.top, 1)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
 
             if showsQualityBadge {
                 HStack(spacing: 6) {

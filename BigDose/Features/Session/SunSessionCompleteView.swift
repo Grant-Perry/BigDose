@@ -12,6 +12,7 @@ struct SunSessionCompleteView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     generatedCard
+                    safetyRecapCard
                     statsCard
                     factorsCard
                     doneButton
@@ -62,10 +63,59 @@ struct SunSessionCompleteView: View {
         }
     }
 
+    private var safetyRecapCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(safetyRecapTint)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(result.safetyRecapTitle)
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+
+                        Text("MED used: \(result.medUsedPercent)%")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(safetyRecapTint)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    InfoCircleButton(topic: .medUsed, compact: true)
+                }
+
+                Text(result.safetyRecapMessage)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var safetyRecapTint: Color {
+        switch result.medUsedPercent {
+        case 90...:
+            .red
+        case 75...:
+            .solarOrange
+        case 50...:
+            .solarGold
+        default:
+            .green
+        }
+    }
+
     private var statsCard: some View {
         GlassCard {
             VStack(spacing: 12) {
                 summaryRow("Duration", durationText(result.elapsedSeconds))
+                Divider().overlay(.white.opacity(0.12))
+                summaryRow("MED used", "\(result.medUsedPercent)%", highlight: result.medOverLimitPercent > 0)
+                if result.medOverLimitPercent > 0 {
+                    summaryRow("Past guidance limit", "+\(result.medOverLimitPercent)%", highlight: true)
+                }
                 Divider().overlay(.white.opacity(0.12))
                 summaryRow("Average Rate", "\(Int(result.averageRate.rounded())) IU/min")
                 Divider().overlay(.white.opacity(0.12))
@@ -93,14 +143,7 @@ struct SunSessionCompleteView: View {
     }
 
     private var doneButton: some View {
-        Button(action: onDone) {
-            Text("Done")
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.blue)
+        BigDosePrimaryButton(title: "Done", style: .accent, action: onDone)
     }
 
     private func summaryRow(_ title: String, _ value: String, highlight: Bool = false) -> some View {

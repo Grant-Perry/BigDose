@@ -18,6 +18,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     sessionSafetyCard
+                    dailySupplementCard
                     notificationsCard
                     manageDataCard
                     medicalCard
@@ -168,6 +169,18 @@ struct SettingsView: View {
                     .foregroundStyle(.white.opacity(0.68))
 
                 if let profile {
+                    Toggle("Nanny", isOn: wantsNannyModeBinding)
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+
+                    Text("When on, BigDose keeps warning every percent past 90% MED (Risk) while you stay out. When off, you still get the 90% guidance alert and over-limit tracking — just not the repeat nagging.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.56))
+
+                    Divider()
+                        .overlay(.white.opacity(0.12))
+
                     Stepper(value: prepareExitLeadPercentBinding, in: UserProfile.prepareExitLeadPercentRange, step: 5) {
                         Text("Exit prep warning: \(profile.prepareExitLeadPercent)%")
                             .font(.bigDoseHeader(.headline).weight(.semibold))
@@ -180,6 +193,47 @@ struct SettingsView: View {
                         .foregroundStyle(.white.opacity(0.56))
                 }
             }
+        }
+    }
+
+    private var dailySupplementCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Daily Supplement", systemImage: "pills.fill")
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
+                    .foregroundStyle(.white)
+
+                if let profile {
+                    Toggle("Auto-apply daily supplement IU", isOn: autoApplyDailySupplementBinding)
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+
+                    Text("When on, BigDose logs your \(profile.defaultSupplementIU) IU default toward each day's total. When off, nothing is counted until you log manually.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.56))
+                }
+            }
+        }
+    }
+
+    private var autoApplyDailySupplementBinding: Binding<Bool> {
+        Binding {
+            profile?.autoApplyDailySupplementIU ?? true
+        } set: { value in
+            profile?.autoApplyDailySupplementIU = value
+            profile?.updatedAt = .now
+            try? modelContext.save()
+        }
+    }
+
+    private var wantsNannyModeBinding: Binding<Bool> {
+        Binding {
+            profile?.wantsNannyMode ?? true
+        } set: { value in
+            profile?.wantsNannyMode = value
+            profile?.updatedAt = .now
+            try? modelContext.save()
         }
     }
 

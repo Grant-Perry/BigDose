@@ -66,8 +66,19 @@ struct NotificationSettingsView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.solarOrange)
+                    .buttonStyle(.plain)
+                    .background {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.solarOrange, Color(red: 1.0, green: 0.58, blue: 0.14), .solarGold],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(color: .solarOrange.opacity(0.5), radius: 14, y: 6)
+                    }
+                    .foregroundStyle(.white)
 
                 case .denied:
                     Text("Notifications are off in Settings. Turn them on in iOS Settings if you want BigDose reminders.")

@@ -258,6 +258,16 @@ struct DoseDNAEditorView: View {
                 field: .defaultSupplement
             )
 
+            Toggle("Auto-apply daily supplement IU", isOn: $profile.autoApplyDailySupplementIU)
+                .font(.bigDoseHeader(.headline).weight(.semibold))
+                .foregroundStyle(.white)
+                .tint(.solarGold)
+                .onChange(of: profile.autoApplyDailySupplementIU) { _, _ in persistProfile() }
+
+            Text("When on, BigDose adds this default to each day's total. When off, you log supplements yourself.")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.56))
+
             Toggle("Save supplements to Apple Health", isOn: $profile.wantsHealthKitSupplementExport)
                 .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)

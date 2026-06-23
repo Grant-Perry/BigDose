@@ -11,6 +11,8 @@ final class ExposureSession {
     var averageUVIndex: Double = 0
     var maxUVIndex: Double = 0
     var estimatedIU: Double = 0
+    var peakMedUsedPercent: Int = 0
+    var medOverLimitPercent: Int = 0
     var exposedBodySurfaceArea: Double = 0.25
     var sunscreenFactor: Double = 1
     var source: ExposureSource = ExposureSource.manual
@@ -31,6 +33,8 @@ final class ExposureSession {
         averageUVIndex: Double = 0,
         maxUVIndex: Double = 0,
         estimatedIU: Double = 0,
+        peakMedUsedPercent: Int = 0,
+        medOverLimitPercent: Int = 0,
         exposedBodySurfaceArea: Double = 0.25,
         sunscreenFactor: Double = 1,
         source: ExposureSource = .manual,
@@ -50,6 +54,8 @@ final class ExposureSession {
         self.averageUVIndex = averageUVIndex
         self.maxUVIndex = maxUVIndex
         self.estimatedIU = estimatedIU
+        self.peakMedUsedPercent = peakMedUsedPercent
+        self.medOverLimitPercent = medOverLimitPercent
         self.exposedBodySurfaceArea = exposedBodySurfaceArea
         self.sunscreenFactor = sunscreenFactor
         self.source = source

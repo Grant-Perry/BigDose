@@ -20,9 +20,11 @@ final class UserProfile {
     var usuallyUsesSunscreen: Bool = false
     var wantsWindowReminders: Bool = true
     var wantsRiskAlerts: Bool = true
+    var wantsNannyMode: Bool = true
     var levelKnowledge: VitaminDLevelKnowledge = VitaminDLevelKnowledge.willAddLater
     var incidentalSunMinutesPerWeek: Int = 30
     var defaultSupplementIU: Int = 1_000
+    var autoApplyDailySupplementIU: Bool = true
     var wantsSolarWindowAlerts: Bool = true
     var wantsDWindowOpeningAlerts: Bool = true
     var wantsDWindowClosingAlerts: Bool = true
@@ -66,9 +68,11 @@ final class UserProfile {
         usuallyUsesSunscreen: Bool = false,
         wantsWindowReminders: Bool = true,
         wantsRiskAlerts: Bool = true,
+        wantsNannyMode: Bool = true,
         levelKnowledge: VitaminDLevelKnowledge = .willAddLater,
         incidentalSunMinutesPerWeek: Int = 30,
         defaultSupplementIU: Int = 1_000,
+        autoApplyDailySupplementIU: Bool = true,
         wantsSolarWindowAlerts: Bool = true,
         wantsDWindowOpeningAlerts: Bool = true,
         wantsDWindowClosingAlerts: Bool = true,
@@ -111,9 +115,11 @@ final class UserProfile {
         self.usuallyUsesSunscreen = usuallyUsesSunscreen
         self.wantsWindowReminders = wantsWindowReminders
         self.wantsRiskAlerts = wantsRiskAlerts
+        self.wantsNannyMode = wantsNannyMode
         self.levelKnowledge = levelKnowledge
         self.incidentalSunMinutesPerWeek = incidentalSunMinutesPerWeek
         self.defaultSupplementIU = defaultSupplementIU
+        self.autoApplyDailySupplementIU = autoApplyDailySupplementIU
         self.wantsSolarWindowAlerts = wantsSolarWindowAlerts
         self.wantsDWindowOpeningAlerts = wantsDWindowOpeningAlerts
         self.wantsDWindowClosingAlerts = wantsDWindowClosingAlerts

@@ -5,13 +5,22 @@ enum SessionSafetyNotificationService {
     static let turnOverIdentifier = "bigdose.session.turnOver"
     static let medWarningIdentifier = "bigdose.session.medWarning"
     static let prepareExitIdentifier = "bigdose.session.prepareExit"
-    static let stopIdentifier = "bigdose.session.stop"
 
-    private static var sessionIdentifiers: [String] {
-        [turnOverIdentifier, medWarningIdentifier, prepareExitIdentifier, stopIdentifier]
+    private static func overLimitIdentifier(for percent: Int) -> String {
+        "bigdose.session.overLimit.\(percent)"
     }
 
-    static func schedule(for plan: SunSessionPlan, enabled: Bool) async {
+    private static var overLimitPercents: ClosedRange<Int> {
+        SunSessionSafetyThresholds.guidanceLimitPercent...SunSessionSafetyThresholds.overLimitNotificationUpperPercent
+    }
+
+    private static var sessionIdentifiers: [String] {
+        var identifiers = [turnOverIdentifier, medWarningIdentifier, prepareExitIdentifier]
+        identifiers.append(contentsOf: overLimitPercents.map(overLimitIdentifier(for:)))
+        return identifiers
+    }
+
+    static func schedule(for plan: SunSessionPlan, enabled: Bool, wantsNannyMode: Bool = true) async {
         guard enabled else {
             cancelSessionNotifications()
             return
@@ -45,16 +54,18 @@ enum SessionSafetyNotificationService {
             await schedule(
                 identifier: prepareExitIdentifier,
                 title: "Get ready to exit sun",
-                body: "Past 75% of MED — start heading inside. Recommended stop in \(exitCountdown).",
+                body: "Past 75% of MED — start heading inside. Guidance limit in \(exitCountdown).",
                 seconds: plan.prepareExitAlertSeconds
             )
 
-            await schedule(
-                identifier: stopIdentifier,
-                title: "Time to stop",
-                body: "About 90% of your estimated MED for \(skin) skin. End this session or get covered.",
-                seconds: plan.stopAlertSeconds
-            )
+            for percent in overLimitPercents where wantsNannyMode || percent == SunSessionSafetyThresholds.guidanceLimitPercent {
+                await schedule(
+                    identifier: overLimitIdentifier(for: percent),
+                    title: overLimitNotificationTitle(for: percent),
+                    body: plan.overLimitAlertMessage(for: percent),
+                    seconds: plan.secondsToReachMedPercent(percent)
+                )
+            }
         } catch {
             return
         }
@@ -81,8 +92,16 @@ enum SessionSafetyNotificationService {
         cancel(identifier: prepareExitIdentifier)
     }
 
-    static func cancelStopNotification() {
-        cancel(identifier: stopIdentifier)
+    static func cancelOverLimitNotification(for percent: Int) {
+        cancel(identifier: overLimitIdentifier(for: percent))
+    }
+
+    private static func overLimitNotificationTitle(for percent: Int) -> String {
+        if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
+            "Past guidance limit"
+        } else {
+            "Still in the sun — \(percent)% MED"
+        }
     }
 
     private static func cancel(identifier: String) {
