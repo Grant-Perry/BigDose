@@ -16,11 +16,15 @@ extension View {
     /// On `List`, this is a no-op because coordination is built in.
     @ViewBuilder
     func bigDoseSwipeActionsContainer() -> some View {
+        #if compiler(>=6.4)
         if #available(iOS 27.0, *) {
             swipeActionsContainer()
         } else {
             self
         }
+        #else
+        self
+        #endif
     }
 
     /// Swipe-to-delete on iOS 27+, long-press delete menu on earlier releases.

@@ -612,7 +612,7 @@ struct HomeView: View {
         }
 
         if remainingSunMinutesForToday > 0 {
-            return "sun time remaining"
+            return "sun goal remaining"
         }
 
         return "IU collected today"

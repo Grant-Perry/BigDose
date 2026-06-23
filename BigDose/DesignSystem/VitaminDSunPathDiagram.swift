@@ -5,6 +5,9 @@ struct VitaminDSunPathDiagram: View {
     var now: Date
     var currentSunAltitude: Double?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var nowBeaconPulse = false
+
     var body: some View {
         VStack(spacing: 14) {
             GeometryReader { proxy in
@@ -155,18 +158,65 @@ struct VitaminDSunPathDiagram: View {
     private func currentSunMarker(layout: SunPathLayout) -> some View {
         if let point = currentSunPoint(layout: layout),
            let altitude = currentSunAltitude {
-            let size: CGFloat = 32
             let roundedAltitude = Int(altitude.rounded())
+            let dotSize: CGFloat = 15
+            let noonX = layout.point(for: display.snapshot.solarNoon).x
+            let isBeforeNoon = point.x < noonX
+            let labelX = point.x + (isBeforeNoon ? -22 : 22)
+            let labelY = point.y - 30
+            let stemEnd = CGPoint(
+                x: labelX + (isBeforeNoon ? 10 : -10),
+                y: labelY + 11
+            )
 
             ZStack {
                 Circle()
-                    .strokeBorder(.solarGold.opacity(0.55), lineWidth: 2)
-                    .frame(width: size * 1.15, height: size * 1.15)
+                    .stroke(Color.gpHiYellow.opacity(reduceMotion ? 0.35 : (nowBeaconPulse ? 0 : 0.6)), lineWidth: 2)
+                    .frame(width: 28, height: 28)
+                    .scaleEffect(reduceMotion ? 1.25 : (nowBeaconPulse ? 1.85 : 1))
                     .position(point)
 
-                sunGlyph(at: point, isPeak: false, size: size, accent: .solarGold)
+                Circle()
+                    .fill(Color.gpHiYellow)
+                    .frame(width: dotSize, height: dotSize)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(.black.opacity(0.22), lineWidth: 1.5)
+                    }
+                    .shadow(color: Color.gpHiYellow.opacity(0.85), radius: 10)
+                    .position(point)
+
+                Path { path in
+                    path.move(to: point)
+                    path.addLine(to: stemEnd)
+                }
+                .stroke(Color.gpHiYellow.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [2, 3]))
+
+                Text("Now")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.black.opacity(0.55), in: .capsule)
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.gpHiYellow.opacity(0.55), lineWidth: 1)
+                    }
+                    .position(x: labelX, y: labelY)
+            }
+            .onAppear {
+                startNowBeaconPulse()
             }
             .accessibilityLabel("Sun now at \(roundedAltitude) degrees")
+        }
+    }
+
+    private func startNowBeaconPulse() {
+        guard !reduceMotion else { return }
+
+        nowBeaconPulse = false
+        withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) {
+            nowBeaconPulse = true
         }
     }
 
@@ -178,11 +228,10 @@ struct VitaminDSunPathDiagram: View {
             let sunrise = display.snapshot.sunrise,
             let sunset = display.snapshot.sunset,
             now >= sunrise,
-            now <= sunset,
-            let xPosition = layout.x(for: now)
+            now <= sunset
         else { return nil }
 
-        return CGPoint(x: xPosition, y: layout.y(forAltitude: altitude))
+        return layout.point(for: now)
     }
 
     private func sunMarker(
