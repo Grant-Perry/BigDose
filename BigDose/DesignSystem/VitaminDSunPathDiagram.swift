@@ -3,6 +3,7 @@ import SwiftUI
 struct VitaminDSunPathDiagram: View {
     var display: VitaminDWindowDisplay
     var now: Date
+    var currentSunAltitude: Double?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -14,6 +15,7 @@ struct VitaminDSunPathDiagram: View {
                     sunPath(layout: layout)
                     thresholdLine(layout: layout)
                     markerLayer(layout: layout)
+                    currentSunMarker(layout: layout)
                 }
             }
             .frame(height: 210)
@@ -149,6 +151,40 @@ struct VitaminDSunPathDiagram: View {
         }
     }
 
+    @ViewBuilder
+    private func currentSunMarker(layout: SunPathLayout) -> some View {
+        if let point = currentSunPoint(layout: layout),
+           let altitude = currentSunAltitude {
+            let size: CGFloat = 32
+            let roundedAltitude = Int(altitude.rounded())
+
+            ZStack {
+                Circle()
+                    .strokeBorder(.solarGold.opacity(0.55), lineWidth: 2)
+                    .frame(width: size * 1.15, height: size * 1.15)
+                    .position(point)
+
+                sunGlyph(at: point, isPeak: false, size: size, accent: .solarGold)
+            }
+            .accessibilityLabel("Sun now at \(roundedAltitude) degrees")
+        }
+    }
+
+    private func currentSunPoint(layout: SunPathLayout) -> CGPoint? {
+        guard
+            display.isToday,
+            let altitude = currentSunAltitude,
+            altitude > 0,
+            let sunrise = display.snapshot.sunrise,
+            let sunset = display.snapshot.sunset,
+            now >= sunrise,
+            now <= sunset,
+            let xPosition = layout.x(for: now)
+        else { return nil }
+
+        return CGPoint(x: xPosition, y: layout.y(forAltitude: altitude))
+    }
+
     private func sunMarker(
         layout: SunPathLayout,
         date: Date,
@@ -160,7 +196,7 @@ struct VitaminDSunPathDiagram: View {
         let point = layout.point(for: date)
 
         return ZStack {
-            sunGlyph(at: point, isPeak: isPeak, size: size)
+            sunGlyph(at: point, isPeak: isPeak, size: size, accent: nil)
 
             if isPeak {
                 VStack(spacing: 2) {
@@ -189,13 +225,30 @@ struct VitaminDSunPathDiagram: View {
         }
     }
 
-    private func sunGlyph(at point: CGPoint, isPeak: Bool, size: CGFloat) -> some View {
-        ZStack {
+    private func sunGlyph(at point: CGPoint, isPeak: Bool, size: CGFloat, accent: Color?) -> some View {
+        let glowColor = accent ?? .solarGold
+        let iconStyle: AnyShapeStyle = {
+            if isPeak {
+                return AnyShapeStyle(
+                    LinearGradient(
+                        colors: [Color.gpHiOrange, Color.gpGatePill],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            }
+            if let accent {
+                return AnyShapeStyle(accent)
+            }
+            return AnyShapeStyle(Color.solarGold)
+        }()
+
+        return ZStack {
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.solarGold.opacity(isPeak ? 0.55 : 0.38),
+                            glowColor.opacity(isPeak ? 0.55 : accent == nil ? 0.38 : 0.48),
                             Color.solarOrange.opacity(isPeak ? 0.22 : 0.14),
                             .clear
                         ],
@@ -209,26 +262,16 @@ struct VitaminDSunPathDiagram: View {
                 .position(point)
 
             Circle()
-                .fill(Color.gpGatePill.opacity(isPeak ? 0.42 : 0.26))
+                .fill(Color.gpGatePill.opacity(isPeak ? 0.42 : accent == nil ? 0.26 : 0.34))
                 .frame(width: size * 0.72, height: size * 0.72)
                 .blur(radius: isPeak ? 9 : 6)
                 .position(point)
 
             Image(systemName: "sun.max.fill")
                 .font(.system(size: size * 0.56, weight: .bold))
-                .foregroundStyle(
-                    isPeak
-                        ? AnyShapeStyle(
-                            LinearGradient(
-                                colors: [Color.gpHiOrange, Color.gpGatePill],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        : AnyShapeStyle(Color.solarGold)
-                )
-                .shadow(color: .solarGold.opacity(isPeak ? 0.85 : 0.55), radius: isPeak ? 10 : 6)
-                .shadow(color: .solarOrange.opacity(isPeak ? 0.45 : 0.28), radius: isPeak ? 4 : 2)
+                .foregroundStyle(iconStyle)
+                .shadow(color: glowColor.opacity(isPeak ? 0.85 : 0.72), radius: isPeak ? 10 : 8)
+                .shadow(color: .solarOrange.opacity(isPeak ? 0.45 : 0.32), radius: isPeak ? 4 : 3)
                 .position(point)
         }
     }
@@ -289,7 +332,10 @@ struct VitaminDSunPathDiagram: View {
         let start = display.snapshot.windowStart?.formatted(date: .omitted, time: .shortened) ?? "unknown"
         let end = display.snapshot.windowEnd?.formatted(date: .omitted, time: .shortened) ?? "unknown"
         let remainingPhrase = remaining.map { ", \($0)" } ?? ""
-        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration)\(remainingPhrase). Solar noon \(Int(display.snapshot.solarNoonAltitudeDegrees.rounded())) degrees."
+        let sunNowPhrase = currentSunAltitude.map { altitude in
+            display.isToday && altitude > 0 ? ", sun now at \(Int(altitude.rounded())) degrees" : ""
+        } ?? ""
+        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration)\(remainingPhrase)\(sunNowPhrase). Solar noon \(Int(display.snapshot.solarNoonAltitudeDegrees.rounded())) degrees."
     }
 }
 

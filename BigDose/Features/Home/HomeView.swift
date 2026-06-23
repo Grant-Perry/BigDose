@@ -318,7 +318,11 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     solarGuidanceHeader(plan: plan, display: display, now: now)
 
-                    VitaminDSunPathDiagram(display: display, now: now)
+                    VitaminDSunPathDiagram(
+                        display: display,
+                        now: now,
+                        currentSunAltitude: currentSunAltitude(for: plan, at: now)
+                    )
 
                     HStack(spacing: 12) {
                         solarPeakChip(plan: plan)

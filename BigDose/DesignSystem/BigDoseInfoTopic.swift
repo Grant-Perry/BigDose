@@ -15,6 +15,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
     case dForDuration
     case dWindowOpen
     case estimatedIU
+    case plannedTime
+    case toReachGoal
+    case safeMax
     case estimatedBloodLevel
     case bloodLevelGoalProgress
     case bloodLevelBand
@@ -52,6 +55,12 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             "D Window Open"
         case .estimatedIU:
             "Estimated IU"
+        case .plannedTime:
+            "Planned Time"
+        case .toReachGoal:
+            "To Reach Goal"
+        case .safeMax:
+            "Safe Max"
         case .estimatedBloodLevel:
             "Estimated Blood Level"
         case .bloodLevelGoalProgress:
@@ -176,6 +185,30 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             **How to use:** BigDose calculates this from your **skin type**, **exposed skin**, **UV** and **session length**. **Outside the D window**, estimates are **scaled down** to reflect trace production.
 
             **What it is not:** A lab measurement. Treat it as **guidance**, not medical advice.
+            """
+        case .plannedTime:
+            """
+            **What it does:** Sets how long this **sun session** will run before BigDose ends it — unless you reach your **IU goal** or hit a **MED safety stop** first.
+
+            **How to use:** Use the slider or tap **To goal** or **Safe max**. BigDose **caps** planned time at **Safe max** so you cannot schedule past your burn-risk limit for today's **UV**, **skin type** and **exposure** settings.
+
+            **Good to know:** Shorter planned time is fine if you only need a few minutes of D. Longer is not safer — **Safe max** is the ceiling.
+            """
+        case .toReachGoal:
+            """
+            **What it does:** Estimates how many minutes at current **UV**, **exposed skin** and **cloud** settings it would take to reach your **daily IU goal** from this session alone.
+
+            **How to use:** Compare this with **Safe max**. If **To reach goal** is shorter, tap **To goal (~X min)** on the slider. If your goal would take longer than **Safe max**, plan for multiple shorter sessions instead of one long one.
+
+            **Good to know:** This tracks **IU intake for today**, not your **ng/mL** blood goal on Progress.
+            """
+        case .safeMax:
+            """
+            **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **90%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
+
+            **How to use:** Treat this as a **hard ceiling**, not a target. Tap **Safe max (~X min)** when you want the full safe window. BigDose still alerts earlier at **50%**, **75%** and **90%** of MED during the session.
+
+            **What it is not:** A guarantee you will or won't burn. Use **Your Limits Today** for turn-over and exit milestones.
             """
         case .estimatedBloodLevel:
             """

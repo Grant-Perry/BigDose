@@ -10,7 +10,7 @@ struct SunSessionPlannerView: View {
 
     @State private var exposedBodySurfaceArea: Double
     @State private var cloudCover: CloudCoverPreset = .clear
-    @State private var durationSeconds: TimeInterval = 15 * 60
+    @State private var durationSeconds: TimeInterval
     @State private var isShowingSkinExposure = false
     @State private var pendingOutsideWindowStart = false
 
@@ -29,6 +29,23 @@ struct SunSessionPlannerView: View {
         self.onCancel = onCancel
         self.onStart = onStart
         _exposedBodySurfaceArea = State(initialValue: profile.typicalExposedBodySurfaceArea)
+
+        let bootstrapPlan = SunSessionPlan(
+            startedAt: .now,
+            durationSeconds: 15 * 60,
+            exposedBodySurfaceArea: profile.typicalExposedBodySurfaceArea,
+            cloudCover: .clear,
+            sunscreenTransmission: profile.usuallyUsesSunscreen ? 0.35 : 1,
+            uvIndex: weather.uvIndex,
+            currentTemperatureFahrenheit: weather.temperatureFahrenheit,
+            skinType: profile.skinType,
+            locationName: weather.locationName,
+            targetIU: Double(profile.preferredDailyIU),
+            exitLeadFraction: profile.prepareExitLeadFraction,
+            latitude: latitude,
+            longitude: longitude
+        )
+        _durationSeconds = State(initialValue: bootstrapPlan.recommendedDurationSeconds)
     }
 
     private var plan: SunSessionPlan {
@@ -61,6 +78,14 @@ struct SunSessionPlannerView: View {
         )
     }
 
+    private var goalMinutes: Int {
+        Int((plan.goalDurationSeconds / 60).rounded())
+    }
+
+    private var safeExitMinutes: Int {
+        Int((plan.safeMaxDurationSeconds / 60).rounded())
+    }
+
     var body: some View {
         ZStack {
             BigDoseGradientBackground()
@@ -70,14 +95,20 @@ struct SunSessionPlannerView: View {
                     header
                     windowStatusCard
                     controls
+                    safetyTimelineCard
                     estimateCard
-                    medWarning
                     startButton
                 }
                 .padding(18)
                 .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
+        }
+        .onChange(of: exposedBodySurfaceArea) { _, _ in
+            durationSeconds = plan.clampedPlannedDuration(durationSeconds)
+        }
+        .onChange(of: cloudCover) { _, _ in
+            durationSeconds = plan.clampedPlannedDuration(durationSeconds)
         }
         .sheet(isPresented: $isShowingSkinExposure) {
             SkinExposurePickerView(exposedBodySurfaceArea: $exposedBodySurfaceArea)
@@ -179,85 +210,187 @@ struct SunSessionPlannerView: View {
 
             GlassCard(cornerRadius: 24) {
                 VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Text("Planned Time")
+                                .font(.bigDoseHeader(.headline).weight(.semibold))
+                                .foregroundStyle(.white)
+                            InfoCircleButton(topic: .plannedTime, compact: true)
+                        }
+
+                        Text("Recommended ~\(Int((plan.recommendedDurationSeconds / 60).rounded())) min · capped at safe max")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+
                     HStack {
-                        Text("Session Length")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .foregroundStyle(.white)
                         Spacer()
                         Text("\(Int(durationSeconds / 60)) min")
                             .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.solarGold)
                     }
 
-                    Slider(value: $durationSeconds, in: 60...90 * 60, step: 60)
-                        .tint(.solarGold)
+                    Slider(
+                        value: $durationSeconds,
+                        in: 60...plan.safeMaxDurationSeconds,
+                        step: 60
+                    )
+                    .tint(.solarGold)
 
                     HStack(spacing: 8) {
-                        ForEach([15, 30, 45, 60], id: \.self) { minutes in
-                            Button("\(minutes) min") {
+                        ForEach(SunSessionDurationPreset.allCases, id: \.self) { preset in
+                            let presetSeconds = preset.durationSeconds(for: plan)
+                            Button(preset.title(for: plan)) {
                                 withAnimation(.smooth) {
-                                    durationSeconds = TimeInterval(minutes * 60)
+                                    durationSeconds = presetSeconds
                                 }
                             }
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(durationSeconds == TimeInterval(minutes * 60) ? .black : .white)
+                            .foregroundStyle(durationSeconds == presetSeconds ? .black : .white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(durationSeconds == TimeInterval(minutes * 60) ? Color.solarGold : .white.opacity(0.08), in: .rect(cornerRadius: 12))
+                            .background(
+                                durationSeconds == presetSeconds ? Color.solarGold : .white.opacity(0.08),
+                                in: .rect(cornerRadius: 12)
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+
+    private var safetyTimelineCard: some View {
+        GlassCard(cornerRadius: 20) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Your Limits Today")
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    InfoCircleButton(topic: .minToMED, compact: true)
+                }
+
+                if let timeline = plan.safetyTimelineMinutes {
+                    Text("\(profile.skinType.title) skin · UV \(weather.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(Int(exposedBodySurfaceArea * 100))% exposed")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+
+                    safetyTimelineRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        title: "Turn over by",
+                        detail: "~\(timeline.turnOver) min"
+                    )
+                    safetyTimelineRow(
+                        icon: "figure.walk",
+                        title: "Start heading in by",
+                        detail: "~\(timeline.wrapUp) min"
+                    )
+                    safetyTimelineRow(
+                        icon: "hand.raised.fill",
+                        title: "Safe exit by",
+                        detail: "~\(timeline.safeExit) min",
+                        tint: .solarOrange
+                    )
+                } else {
+                    HStack(spacing: 8) {
+                        Image(systemName: "flame.fill")
+                            .foregroundStyle(.solarOrange)
+                        Text("No meaningful UV estimate right now.")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.solarOrange)
+                    }
+                }
+            }
+        }
+    }
+
+    private func safetyTimelineRow(icon: String, title: String, detail: String, tint: Color = .white) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.solarGold)
+                .frame(width: 22)
+
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(tint.opacity(0.78))
+
+            Spacer()
+
+            Text(detail)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(tint)
         }
     }
 
     private var estimateCard: some View {
         GlassCard {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(Int(durationSeconds / 60)) min")
-                        .font(.system(size: 44, weight: .semibold))
-                        .foregroundStyle(.solarGold)
-                    Text("planned time")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.6))
+            VStack(spacing: 16) {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("~\(goalMinutes) min")
+                            .font(.system(size: 36, weight: .semibold))
+                            .foregroundStyle(.solarGold)
+                        HStack(spacing: 4) {
+                            Text("to reach goal")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                            InfoCircleButton(topic: .toReachGoal, compact: true)
+                        }
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "arrow.right")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.35))
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text("~\(safeExitMinutes) min")
+                            .font(.system(size: 36, weight: .semibold))
+                            .foregroundStyle(.solarOrange)
+                        HStack(spacing: 4) {
+                            Text("safe max")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                            InfoCircleButton(topic: .safeMax, compact: true)
+                        }
+                    }
                 }
 
-                Spacer()
+                Divider().overlay(.white.opacity(0.12))
 
-                Image(systemName: "arrow.right")
-                    .font(.title.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.35))
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text("\(Int(estimate.estimatedIU.rounded()))")
-                        .font(.system(size: 44, weight: .semibold))
-                        .foregroundStyle(plan.isTraceVitaminDConditions ? .white.opacity(0.55) : .white)
-                    HStack(spacing: 4) {
-                        Text(plan.isTraceVitaminDConditions ? "IU trace est." : "IU estimated")
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(Int(durationSeconds / 60)) min")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text("planned time")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.6))
-                        if plan.isTraceVitaminDConditions {
-                            InfoCircleButton(topic: .estimatedIU, compact: true)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text("\(Int(estimate.estimatedIU.rounded()))")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundStyle(plan.isTraceVitaminDConditions ? .white.opacity(0.55) : .white)
+                        HStack(spacing: 4) {
+                            Text(plan.isTraceVitaminDConditions ? "IU trace est." : "IU estimated")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                            if plan.isTraceVitaminDConditions {
+                                InfoCircleButton(topic: .estimatedIU, compact: true)
+                            }
                         }
                     }
                 }
             }
         }
-    }
-
-    private var medWarning: some View {
-        let minutes = Int((plan.medTimeSeconds / 60).rounded())
-        return HStack(spacing: 8) {
-            Image(systemName: "flame.fill")
-            Text(minutes > 0 ? "Time to MED: \(minutes) min. Turn over before then." : "No meaningful UV estimate right now.")
-            InfoCircleButton(topic: .minToMED, compact: true)
-        }
-        .font(.bigDoseHeader(.headline).weight(.semibold))
-        .foregroundStyle(.solarOrange)
-        .padding(.horizontal, 4)
     }
 
     private var startButton: some View {

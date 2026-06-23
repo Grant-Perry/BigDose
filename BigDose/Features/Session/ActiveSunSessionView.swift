@@ -145,11 +145,10 @@ struct ActiveSunSessionView: View {
                 )
             case .stop:
                 BigDoseAlertContent(
-                    title: "Stop or cover up",
+                    title: "Safe exposure reached",
                     message: plan.safetyAlertMessage(for: .stop, elapsedSeconds: elapsedSeconds),
                     actions: [
-                        .destructive("End Session") { complete() },
-                        .default("Resume") { isPaused = false }
+                        .default("End Session") { complete() }
                     ]
                 )
             }
@@ -243,6 +242,13 @@ struct ActiveSunSessionView: View {
                     Text(durationText(elapsedSeconds))
                         .font(.system(size: 40, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white)
+
+                    if plan.medTimeSeconds > 0 {
+                        Text("\(Int(plan.durationSeconds / 60)) min planned · exit by \(Int(plan.stopAlertSeconds / 60)) min")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.solarOrange)
+                            .multilineTextAlignment(.center)
+                    }
 
                     Text("\(Int(estimatedIU.rounded())) IU")
                         .font(.system(size: 52, weight: .semibold))

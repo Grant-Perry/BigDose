@@ -131,6 +131,37 @@ struct SunSessionPlan: Equatable {
         return med * 40 / effectiveUV
     }
 
+    /// Minutes of exposure at current settings to reach the session IU goal.
+    var goalDurationSeconds: TimeInterval {
+        guard liveIUProductionRatePerMinute > 0, targetIU > 0 else { return 60 }
+        return max(60, ceil(targetIU / liveIUProductionRatePerMinute) * 60)
+    }
+
+    /// Maximum planned session length — capped at the conservative MED stop point.
+    var safeMaxDurationSeconds: TimeInterval {
+        guard medTimeSeconds > 0 else { return 30 * 60 }
+        return max(60, stopAlertSeconds)
+    }
+
+    /// Default planned duration: enough for the goal without exceeding safe MED headroom.
+    var recommendedDurationSeconds: TimeInterval {
+        clampedPlannedDuration(min(goalDurationSeconds, safeMaxDurationSeconds))
+    }
+
+    var safetyTimelineMinutes: SunSessionSafetyTimeline? {
+        guard medTimeSeconds > 0 else { return nil }
+        return SunSessionSafetyTimeline(
+            turnOver: max(1, Int((turnOverAlertSeconds / 60).rounded())),
+            wrapUp: max(1, Int((medWarningSeconds / 60).rounded())),
+            safeExit: max(1, Int((stopAlertSeconds / 60).rounded()))
+        )
+    }
+
+    func clampedPlannedDuration(_ seconds: TimeInterval) -> TimeInterval {
+        let rounded = (seconds / 60).rounded() * 60
+        return min(max(rounded, 60), safeMaxDurationSeconds)
+    }
+
     var turnOverAlertSeconds: TimeInterval {
         let halfSession = durationSeconds / 2
         guard medTimeSeconds > 0 else { return halfSession }
@@ -168,6 +199,36 @@ struct SunSessionPlan: Equatable {
         let minutes = total / 60
         let secondsPart = total % 60
         return "\(minutes):\(String(format: "%02d", secondsPart))"
+    }
+}
+
+struct SunSessionSafetyTimeline: Equatable {
+    var turnOver: Int
+    var wrapUp: Int
+    var safeExit: Int
+}
+
+enum SunSessionDurationPreset: CaseIterable {
+    case toGoal
+    case safeMax
+
+    func durationSeconds(for plan: SunSessionPlan) -> TimeInterval {
+        switch self {
+        case .toGoal:
+            plan.clampedPlannedDuration(plan.goalDurationSeconds)
+        case .safeMax:
+            plan.safeMaxDurationSeconds
+        }
+    }
+
+    func title(for plan: SunSessionPlan) -> String {
+        let minutes = Int((durationSeconds(for: plan) / 60).rounded())
+        switch self {
+        case .toGoal:
+            return "To goal (~\(minutes) min)"
+        case .safeMax:
+            return "Safe max (~\(minutes) min)"
+        }
     }
 }
 
