@@ -14,7 +14,7 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
     var vitaminDWindowEnd: Date?
     var nextVitaminDWindowStart: Date?
     var isVitaminDWindowOpenNow: Bool
-    var todayCollectedIU: Double
+    var todaySunIU: Double
     var targetIU: Int
     var isInBestWindow: Bool
     var isOnboardingComplete: Bool
@@ -22,7 +22,28 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
 
     var todayGoalProgress: Double {
         guard targetIU > 0 else { return 0 }
-        return min(max(todayCollectedIU / Double(targetIU), 0), 1)
+        return min(max(todaySunIU / Double(targetIU), 0), 1)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case generatedAt
+        case locationLabel
+        case currentUVIndex
+        case peakUVIndex
+        case windowQualityTitle
+        case bestWindowStart
+        case bestWindowEnd
+        case nextUsefulStart
+        case nextUsefulEnd
+        case vitaminDWindowStart
+        case vitaminDWindowEnd
+        case nextVitaminDWindowStart
+        case isVitaminDWindowOpenNow
+        case todaySunIU = "todayCollectedIU"
+        case targetIU
+        case isInBestWindow
+        case isOnboardingComplete
+        case activeSession
     }
 
     var nextTimelineRefreshDate: Date {
@@ -77,7 +98,7 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         vitaminDWindowEnd: nil,
         nextVitaminDWindowStart: nil,
         isVitaminDWindowOpenNow: false,
-        todayCollectedIU: 0,
+        todaySunIU: 0,
         targetIU: 1_000,
         isInBestWindow: false,
         isOnboardingComplete: false,

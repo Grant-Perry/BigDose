@@ -99,7 +99,7 @@ struct SunSessionGoalDialView: View {
 
     private var accessibilityLabelText: String {
         if progressCaption != nil {
-            "Daily IU goal \(Int(clampedProgress * 100)) percent complete"
+            "Daily sun IU goal \(Int(clampedProgress * 100)) percent complete"
         } else {
             "Session goal \(Int(clampedProgress * 100)) percent complete"
         }

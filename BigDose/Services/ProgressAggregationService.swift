@@ -17,7 +17,7 @@ struct BigDoseProgressSnapshot {
 
     var goalProgress: Double {
         guard targetIU > 0 else { return 0 }
-        return min(totalIU / targetIU, 1)
+        return min(sunIU / targetIU, 1)
     }
 
     var levelProgress: Double {

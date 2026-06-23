@@ -260,27 +260,19 @@ struct HistoryView: View {
             + foods.reduce(0) { $0 + Double($1.estimatedIU) }
     }
 
-    private var todaySunIU: Double {
-        sessions
-            .filter { calendar.isDateInToday($0.startedAt) }
-            .reduce(0) { $0 + $1.estimatedIU }
+    private var todayIUIntake: DailyIUIntakeSummary {
+        DailyIUIntakeAggregation.today(
+            sessions: sessions,
+            supplements: supplements,
+            foods: foods,
+            calendar: calendar
+        )
     }
 
-    private var todaySupplementIU: Double {
-        supplements
-            .filter { calendar.isDateInToday($0.takenAt) }
-            .reduce(0) { $0 + Double($1.internationalUnits) }
-    }
-
-    private var todayFoodIU: Double {
-        foods
-            .filter { calendar.isDateInToday($0.loggedAt) }
-            .reduce(0) { $0 + Double($1.estimatedIU) }
-    }
-
-    private var todayTotalIU: Double {
-        todaySunIU + todaySupplementIU + todayFoodIU
-    }
+    private var todaySunIU: Double { todayIUIntake.sunIU }
+    private var todaySupplementIU: Double { todayIUIntake.supplementIU }
+    private var todayFoodIU: Double { todayIUIntake.foodIU }
+    private var todayTotalIU: Double { todayIUIntake.totalIU }
 
     private func historyTimestamp(_ date: Date) -> String {
         if calendar.isDateInToday(date) {

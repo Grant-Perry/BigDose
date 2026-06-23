@@ -218,7 +218,7 @@ struct BigDoseHomeWidgetEntryView: View {
                 Spacer(minLength: 0)
             }
 
-            Text("\(Int(entry.snapshot.todayCollectedIU.rounded())) / \(entry.snapshot.targetIU) IU")
+            Text("\(Int(entry.snapshot.todaySunIU.rounded())) / \(entry.snapshot.targetIU) IU sun")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.72))
         }
@@ -270,7 +270,7 @@ struct BigDoseHomeWidgetEntryView: View {
     }
 
     private var windowInlineView: some View {
-        Text("\(windowHeadline) · \(Int(entry.snapshot.todayCollectedIU.rounded()))/\(entry.snapshot.targetIU) IU")
+        Text("\(windowHeadline) · \(Int(entry.snapshot.todaySunIU.rounded()))/\(entry.snapshot.targetIU) IU sun")
     }
 
     private var windowCircularView: some View {

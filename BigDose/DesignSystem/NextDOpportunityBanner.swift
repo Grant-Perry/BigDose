@@ -4,7 +4,7 @@ struct NextDOpportunityBanner: View {
     var display: VitaminDWindowDisplay
     var now: Date
     var todayGoalProgress: Double
-    var todayCollectedIU: Double
+    var todaySunIU: Double
     var targetIU: Int
     var isSunSessionStartEnabled = true
     var showsNoUsefulUV = false
@@ -27,7 +27,7 @@ struct NextDOpportunityBanner: View {
 
             bannerTitleBlock
 
-            Text("\(Int(todayCollectedIU.rounded())) / \(targetIU) IU today")
+            Text("\(Int(todaySunIU.rounded())) / \(targetIU) IU sun")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white.opacity(0.48))
         }
@@ -95,7 +95,7 @@ struct NextDOpportunityBanner: View {
         .disabled(!isSunSessionStartEnabled)
         .opacity(isSunSessionStartEnabled ? 1 : 0.48)
         .accessibilityLabel("Start sun session")
-        .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily IU goal")
+        .accessibilityValue("\(Int(todayGoalProgress * 100)) percent of daily sun IU goal")
         .accessibilityHint(isSunSessionStartEnabled ? "Starts a new sun session" : "Weather data required to start a sun session")
     }
 }

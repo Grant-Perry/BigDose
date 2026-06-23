@@ -91,8 +91,8 @@ struct HomeView: View {
     private func header(now: Date) -> some View {
         HomeHeroHeader(
             profile: profile ?? activeProfile,
-            todayGoalProgress: todayGoalProgress,
-            todayCollectedIU: todayCollectedIU,
+            todayGoalProgress: todaySunGoalProgress,
+            todaySunIU: todayIUIntake.sunIU,
             targetIU: activeProfile.preferredDailyIU,
             vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
             now: now,
@@ -451,8 +451,8 @@ struct HomeView: View {
                 }
 
                 SunArcMeter(
-                    progress: todayGoalProgress,
-                    quality: todayGoalProgress >= 1 ? .prime : estimate.quality,
+                    progress: todaySunGoalProgress,
+                    quality: todaySunGoalProgress >= 1 ? .prime : estimate.quality,
                     title: goalMeterTitle,
                     durationTitle: goalMeterDurationTitle,
                     subtitle: goalMeterSubtitle,
@@ -597,35 +597,31 @@ struct HomeView: View {
         return "Based on your \(activeProfile.skinType.title) skin, about \(Int(activeProfile.typicalExposedBodySurfaceArea * 100))% skin exposed and a UV index of \(weather.uvIndex.formatted(.number.precision(.fractionLength(1))))."
     }
 
-    private var todayCollectedIU: Double {
-        let calendar = Calendar.current
-        let sunIU = sessions
-            .filter { calendar.isDateInToday($0.startedAt) }
-            .reduce(0) { $0 + $1.estimatedIU }
-        let supplementIU = supplements
-            .filter { calendar.isDateInToday($0.takenAt) }
-            .reduce(0) { $0 + Double($1.internationalUnits) }
-        let foodIU = foods
-            .filter { calendar.isDateInToday($0.loggedAt) }
-            .reduce(0) { $0 + Double($1.estimatedIU) }
-
-        return sunIU + supplementIU + foodIU
+    private var todayIUIntake: DailyIUIntakeSummary {
+        DailyIUIntakeAggregation.today(
+            sessions: sessions,
+            supplements: supplements,
+            foods: foods
+        )
     }
 
-    private var todayGoalProgress: Double {
-        let target = Double(max(activeProfile.preferredDailyIU, 1))
-        return min(max(todayCollectedIU / target, 0), 1)
+    private var todaySunGoalProgress: Double {
+        todayIUIntake.sunGoalProgress(
+            dailyTargetIU: Double(max(activeProfile.preferredDailyIU, 1))
+        )
     }
 
-    private var remainingIUForToday: Double {
-        max(Double(activeProfile.preferredDailyIU) - todayCollectedIU, 0)
+    private var remainingSunIUForToday: Double {
+        todayIUIntake.remainingSunIUForGoal(
+            dailyTargetIU: Double(activeProfile.preferredDailyIU)
+        )
     }
 
     private var remainingSunMinutesForToday: Int {
-        guard remainingIUForToday > 0 else { return 0 }
+        guard remainingSunIUForToday > 0 else { return 0 }
 
         return Int(ceil(VitaminDCalculator.targetDurationSeconds(
-            targetIU: remainingIUForToday,
+            targetIU: remainingSunIUForToday,
             uvIndex: homeViewModel.weather?.uvIndex ?? 0,
             exposedBodySurfaceArea: activeProfile.typicalExposedBodySurfaceArea,
             skinType: activeProfile.skinType
@@ -633,12 +629,12 @@ struct HomeView: View {
     }
 
     private var goalMeterDurationTitle: BigDoseDurationComponents? {
-        guard todayGoalProgress < 1, remainingSunMinutesForToday > 0 else { return nil }
+        guard todaySunGoalProgress < 1, remainingSunMinutesForToday > 0 else { return nil }
         return BigDoseDurationComponents(minutes: remainingSunMinutesForToday)
     }
 
     private var goalMeterTitle: String {
-        if todayGoalProgress >= 1 {
+        if todaySunGoalProgress >= 1 {
             return "Done"
         }
 
@@ -646,19 +642,19 @@ struct HomeView: View {
             return ""
         }
 
-        return "\(Int(todayCollectedIU.rounded()))"
+        return "\(Int(todayIUIntake.sunIU.rounded()))"
     }
 
     private var goalMeterSubtitle: String {
-        if todayGoalProgress >= 1 {
-            return "goal reached"
+        if todaySunGoalProgress >= 1 {
+            return "sun goal reached"
         }
 
         if remainingSunMinutesForToday > 0 {
             return "sun goal remaining"
         }
 
-        return "IU collected today"
+        return "IU from sun today"
     }
 
     private var legalFooter: some View {
@@ -816,7 +812,7 @@ struct HomeView: View {
             profile: activeProfile,
             plan: currentPlan,
             weather: homeViewModel.weather,
-            todayCollectedIU: todayCollectedIU
+            todaySunIU: todayIUIntake.sunIU
         )
     }
 

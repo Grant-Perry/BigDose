@@ -6,7 +6,7 @@ enum BigDoseWidgetPublisher {
         profile: UserProfile,
         plan: DailySunPlan?,
         weather: BigDoseWeatherSnapshot?,
-        todayCollectedIU: Double,
+        todaySunIU: Double,
         activeSessionPlan: SunSessionPlan? = nil,
         activeSessionElapsed: TimeInterval = 0,
         activeSessionIsPaused: Bool = false
@@ -15,7 +15,7 @@ enum BigDoseWidgetPublisher {
             profile: profile,
             plan: plan,
             weather: weather,
-            todayCollectedIU: todayCollectedIU,
+            todaySunIU: todaySunIU,
             activeSessionPlan: activeSessionPlan,
             activeSessionElapsed: activeSessionElapsed,
             activeSessionIsPaused: activeSessionIsPaused
@@ -28,13 +28,13 @@ enum BigDoseWidgetPublisher {
         profile: UserProfile,
         plan: DailySunPlan?,
         weather: BigDoseWeatherSnapshot?,
-        todayCollectedIU: Double
+        todaySunIU: Double
     ) {
         let snapshot = BigDoseWidgetSnapshotBuilder.makeSnapshot(
             profile: profile,
             plan: plan,
             weather: weather,
-            todayCollectedIU: todayCollectedIU
+            todaySunIU: todaySunIU
         )
         BigDoseWidgetSnapshotStore.save(snapshot)
         BigDoseWidgetReloader.reloadHomeWidget()

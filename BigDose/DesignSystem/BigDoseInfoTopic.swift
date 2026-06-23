@@ -140,9 +140,9 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .sessionGoal:
             """
-            **What it does:** Shows how close this sun session is to your **daily IU goal** — the ring and **% of goal** fill as estimated vitamin D accumulates.
+            **What it does:** Shows how close this sun session is to your **daily sun IU goal** — the ring and **% of goal** fill as estimated vitamin D from this session accumulates.
 
-            **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **IU for today**, not your **ng/mL** blood goal on Progress.
+            **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
 
             **Good to know:** Goal progress and **MED Used (Risk)** measure different things — vitamin D gained vs. burn risk consumed.
             """
@@ -160,7 +160,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Your target **blood vitamin D level** in **ng/mL** (nanograms per milliliter).
 
-            **How to use:** Set it during onboarding or in **Dose DNA**. **Progress** tracks blood-level estimates against this target. **Home** tracks a separate **daily IU goal** for today's sun, supplements and food.
+            **How to use:** Set it during onboarding or in **Dose DNA**. **Progress** tracks blood-level estimates against this target. **Home** tracks a separate **daily sun IU goal** — supplements and food are logged separately and do not fill the goal ring.
 
             **Good to know:** **ng/mL** and **IU** answer different questions — blood level vs. today's intake.
             """
@@ -222,11 +222,11 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .toReachGoal:
             """
-            **What it does:** Estimates how many minutes at current **UV**, **exposed skin** and **cloud** settings it would take to reach your **daily IU goal** from this session alone.
+            **What it does:** Estimates how many minutes at current **UV**, **exposed skin** and **cloud** settings it would take to reach your **daily sun IU goal** from this session alone.
 
             **How to use:** Compare this with **Safe max**. If **To reach goal** is shorter, tap **To goal (~X min)** on the slider. If your goal would take longer than **Safe max**, plan for multiple shorter sessions instead of one long one.
 
-            **Good to know:** This tracks **IU intake for today**, not your **ng/mL** blood goal on Progress.
+            **Good to know:** This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
             """
         case .safeMax:
             """
@@ -240,7 +240,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** A **modeled blood vitamin D level** in **ng/mL**, anchored to your latest **lab or baseline** and adjusted by recent intake.
 
-            **How to use:** This is different from the **IU %** on Home, which only tracks **today's sun, supplement and food IU** against your daily IU target. **Progress** estimates whether your blood level is moving toward your **ng/mL goal** over the last **7 days**.
+            **How to use:** This is different from the **IU %** on Home, which only tracks **today's sun IU** against your daily sun target. **Progress** estimates whether your blood level is moving toward your **ng/mL goal** over the last **7 days**.
 
             **Tip:** A fresh **lab result** in BigDose improves this estimate more than any single sun session.
             """
