@@ -4,6 +4,8 @@ import Foundation
 enum SunSessionSessionCleanup {
     static func finishSession(clearPendingCommandFor sessionID: String? = nil) {
         ActiveSunSessionPersistence.clear()
+        SessionSafetyNotificationService.cancelSessionNotifications()
+        ActiveSessionReminderService.cancel()
 
         if let sessionID {
             SunSessionLiveActivityCommandStore.clearPending(for: sessionID)

@@ -20,6 +20,7 @@ final class UserProfile {
     var usuallyUsesSunscreen: Bool = false
     var wantsWindowReminders: Bool = true
     var wantsRiskAlerts: Bool = true
+    var wantsActiveSessionReminders: Bool = true
     var wantsNannyMode: Bool = true
     var levelKnowledge: VitaminDLevelKnowledge = VitaminDLevelKnowledge.willAddLater
     var incidentalSunMinutesPerWeek: Int = 30
@@ -46,7 +47,9 @@ final class UserProfile {
     var supplementReminderMinute: Int = 0
     var labReminderIntervalDays: Int = 90
     var lastHealthKitImportAt: Date?
+    var lastHealthKitAutoSyncAt: Date?
     var healthKitImportStatus: HealthImportStatus = HealthImportStatus.neverImported
+    var wantsHealthKitSync: Bool = true
     var wantsHealthKitSupplementExport: Bool = false
     var hasAcceptedWellnessDisclaimer: Bool = false
     var prepareExitLeadPercent: Int = 20
@@ -69,6 +72,7 @@ final class UserProfile {
         usuallyUsesSunscreen: Bool = false,
         wantsWindowReminders: Bool = true,
         wantsRiskAlerts: Bool = true,
+        wantsActiveSessionReminders: Bool = true,
         wantsNannyMode: Bool = true,
         levelKnowledge: VitaminDLevelKnowledge = .willAddLater,
         incidentalSunMinutesPerWeek: Int = 30,
@@ -95,7 +99,9 @@ final class UserProfile {
         supplementReminderMinute: Int = 0,
         labReminderIntervalDays: Int = 90,
         lastHealthKitImportAt: Date? = nil,
+        lastHealthKitAutoSyncAt: Date? = nil,
         healthKitImportStatus: HealthImportStatus = .neverImported,
+        wantsHealthKitSync: Bool = true,
         wantsHealthKitSupplementExport: Bool = false,
         hasAcceptedWellnessDisclaimer: Bool = false,
         prepareExitLeadPercent: Int = 20
@@ -117,6 +123,7 @@ final class UserProfile {
         self.usuallyUsesSunscreen = usuallyUsesSunscreen
         self.wantsWindowReminders = wantsWindowReminders
         self.wantsRiskAlerts = wantsRiskAlerts
+        self.wantsActiveSessionReminders = wantsActiveSessionReminders
         self.wantsNannyMode = wantsNannyMode
         self.levelKnowledge = levelKnowledge
         self.incidentalSunMinutesPerWeek = incidentalSunMinutesPerWeek
@@ -143,7 +150,9 @@ final class UserProfile {
         self.supplementReminderMinute = supplementReminderMinute
         self.labReminderIntervalDays = labReminderIntervalDays
         self.lastHealthKitImportAt = lastHealthKitImportAt
+        self.lastHealthKitAutoSyncAt = lastHealthKitAutoSyncAt
         self.healthKitImportStatus = healthKitImportStatus
+        self.wantsHealthKitSync = wantsHealthKitSync
         self.wantsHealthKitSupplementExport = wantsHealthKitSupplementExport
         self.hasAcceptedWellnessDisclaimer = hasAcceptedWellnessDisclaimer
         self.prepareExitLeadPercent = Self.clampedPrepareExitLeadPercent(prepareExitLeadPercent)

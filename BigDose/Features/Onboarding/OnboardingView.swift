@@ -31,6 +31,7 @@ struct OnboardingView: View {
     @State private var wantsAMLightWindowAlerts = true
     @State private var wantsNextDOpportunityAlerts = true
     @State private var wantsRiskAlerts = true
+    @State private var wantsActiveSessionReminders = true
     @State private var wantsSupplementReminders = false
     @State private var wantsLabReminders = true
     @State private var wantsWeeklyProgressAlerts = true
@@ -40,6 +41,7 @@ struct OnboardingView: View {
     @State private var autoApplyDailySupplementIU = true
     @State private var selectedSkinType: FitzpatrickSkinType = .typeII
     @State private var wantsHealthKitSupplementExport = false
+    @State private var wantsHealthKitSync = true
     @State private var didPrefillSupplementFromHealth = false
     @State private var page = 0
     @State private var isSyncingHealth = false
@@ -88,6 +90,9 @@ struct OnboardingView: View {
                             Task { await syncHealthData() }
                         },
                         onSkip: {
+                            wantsHealthKitSync = false
+                            profile?.wantsHealthKitSync = false
+                            try? modelContext.save()
                             withAnimation(.smooth) {
                                 page = healthPage + 1
                             }
@@ -163,6 +168,7 @@ struct OnboardingView: View {
             wantsAMLightWindowAlerts = profile?.wantsAMLightWindowAlerts ?? true
             wantsNextDOpportunityAlerts = profile?.wantsNextDOpportunityAlerts ?? true
             wantsRiskAlerts = profile?.wantsRiskAlerts ?? true
+            wantsActiveSessionReminders = profile?.wantsActiveSessionReminders ?? true
             wantsSupplementReminders = profile?.wantsSupplementReminders ?? false
             wantsLabReminders = profile?.wantsLabReminders ?? true
             wantsWeeklyProgressAlerts = profile?.wantsWeeklyProgressAlerts ?? true
@@ -172,6 +178,7 @@ struct OnboardingView: View {
             autoApplyDailySupplementIU = profile?.autoApplyDailySupplementIU ?? true
             selectedSkinType = profile?.skinType ?? .typeII
             wantsHealthKitSupplementExport = profile?.wantsHealthKitSupplementExport ?? false
+            wantsHealthKitSync = profile?.wantsHealthKitSync ?? true
         }
         .bigDoseAlert(
             healthAutofillTitle,
@@ -412,7 +419,7 @@ struct OnboardingView: View {
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("**Nanny in Settings → Session Safety** is on by default. She adds one extra reminder at **98% MED (burn risk)** while you stay out. Turn **Nanny** off anytime if you only want the **95%** guidance alert without the extra reminder — over-limit tracking still applies past **100%**.")
+                        Text("**Nanny in Settings → Session Safety** is on by default. She adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out. Turn **Nanny** off anytime for **50%** and **75%** warnings only — over-limit tracking still applies past **100%**.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -716,6 +723,15 @@ struct OnboardingView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
+                        VStack(alignment: .leading, spacing: 6) {
+                            Toggle("Active session reminders", isOn: $wantsActiveSessionReminders)
+
+                            Text("If a sun session keeps running after your goal or safe max, BigDose nudges you to stop and save — or keep going if you're still out.")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
                         Toggle("Supplement reminders", isOn: $wantsSupplementReminders)
                         Toggle("Lab retest reminders", isOn: $wantsLabReminders)
                         Toggle("Weekly progress", isOn: $wantsWeeklyProgressAlerts)
@@ -945,6 +961,7 @@ struct OnboardingView: View {
         activeProfile.wantsAMLightWindowAlerts = wantsAMLightWindowAlerts
         activeProfile.wantsNextDOpportunityAlerts = wantsNextDOpportunityAlerts
         activeProfile.wantsRiskAlerts = wantsRiskAlerts
+        activeProfile.wantsActiveSessionReminders = wantsActiveSessionReminders
         activeProfile.wantsSupplementReminders = wantsSupplementReminders
         activeProfile.wantsLabReminders = wantsLabReminders
         activeProfile.wantsWeeklyProgressAlerts = wantsWeeklyProgressAlerts
@@ -952,6 +969,7 @@ struct OnboardingView: View {
         activeProfile.wantsMilestoneAlerts = wantsMilestoneAlerts
         activeProfile.wantsWeatherBreakAlerts = wantsWeatherBreakAlerts
         activeProfile.wantsHealthKitSupplementExport = wantsHealthKitSupplementExport
+        activeProfile.wantsHealthKitSync = wantsHealthKitSync
         activeProfile.skinType = selectedSkinType
         activeProfile.hasAcceptedWellnessDisclaimer = true
         activeProfile.isOnboardingComplete = true
@@ -1013,6 +1031,12 @@ struct OnboardingView: View {
                 profile: profile,
                 modelContext: modelContext
             )
+            _ = try? await healthKitImportService.silentRefreshIfNeeded(
+                profile: profile,
+                modelContext: modelContext,
+                force: true,
+                requiresOnboardingComplete: false
+            )
         }
         onFinished?()
         dismiss()
@@ -1053,6 +1077,18 @@ struct OnboardingView: View {
             let autofill = try await healthKitImportService.fetchProfileAutofill()
             apply(autofill)
             profile?.healthKitImportStatus = .authorized
+            profile?.wantsHealthKitSync = true
+            wantsHealthKitSync = true
+            try? modelContext.save()
+
+            if let profile {
+                await healthKitImportService.silentRefreshIfNeeded(
+                    profile: profile,
+                    modelContext: modelContext,
+                    force: true,
+                    requiresOnboardingComplete: false
+                )
+            }
 
             if autofill.filledFields.isEmpty {
                 healthAutofillTitle = "Apple Health Connected"

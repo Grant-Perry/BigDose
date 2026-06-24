@@ -26,7 +26,18 @@ final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCente
             return
         }
 
-        let kind = Self.feedbackKind(for: response.notification.request.identifier)
+        let identifier = response.notification.request.identifier
+        if identifier == ActiveSessionReminderService.identifier,
+           let record = ActiveSunSessionStore.load() {
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .bigDoseOpenSessionFromLiveActivity,
+                    object: record.sessionID
+                )
+            }
+        }
+
+        let kind = Self.feedbackKind(for: identifier)
         await MainActor.run {
             BigDoseAlertFeedback.present(kind: kind)
         }
@@ -40,6 +51,10 @@ final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCente
     nonisolated private static func feedbackKind(for identifier: String) -> BigDoseAlertFeedback.Kind {
         if identifier.contains("overLimit") || identifier.contains("stop") || identifier.contains("levelTrend") {
             return .critical
+        }
+
+        if identifier.contains("stillActive") {
+            return .warning
         }
 
         if identifier.contains("medWarning") || identifier.contains("turnOver") || identifier.contains("prepareExit") || identifier.contains("risk") {

@@ -30,12 +30,12 @@ struct EducationView: View {
         EducationSection(
             symbolName: "shield.lefthalf.filled",
             title: "What MED (burn risk) Means",
-            detail: "MED (burn risk) — minimal erythema dose — is Science-based estimate of the UV exposure that would start to redden your skin. Your Fitzpatrick skin type sets the baseline. BigDose tracks MED Used (burn risk) during every live session."
+            detail: "MED (burn risk) — minimal erythema dose — is Science-based estimate of the UV exposure that would start to redden your skin. Your Fitzpatrick skin type sets the baseline. BigDose tracks MED (burn risk) Used during every live session."
         ),
         EducationSection(
             symbolName: "bell.badge.fill",
             title: "How BigDose Limits Sessions",
-            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire near 50%, wrap-up near 75% and the guidance limit at 95%. Nanny adds one reminder at 98% while you stay out. Only you stop the session."
+            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire near 50% and wrap-up near 75%. Nanny adds exit prep, the 95% guidance alert and a 98% reminder while you stay out. Only you stop the session."
         ),
         EducationSection(
             symbolName: "cross.case.fill",

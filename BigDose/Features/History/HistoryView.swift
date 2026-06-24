@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct HistoryView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var profiles: [UserProfile]
     @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
     @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
@@ -12,6 +13,9 @@ struct HistoryView: View {
     @State private var isShowingTodayFood = false
     @State private var editingSupplement: SupplementDose?
     @State private var editingFood: FoodVitaminDEntry?
+    @State private var editingSunSession: ExposureSession?
+    @State private var healthKitImportService = HealthKitImportService()
+    @State private var isRefreshingAppleHealth = false
 
     private var calendar: Calendar { .current }
     private var profile: UserProfile? { profiles.first }
@@ -81,6 +85,9 @@ struct HistoryView: View {
             .sheet(item: $editingFood) { entry in
                 FoodVitaminDEntryEditorView(entry: entry)
             }
+            .sheet(item: $editingSunSession) { session in
+                EditSunSessionView(session: session, profile: profile ?? .preview)
+            }
         }
     }
 
@@ -106,58 +113,92 @@ struct HistoryView: View {
 
                     Spacer()
 
-                    Text("\(Int(todayTotalIU.rounded()))")
-                        .font(.system(size: 42, weight: .black))
-                        .foregroundStyle(.solarGold)
-
-                    Text("IU")
-                        .font(.bigDoseHeader(.headline).weight(.bold))
-                        .foregroundStyle(.white.opacity(0.7))
+                    historyIUValue(
+                        value: todayTotalIU,
+                        numberFont: .system(size: 42, weight: .black),
+                        unitFont: .bigDoseHeader(.headline).weight(.bold)
+                    )
                 }
 
-                if todayTotalIU > 0 || todaySupplementIU > 0 || todayFoodIU > 0 {
-                    todaySourceRow(title: "Sun", value: todaySunIU, systemImage: "sun.max.fill")
-                    todayEditableSourceRow(
-                        title: "Supplements",
-                        value: todaySupplementIU,
-                        systemImage: "pills.fill",
-                        emptyLabel: "Log supplement"
-                    ) {
-                        isShowingTodaySupplements = true
-                    }
-                    todayEditableSourceRow(
-                        title: "Food",
-                        value: todayFoodIU,
-                        systemImage: "fork.knife",
-                        emptyLabel: "Log food"
-                    ) {
-                        isShowingTodayFood = true
-                    }
-                } else {
+                if todayTotalIU > 0 {
+                    Text(todayTotalBreakdownCaption)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.48))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if todayTotalIU == 0 {
                     Text("Nothing logged yet today. Sun sessions, supplements and food will show up here.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
+                }
 
-                    todayEditableSourceRow(
-                        title: "Supplements",
-                        value: 0,
-                        systemImage: "pills.fill",
-                        emptyLabel: "Log supplement"
-                    ) {
-                        isShowingTodaySupplements = true
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    todaySunComponentRow(
+                        title: "Tracked / Exposure",
+                        systemImage: "sun.max.fill",
+                        value: todaySunBreakdown.trackedIU,
+                        showsEstimatePrefix: false,
+                        titleOpacity: todaySunBreakdown.trackedIU > 0 ? 0.82 : 0.42
+                    )
 
-                    todayEditableSourceRow(
-                        title: "Food",
-                        value: 0,
-                        systemImage: "fork.knife",
-                        emptyLabel: "Log food"
-                    ) {
-                        isShowingTodayFood = true
+                    todaySunComponentRow(
+                        title: "Incidental",
+                        systemImage: "sun.horizon.fill",
+                        value: todaySunBreakdown.incidentalIU,
+                        showsEstimatePrefix: true,
+                        titleOpacity: todaySunBreakdown.incidentalIU > 0 ? 0.82 : 0.42,
+                        infoTopic: .incidentalDaylight,
+                        showsAppleHealthRefresh: profile?.wantsHealthKitSync == true
+                    )
+
+                    todaySunComponentRow(
+                        title: "Imported",
+                        systemImage: "figure.walk",
+                        value: todaySunBreakdown.importedIU,
+                        showsEstimatePrefix: true,
+                        titleOpacity: todaySunBreakdown.importedIU > 0 ? 0.82 : 0.42,
+                        infoTopic: .importedSun
+                    )
+
+                    Divider()
+                        .overlay(.white.opacity(0.12))
+                        .padding(.vertical, 2)
+
+                    todaySunTotalRow(value: todaySunIU)
+
+                    if todayMedExcessSeconds > 0 {
+                        todayMedExcessRow(seconds: todayMedExcessSeconds)
                     }
+                }
+
+                todayEditableSourceRow(
+                    title: "Supplements",
+                    value: todaySupplementIU,
+                    systemImage: "pills.fill",
+                    emptyLabel: "Log supplement"
+                ) {
+                    isShowingTodaySupplements = true
+                }
+
+                todayEditableSourceRow(
+                    title: "Food",
+                    value: todayFoodIU,
+                    systemImage: "fork.knife",
+                    emptyLabel: "Log food"
+                ) {
+                    isShowingTodayFood = true
                 }
             }
         }
+    }
+
+    private enum TodayLedgerLayout {
+        static let iconWidth: CGFloat = 22
+        static let rowSpacing: CGFloat = 10
+        static let valueWidth: CGFloat = 92
+        static let accessoryWidth: CGFloat = 14
+        static let rowMinHeight: CGFloat = 28
     }
 
     private func todayEditableSourceRow(
@@ -168,69 +209,230 @@ struct HistoryView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Label(title, systemImage: systemImage)
+            HStack(alignment: .center, spacing: TodayLedgerLayout.rowSpacing) {
+                todayLedgerIcon(systemImage, opacity: value > 0 ? 1 : 0.42)
+
+                Text(title)
                     .font(.bigDoseHeader(.subheadline).weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.white.opacity(value > 0 ? 1 : 0.42))
 
-                Spacer()
+                Spacer(minLength: 0)
 
-                if value > 0 {
-                    Text("\(Int(value.rounded())) IU")
-                        .font(.bigDoseHeader(.subheadline).weight(.black))
-                        .foregroundStyle(.solarGold)
-                } else {
-                    Text(emptyLabel)
-                        .font(.bigDoseHeader(.subheadline).weight(.semibold))
-                        .foregroundStyle(.solarGold.opacity(0.72))
+                Group {
+                    if value > 0 {
+                        historyIUValue(value: value)
+                    } else {
+                        Text(emptyLabel)
+                            .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                            .foregroundStyle(.solarGold.opacity(0.72))
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
+                .frame(minWidth: TodayLedgerLayout.valueWidth, alignment: .trailing)
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.32))
+                    .frame(width: TodayLedgerLayout.accessoryWidth, alignment: .trailing)
             }
+            .frame(minHeight: TodayLedgerLayout.rowMinHeight)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityHint(value > 0 ? "Edit today's \(title.lowercased())" : "Log \(title.lowercased())")
     }
 
-    private func todaySourceRow(title: String, value: Double, systemImage: String) -> some View {
-        HStack {
-            Label(title, systemImage: systemImage)
+    private var todayMedExcessSeconds: TimeInterval { todayIUIntake.medExcessSeconds }
+
+    private func todayMedExcessRow(seconds: TimeInterval) -> some View {
+        HStack(alignment: .center, spacing: TodayLedgerLayout.rowSpacing) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.gpDeltaPurple)
+                .frame(width: TodayLedgerLayout.iconWidth, height: TodayLedgerLayout.rowMinHeight, alignment: .center)
+
+            Text("Past 100% MED")
                 .font(.bigDoseHeader(.subheadline).weight(.semibold))
-                .foregroundStyle(.white.opacity(value > 0 ? 1 : 0.42))
+                .foregroundStyle(.white.opacity(0.82))
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            Text("\(Int(value.rounded())) IU")
-                .font(.bigDoseHeader(.subheadline).weight(.black))
-                .foregroundStyle(value > 0 ? .solarGold : .white.opacity(0.32))
+            Text(SunSessionDurationFormatting.compact(seconds))
+                .font(.system(size: 22, weight: .black))
+                .foregroundStyle(Color.gpDeltaPurple)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(width: TodayLedgerLayout.valueWidth, alignment: .trailing)
+
+            Color.clear
+                .frame(width: TodayLedgerLayout.accessoryWidth)
         }
+        .frame(minHeight: TodayLedgerLayout.rowMinHeight)
+        .accessibilityLabel("Past 100% MED excess time \(SunSessionDurationFormatting.compact(seconds))")
+    }
+
+    private func todaySunTotalRow(value: Double) -> some View {
+        HStack(alignment: .center, spacing: TodayLedgerLayout.rowSpacing) {
+            Image(systemName: "sun.max.fill")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.solarGold)
+                .frame(width: TodayLedgerLayout.iconWidth, height: 34, alignment: .center)
+
+            Text("Sun")
+                .font(.bigDoseHeader(.headline).weight(.black))
+                .foregroundStyle(.white)
+
+            Spacer(minLength: 0)
+
+            historyIUValue(
+                value: value,
+                numberFont: .system(size: 26, weight: .black),
+                unitFont: .bigDoseHeader(.subheadline).weight(.bold)
+            )
+            .frame(width: TodayLedgerLayout.valueWidth, alignment: .trailing)
+
+            Color.clear
+                .frame(width: TodayLedgerLayout.accessoryWidth)
+        }
+        .frame(minHeight: 34)
+        .padding(.top, 2)
+    }
+
+    private func todaySunComponentRow(
+        title: String,
+        systemImage: String,
+        value: Double,
+        showsEstimatePrefix: Bool,
+        titleOpacity: Double,
+        infoTopic: BigDoseInfoTopic? = nil,
+        showsAppleHealthRefresh: Bool = false
+    ) -> some View {
+        HStack(alignment: .center, spacing: TodayLedgerLayout.rowSpacing) {
+            todayLedgerIcon(systemImage, opacity: titleOpacity)
+
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                    .foregroundStyle(.white.opacity(titleOpacity))
+
+                if let infoTopic {
+                    InfoCircleButton(topic: infoTopic, iconSize: 11, compact: true)
+                }
+
+                if showsAppleHealthRefresh {
+                    AppleHealthRefreshButton(isRefreshing: isRefreshingAppleHealth) {
+                        Task { await refreshAppleHealth() }
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            historyIUValue(
+                value: value,
+                showsEstimatePrefix: showsEstimatePrefix,
+                numberUsesSecondary: true
+            )
+            .frame(width: TodayLedgerLayout.valueWidth, alignment: .trailing)
+
+            Color.clear
+                .frame(width: TodayLedgerLayout.accessoryWidth)
+        }
+        .frame(minHeight: TodayLedgerLayout.rowMinHeight)
+    }
+
+    private var todayTotalBreakdownCaption: String {
+        var parts: [String] = []
+        if todaySunIU > 0 {
+            parts.append("sun \(Int(todaySunIU.rounded()))")
+        }
+        if todaySupplementIU > 0 {
+            parts.append("supplements \(Int(todaySupplementIU.rounded()))")
+        }
+        if todayFoodIU > 0 {
+            parts.append("food \(Int(todayFoodIU.rounded()))")
+        }
+        guard !parts.isEmpty else { return "" }
+        return parts.joined(separator: " + ")
+    }
+
+    private func refreshAppleHealth() async {
+        guard let profile, profile.wantsHealthKitSync else { return }
+        guard !isRefreshingAppleHealth else { return }
+
+        isRefreshingAppleHealth = true
+        defer { isRefreshingAppleHealth = false }
+
+        await healthKitImportService.silentRefreshIfNeeded(
+            profile: profile,
+            modelContext: modelContext,
+            force: true
+        )
+    }
+
+    private func todayLedgerIcon(_ systemImage: String, opacity: Double) -> some View {
+        Image(systemName: systemImage)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.solarGold.opacity(opacity))
+            .frame(width: TodayLedgerLayout.iconWidth, height: TodayLedgerLayout.rowMinHeight, alignment: .center)
+    }
+
+    private func historyIUValue(
+        value: Double,
+        showsEstimatePrefix: Bool = false,
+        numberFont: Font = .bigDoseHeader(.subheadline).weight(.black),
+        unitFont: Font = .bigDoseHeader(.caption).weight(.bold),
+        numberUsesSecondary: Bool = false
+    ) -> some View {
+        let numberColor: Color = numberUsesSecondary
+            ? .secondary
+            : (value > 0 ? .solarGold : .white.opacity(0.32))
+
+        return HStack(alignment: .firstTextBaseline, spacing: 2) {
+            HStack(spacing: 0) {
+                Text("~")
+                    .font(numberFont)
+                    .foregroundStyle(numberColor)
+                    .opacity(showsEstimatePrefix ? 1 : 0)
+                    .frame(width: 10, alignment: .leading)
+
+                Text("\(Int(value.rounded()))")
+                    .font(numberFont)
+                    .monospacedDigit()
+                    .foregroundStyle(numberColor)
+            }
+
+            Text("IU")
+                .font(unitFont)
+                .foregroundStyle(.secondary)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
     }
 
     private var summaryCard: some View {
         GlassCard {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
                     Text("Last 90 Days")
                         .font(.bigDoseHeader(.headline).weight(.black))
                         .foregroundStyle(.white)
 
-                    Text("\(sessions.count) sun sessions • \(supplements.count) supplement doses • \(foods.count) food entries • \(labs.count) labs")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.62))
+                    Spacer(minLength: 8)
+
+                    historyIUValue(
+                        value: totalIU,
+                        numberFont: .system(size: 42, weight: .black),
+                        unitFont: .bigDoseHeader(.headline).weight(.bold)
+                    )
+                    .layoutPriority(1)
                 }
 
-                Spacer()
-
-                Text(totalIU.formatted(.number.precision(.fractionLength(0))))
-                    .font(.system(size: 42, weight: .black))
-                    .foregroundStyle(.solarGold)
-
-                Text("IU")
-                    .font(.bigDoseHeader(.headline).weight(.bold))
-                    .foregroundStyle(.white.opacity(0.7))
+                Text("\(sessions.count) sun sessions • \(supplements.count) supplement doses • \(foods.count) food entries • \(labs.count) labs")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -270,6 +472,7 @@ struct HistoryView: View {
     }
 
     private var todaySunIU: Double { todayIUIntake.sunIU }
+    private var todaySunBreakdown: TodaySunBreakdown { todayIUIntake.sunBreakdown }
     private var todaySupplementIU: Double { todayIUIntake.supplementIU }
     private var todayFoodIU: Double { todayIUIntake.foodIU }
     private var todayTotalIU: Double { todayIUIntake.totalIU }
@@ -294,33 +497,66 @@ struct HistoryView: View {
             .padding(.top, 4)
     }
 
+    @ViewBuilder
     private func sessionRow(_ session: ExposureSession) -> some View {
-        GlassCard(cornerRadius: 24) {
-            HStack {
-                Image(systemName: "sun.max.fill")
+        let content = GlassCard(cornerRadius: 24) {
+            HStack(alignment: .top) {
+                Image(systemName: session.source == .healthKitDaylight ? "sun.horizon.fill" : "sun.max.fill")
                     .font(.bigDoseHeader(.title2).weight(.black))
                     .foregroundStyle(.solarGold)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(session.historySourceTitle)
-                        .font(.bigDoseHeader(.headline).weight(.black))
-                        .foregroundStyle(.white)
+                    HStack(spacing: 8) {
+                        Text(session.historySourceTitle)
+                            .font(.bigDoseHeader(.headline).weight(.black))
+                            .foregroundStyle(.white)
 
-                    Text(historyTimestamp(session.startedAt))
+                        if session.source == .healthKitDaylight, profile?.wantsHealthKitSync == true {
+                            AppleHealthRefreshButton(isRefreshing: isRefreshingAppleHealth) {
+                                Task { await refreshAppleHealth() }
+                            }
+                        }
+                    }
+
+                    if let subtitle = session.historySubtitle ?? session.trackedSessionDetail {
+                        Text(subtitle)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.52))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Text(session.historyTimestamp(calendar: calendar))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
 
-                Text("\(Int(session.estimatedIU.rounded()))")
-                    .font(.bigDoseHeader(.title2).weight(.black))
-                    .foregroundStyle(.solarGold)
+                historyIUValue(
+                    value: session.estimatedIU,
+                    showsEstimatePrefix: session.showsHolickEstimate,
+                    numberFont: .bigDoseHeader(.title2).weight(.black),
+                    unitFont: .caption.weight(.bold)
+                )
 
-                Text("IU")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.62))
+                if SunSessionEditService.isEditable(session) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.32))
+                        .padding(.top, 6)
+                }
             }
+        }
+
+        if SunSessionEditService.isEditable(session) {
+            Button {
+                editingSunSession = session
+            } label: {
+                content
+            }
+            .buttonStyle(.plain)
+        } else {
+            content
         }
     }
 
@@ -344,15 +580,13 @@ struct HistoryView: View {
                             .foregroundStyle(.white.opacity(0.62))
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
-                    Text("\(dose.internationalUnits)")
-                        .font(.bigDoseHeader(.title2).weight(.black))
-                        .foregroundStyle(.solarGold)
-
-                    Text("IU")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.62))
+                    historyIUValue(
+                        value: Double(dose.internationalUnits),
+                        numberFont: .bigDoseHeader(.title2).weight(.black),
+                        unitFont: .caption.weight(.bold)
+                    )
 
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.bold))
@@ -383,15 +617,13 @@ struct HistoryView: View {
                             .foregroundStyle(.white.opacity(0.62))
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
-                    Text("\(entry.estimatedIU)")
-                        .font(.bigDoseHeader(.title2).weight(.black))
-                        .foregroundStyle(.solarGold)
-
-                    Text("IU")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.62))
+                    historyIUValue(
+                        value: Double(entry.estimatedIU),
+                        numberFont: .bigDoseHeader(.title2).weight(.black),
+                        unitFont: .caption.weight(.bold)
+                    )
 
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.bold))
@@ -450,6 +682,12 @@ struct HistoryView: View {
                         Text("\(batch.workoutCount) workouts • \(batch.acceptedExposureCount) accepted")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
+
+                        if batch.daylightDayCount > 0 {
+                            Text("\(batch.daylightDayCount) daylight days")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.62))
+                        }
                     }
 
                     Spacer()

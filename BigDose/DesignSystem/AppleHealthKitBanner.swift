@@ -15,7 +15,7 @@ struct OnboardingAppleHealthPage: View {
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
+                Text("Using BigDose with the Apple Health app on iPhone can fill your profile, suggest a default supplement amount from recent vitamin D entries, review outdoor workouts, sync Apple Watch Time in Daylight as incidental sun and keep sunlight history alongside the rest of your health data. BigDose reads only what you allow.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
@@ -124,6 +124,36 @@ struct AppleHealthKitActionSection: View {
                 AppleHealthKitAttributionView()
             }
         }
+    }
+}
+
+// MARK: - Inline Refresh
+
+struct AppleHealthRefreshButton: View {
+    var isRefreshing = false
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image("AppleHealthAppIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                    .clipShape(.rect(cornerRadius: 4, style: .continuous))
+
+                Image(systemName: "arrow.clockwise")
+                    .font(.caption2.weight(.bold))
+                    .symbolEffect(.rotate, isActive: isRefreshing)
+            }
+            .foregroundStyle(.white.opacity(isRefreshing ? 0.42 : 0.68))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(.white.opacity(0.08), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .disabled(isRefreshing)
+        .accessibilityLabel(isRefreshing ? "Refreshing Apple Health sun data" : "Refresh Apple Health sun data")
     }
 }
 

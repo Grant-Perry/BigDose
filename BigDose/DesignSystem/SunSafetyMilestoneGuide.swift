@@ -27,7 +27,7 @@ struct SunSafetyMilestoneGuide: View {
                     icon: "hand.raised.fill",
                     title: "Stop or cover up",
                     detail: "~95% of MED (burn risk)",
-                    note: "BigDose's guidance limit. Nanny adds one reminder at 98% while you stay out. Only you stop the session.",
+                    note: "BigDose's guidance limit. Requires Nanny in Settings → Session Safety. Nanny also adds a 98% reminder while you stay out. Only you stop the session.",
                     tint: .solarOrange
                 )
             }

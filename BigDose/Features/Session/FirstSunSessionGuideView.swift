@@ -35,13 +35,13 @@ struct FirstSunSessionGuideView: View {
                     GlassCard {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 4) {
-                                Label("MED Used (burn risk)", systemImage: "shield.lefthalf.filled")
+                                Label("MED (burn risk) Used", systemImage: "shield.lefthalf.filled")
                                     .font(.bigDoseHeader(.headline).weight(.semibold))
                                     .foregroundStyle(.solarOrange)
                                 InfoCircleButton(topic: .medUsed, compact: true)
                             }
 
-                            Text("Climbs as burn risk is consumed. BigDose warns at 50%, 75% and 95%. Nanny adds one reminder at 98%. Only you stop the session.")
+                            Text("Climbs as burn risk is consumed. BigDose warns at 50% and 75%. Nanny adds exit prep, the 95% guidance alert and a 98% reminder. Only you stop the session.")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.white.opacity(0.72))
                         }

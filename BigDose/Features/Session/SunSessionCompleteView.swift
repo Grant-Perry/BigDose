@@ -15,6 +15,7 @@ struct SunSessionCompleteView: View {
                     safetyRecapCard
                     statsCard
                     factorsCard
+                    editHintCard
                     doneButton
                 }
                 .padding(18)
@@ -76,7 +77,7 @@ struct SunSessionCompleteView: View {
                             .font(.bigDoseHeader(.headline).weight(.semibold))
                             .foregroundStyle(.white)
 
-                        Text("MED used (burn risk): \(result.medUsedPercent)%")
+                        Text("MED (burn risk) Used: \(result.medUsedPercent)%")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(safetyRecapTint)
                     }
@@ -112,7 +113,7 @@ struct SunSessionCompleteView: View {
             VStack(spacing: 12) {
                 summaryRow("Duration", durationText(result.elapsedSeconds))
                 Divider().overlay(.white.opacity(0.12))
-                summaryRow("MED used (burn risk)", "\(result.medUsedPercent)%", highlight: result.medOverLimitPercent > 0)
+                summaryRow("MED (burn risk) Used", "\(result.medUsedPercent)%", highlight: result.medOverLimitPercent > 0)
                 if result.medOverLimitPercent > 0 {
                     summaryRow("Past 100% MED (burn risk)", "+\(result.medOverLimitPercent)%", highlight: true)
                 }
@@ -140,6 +141,21 @@ struct SunSessionCompleteView: View {
                 summaryRow("Final rate", "\(Int(result.plan.iuPerMinute.rounded())) IU/min", highlight: true)
             }
         }
+    }
+
+    private var editHintCard: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "pencil.and.list.clipboard")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.solarGold)
+
+            Text("Logged too long? Tap this session in History to dial in the duration — IU and MED (burn risk) recalculate automatically.")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 18))
     }
 
     private var doneButton: some View {

@@ -755,6 +755,7 @@ struct HomeView: View {
             ActiveSunSessionView(
                 plan: plan,
                 wantsSessionSafetyAlerts: activeProfile.wantsRiskAlerts,
+                wantsActiveSessionReminders: activeProfile.wantsActiveSessionReminders,
                 wantsNannyMode: activeProfile.wantsNannyMode,
                 onCancel: { sessionRoute = nil },
                 onComplete: { result in sessionRoute = .completion(result) }
@@ -779,11 +780,15 @@ struct HomeView: View {
             estimatedIU: result.estimatedIU,
             peakMedUsedPercent: result.medUsedPercent,
             medOverLimitPercent: result.medOverLimitPercent,
+            cloudCoverRaw: result.plan.cloudCover.rawValue,
+            skinTypeRaw: result.plan.skinType.rawValue,
             exposedBodySurfaceArea: result.plan.exposedBodySurfaceArea,
             sunscreenFactor: result.plan.sunscreenTransmission,
             source: .liveTracked,
             quality: result.plan.estimate.quality,
-            locationLabel: result.plan.locationName
+            locationLabel: result.plan.locationName,
+            latitude: result.plan.latitude,
+            longitude: result.plan.longitude
         )
         modelContext.insert(session)
         try? modelContext.save()

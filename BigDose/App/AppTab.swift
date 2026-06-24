@@ -5,6 +5,7 @@ enum AppTab: Hashable {
     case history
     case progress
     case profile
+    case settings
 
     var title: String {
         switch self {
@@ -16,6 +17,8 @@ enum AppTab: Hashable {
             "Progress"
         case .profile:
             "Profile"
+        case .settings:
+            "Settings"
         }
     }
 
@@ -29,6 +32,8 @@ enum AppTab: Hashable {
             "chart.bar.fill"
         case .profile:
             "person.crop.circle.fill"
+        case .settings:
+            "gearshape.fill"
         }
     }
 }

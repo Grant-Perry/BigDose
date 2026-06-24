@@ -5,6 +5,7 @@ enum ExposureSource: String, Codable, CaseIterable, Identifiable {
     case manual
     case liveTracked
     case healthKit
+    case healthKitDaylight
     case rescueFile
 
     var id: String { rawValue }
@@ -19,6 +20,8 @@ enum ExposureSource: String, Codable, CaseIterable, Identifiable {
             "Tracked"
         case .healthKit:
             "Apple Health"
+        case .healthKitDaylight:
+            "Time in Daylight"
         case .rescueFile:
             "Rescue File"
         }

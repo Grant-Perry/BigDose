@@ -19,6 +19,7 @@ struct HealthImportResult: Sendable {
     var workoutCount: Int
     var acceptedCount: Int
     var skippedCount: Int
+    var daylightDayCount: Int
 }
 
 struct HealthProfileMetricUpdatePlan: Sendable {
@@ -394,11 +395,173 @@ final class HealthKitImportService {
         }
     }
 
+    nonisolated static let autoSyncLookbackDays = 7
+    nonisolated static let autoSyncMinimumInterval: TimeInterval = 3_600
+
+    func silentRefreshIfNeeded(
+        profile: UserProfile,
+        modelContext: ModelContext,
+        force: Bool = false,
+        requiresOnboardingComplete: Bool = true
+    ) async {
+        guard profile.wantsHealthKitSync else { return }
+        if requiresOnboardingComplete, !profile.isOnboardingComplete { return }
+        guard isAvailable else { return }
+
+        if !force,
+           let lastSync = profile.lastHealthKitAutoSyncAt,
+           Date().timeIntervalSince(lastSync) < Self.autoSyncMinimumInterval {
+            return
+        }
+
+        do {
+            try await requestOnboardingAuthorization()
+            _ = try await syncDaylightIncidental(
+                profile: profile,
+                modelContext: modelContext,
+                days: Self.autoSyncLookbackDays
+            )
+            _ = try await syncWorkoutsSilently(
+                profile: profile,
+                modelContext: modelContext,
+                days: Self.autoSyncLookbackDays
+            )
+            profile.lastHealthKitAutoSyncAt = .now
+            profile.lastHealthKitImportAt = .now
+            profile.healthKitImportStatus = .imported
+            try? modelContext.save()
+        } catch {
+            return
+        }
+    }
+
+    func syncWorkoutsSilently(
+        profile: UserProfile,
+        modelContext: ModelContext,
+        days: Int
+    ) async throws -> Int {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+
+        let existingIDs = Set(
+            fetchExposureSessions(modelContext: modelContext)
+                .filter { $0.source == .healthKit }
+                .compactMap(\.externalIdentifier)
+        )
+        let candidates = try await fetchWorkoutCandidates(days: days, existingIDs: existingIDs)
+        let accepted = candidates.filter(\.shouldImport)
+
+        for candidate in accepted {
+            insertWorkoutExposure(
+                from: candidate,
+                profile: profile,
+                modelContext: modelContext,
+                importBatchImportedAt: nil
+            )
+        }
+
+        if !accepted.isEmpty {
+            try? modelContext.save()
+        }
+
+        return accepted.count
+    }
+
+    func fetchDaylightPreview(
+        days: Int = 90,
+        profile: UserProfile,
+        modelContext: ModelContext
+    ) async throws -> DaylightImportPreview {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+
+        let daylightMinutesByDay = try await fetchDaylightMinutesByDay(days: days)
+        let existingSessions = fetchExposureSessions(modelContext: modelContext)
+        return DaylightIncidentalImportService.preview(
+            daylightMinutesByDay: daylightMinutesByDay,
+            existingSessions: existingSessions,
+            profile: profile,
+            lookbackDays: days
+        )
+    }
+
+    func syncDaylightIncidental(
+        profile: UserProfile,
+        modelContext: ModelContext,
+        days: Int = 90,
+        importBatchImportedAt: Date? = nil
+    ) async throws -> Int {
+        guard isAvailable else { throw HealthKitImportError.unavailable }
+
+        let daylightMinutesByDay = try await fetchDaylightMinutesByDay(days: days)
+        let existingSessions = fetchExposureSessions(modelContext: modelContext)
+        let plans = DaylightIncidentalImportService.buildPlans(
+            daylightMinutesByDay: daylightMinutesByDay,
+            existingSessions: existingSessions,
+            profile: profile
+        )
+
+        let calendar = Calendar.current
+        var importedDayCount = 0
+
+        for plan in plans {
+            if let existing = existingSessions.first(where: { $0.externalIdentifier == plan.externalIdentifier }) {
+                if plan.netMinutes < DaylightIncidentalImportService.minimumNetMinutes {
+                    modelContext.delete(existing)
+                    continue
+                }
+
+                apply(plan: plan, to: existing, profile: profile, calendar: calendar)
+                importedDayCount += 1
+                continue
+            }
+
+            guard plan.netMinutes >= DaylightIncidentalImportService.minimumNetMinutes else { continue }
+
+            let estimate = DaylightIncidentalImportService.holickEstimate(
+                profile: profile,
+                netMinutes: plan.netMinutes
+            )
+            let timestamp = DaylightIncidentalImportService.representativeTimestamp(for: plan.day, calendar: calendar)
+            let durationSeconds = plan.netMinutes * 60
+
+            modelContext.insert(
+                ExposureSession(
+                    startedAt: timestamp,
+                    endedAt: timestamp.addingTimeInterval(durationSeconds),
+                    durationSeconds: durationSeconds,
+                    averageUVIndex: DaylightIncidentalImportService.nominalUVIndex,
+                    maxUVIndex: DaylightIncidentalImportService.nominalUVIndex,
+                    estimatedIU: estimate.estimatedIU,
+                    exposedBodySurfaceArea: DaylightIncidentalImportService.incidentalExposedArea(
+                        typicalExposedBodySurfaceArea: profile.typicalExposedBodySurfaceArea
+                    ),
+                    sunscreenFactor: profile.usuallyUsesSunscreen ? 0.35 : 1,
+                    source: .healthKitDaylight,
+                    quality: estimate.quality,
+                    locationLabel: "Incidental daylight",
+                    externalIdentifier: plan.externalIdentifier,
+                    importBatchImportedAt: importBatchImportedAt,
+                    sourceAppName: "Apple Watch",
+                    confidence: plan.confidence,
+                    note: plan.note
+                )
+            )
+            importedDayCount += 1
+        }
+
+        if importedDayCount > 0 || importBatchImportedAt != nil {
+            profile.lastHealthKitImportAt = .now
+            profile.healthKitImportStatus = .imported
+        }
+
+        try? modelContext.save()
+        return importedDayCount
+    }
+
     func commit(
         candidates: [HealthWorkoutImportCandidate],
         profile: UserProfile,
         modelContext: ModelContext
-    ) -> HealthImportResult {
+    ) async -> HealthImportResult {
         let now = Date()
         let accepted = candidates.filter(\.shouldImport)
         let skipped = candidates.count - accepted.count
@@ -432,26 +595,11 @@ final class HealthKitImportService {
 
             guard candidate.shouldImport else { continue }
 
-            let estimate = conservativeEstimate(profile: profile, durationSeconds: candidate.durationSeconds, confidence: candidate.confidence)
-            modelContext.insert(
-                ExposureSession(
-                    startedAt: candidate.startedAt,
-                    endedAt: candidate.endedAt,
-                    durationSeconds: candidate.durationSeconds,
-                    averageUVIndex: 2,
-                    maxUVIndex: 2,
-                    estimatedIU: estimate.estimatedIU,
-                    exposedBodySurfaceArea: profile.typicalExposedBodySurfaceArea,
-                    sunscreenFactor: profile.usuallyUsesSunscreen ? 0.35 : 1,
-                    source: .healthKit,
-                    quality: estimate.quality,
-                    locationLabel: candidate.activityName,
-                    externalIdentifier: candidate.id,
-                    importBatchImportedAt: now,
-                    sourceAppName: candidate.sourceAppName,
-                    confidence: candidate.confidence,
-                    note: candidate.note
-                )
+            insertWorkoutExposure(
+                from: candidate,
+                profile: profile,
+                modelContext: modelContext,
+                importBatchImportedAt: now
             )
         }
 
@@ -459,11 +607,28 @@ final class HealthKitImportService {
         profile.healthKitImportStatus = .imported
         try? modelContext.save()
 
+        let daylightDayCount: Int
+        do {
+            daylightDayCount = try await syncDaylightIncidental(
+                profile: profile,
+                modelContext: modelContext,
+                days: 90,
+                importBatchImportedAt: now
+            )
+        } catch {
+            daylightDayCount = 0
+        }
+
+        batch.daylightDayCount = daylightDayCount
+        batch.note = "Imported outdoor workouts and Apple Watch Time in Daylight from Apple Health."
+        try? modelContext.save()
+
         return HealthImportResult(
             importedAt: now,
             workoutCount: candidates.count,
             acceptedCount: accepted.count,
-            skippedCount: skipped
+            skippedCount: skipped,
+            daylightDayCount: daylightDayCount
         )
     }
 
@@ -483,7 +648,7 @@ final class HealthKitImportService {
         } else if !isOutdoorActivity {
             note = "Workout type is not treated as outdoor sun exposure."
         } else {
-            note = "Outdoor workout; BigDose uses conservative UV assumptions until weather/location review is available."
+            note = "Holick est. from outdoor workout with conservative assumed UV."
         }
 
         return HealthWorkoutImportCandidate(
@@ -539,6 +704,9 @@ final class HealthKitImportService {
         }
         if let dietaryVitaminD = HKObjectType.quantityType(forIdentifier: .dietaryVitaminD) {
             readTypes.insert(dietaryVitaminD)
+        }
+        if let timeInDaylight = HKObjectType.quantityType(forIdentifier: .timeInDaylight) {
+            readTypes.insert(timeInDaylight)
         }
 
         return readTypes
@@ -699,6 +867,97 @@ final class HealthKitImportService {
 
             healthStore.execute(query)
         }
+    }
+
+    private func insertWorkoutExposure(
+        from candidate: HealthWorkoutImportCandidate,
+        profile: UserProfile,
+        modelContext: ModelContext,
+        importBatchImportedAt: Date?
+    ) {
+        let estimate = conservativeEstimate(
+            profile: profile,
+            durationSeconds: candidate.durationSeconds,
+            confidence: candidate.confidence
+        )
+        modelContext.insert(
+            ExposureSession(
+                startedAt: candidate.startedAt,
+                endedAt: candidate.endedAt,
+                durationSeconds: candidate.durationSeconds,
+                averageUVIndex: 2,
+                maxUVIndex: 2,
+                estimatedIU: estimate.estimatedIU,
+                exposedBodySurfaceArea: profile.typicalExposedBodySurfaceArea,
+                sunscreenFactor: profile.usuallyUsesSunscreen ? 0.35 : 1,
+                source: .healthKit,
+                quality: estimate.quality,
+                locationLabel: candidate.activityName,
+                externalIdentifier: candidate.id,
+                importBatchImportedAt: importBatchImportedAt,
+                sourceAppName: candidate.sourceAppName,
+                confidence: candidate.confidence,
+                note: candidate.note
+            )
+        )
+    }
+
+    private func fetchExposureSessions(modelContext: ModelContext) -> [ExposureSession] {
+        let descriptor = FetchDescriptor<ExposureSession>()
+        return (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    private func fetchDaylightMinutesByDay(days: Int) async throws -> [Date: TimeInterval] {
+        guard let type = HKObjectType.quantityType(forIdentifier: .timeInDaylight) else {
+            return [:]
+        }
+
+        let calendar = Calendar.current
+        let end = Date()
+        let start = calendar.date(byAdding: .day, value: -days, to: end) ?? end.addingTimeInterval(-Double(days) * 86_400)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        let samples = try await quantitySamples(for: type, predicate: predicate)
+        let minuteUnit = HKUnit.minute()
+
+        var minutesByDay: [Date: TimeInterval] = [:]
+        for sample in samples {
+            let day = calendar.startOfDay(for: sample.startDate)
+            let minutes = sample.quantity.doubleValue(for: minuteUnit)
+            minutesByDay[day, default: 0] += minutes
+        }
+
+        return minutesByDay
+    }
+
+    private func apply(
+        plan: DaylightDayImportPlan,
+        to session: ExposureSession,
+        profile: UserProfile,
+        calendar: Calendar
+    ) {
+        let estimate = DaylightIncidentalImportService.holickEstimate(
+            profile: profile,
+            netMinutes: plan.netMinutes
+        )
+        let timestamp = DaylightIncidentalImportService.representativeTimestamp(for: plan.day, calendar: calendar)
+        let durationSeconds = plan.netMinutes * 60
+
+        session.startedAt = timestamp
+        session.endedAt = timestamp.addingTimeInterval(durationSeconds)
+        session.durationSeconds = durationSeconds
+        session.averageUVIndex = DaylightIncidentalImportService.nominalUVIndex
+        session.maxUVIndex = DaylightIncidentalImportService.nominalUVIndex
+        session.estimatedIU = estimate.estimatedIU
+        session.exposedBodySurfaceArea = DaylightIncidentalImportService.incidentalExposedArea(
+            typicalExposedBodySurfaceArea: profile.typicalExposedBodySurfaceArea
+        )
+        session.sunscreenFactor = profile.usuallyUsesSunscreen ? 0.35 : 1
+        session.source = .healthKitDaylight
+        session.quality = estimate.quality
+        session.locationLabel = "Incidental daylight"
+        session.sourceAppName = "Apple Watch"
+        session.confidence = plan.confidence
+        session.note = plan.note
     }
 }
 

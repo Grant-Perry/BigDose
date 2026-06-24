@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var confirmationStep: SettingsConfirmationStep = .none
     @State private var isShowingOnboarding = false
     @State private var onboardingProfile: UserProfile?
+    @State private var healthKitImportService = HealthKitImportService()
 
     var body: some View {
         ZStack {
@@ -19,6 +20,7 @@ struct SettingsView: View {
                     header
                     sessionSafetyCard
                     dailySupplementCard
+                    appleHealthSyncCard
                     notificationsCard
                     manageDataCard
                     medicalCard
@@ -26,7 +28,7 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
-                .padding(.bottom, 40)
+                .padding(.bottom, 110)
             }
             .scrollIndicators(.hidden)
         }
@@ -174,7 +176,7 @@ struct SettingsView: View {
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
-                    Text("When on, BigDose adds one extra reminder at 98% MED (burn risk) while you stay out. When off, you still get the 95% guidance alert and over-limit tracking past 100% — just not the extra reminder.")
+                    Text("When on, BigDose adds exit prep, the 95% guidance alert, a 98% reminder and a stop-now warning at 100% MED (burn risk). When off, you still get turn-over and wrap-up warnings at 50% and 75% — over-limit tracking on the dial still applies past 100%.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
 
@@ -222,6 +224,53 @@ struct SettingsView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
                 }
+            }
+        }
+    }
+
+    private var appleHealthSyncCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Apple Health", systemImage: "heart.fill")
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
+                    .foregroundStyle(.white)
+
+                if let profile {
+                    Toggle("Sync sun from Apple Health", isOn: wantsHealthKitSyncBinding)
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .tint(.solarGold)
+
+                    Text("When on, BigDose quietly refreshes the last 7 days of Apple Watch Time in Daylight and new outdoor workouts about once an hour while the app is open. Full 90-day review stays in Manage Data.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.56))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let lastSync = profile.lastHealthKitAutoSyncAt {
+                        Text("Last background sync: \(lastSync.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.48))
+                    }
+                }
+            }
+        }
+    }
+
+    private var wantsHealthKitSyncBinding: Binding<Bool> {
+        Binding {
+            profile?.wantsHealthKitSync ?? true
+        } set: { value in
+            profile?.wantsHealthKitSync = value
+            profile?.updatedAt = .now
+            try? modelContext.save()
+
+            guard value, let profile else { return }
+            Task {
+                await healthKitImportService.silentRefreshIfNeeded(
+                    profile: profile,
+                    modelContext: modelContext,
+                    force: true
+                )
             }
         }
     }
@@ -336,6 +385,16 @@ private enum SettingsConfirmationStep {
     case resetOnboarding
     case nukeFirstConfirm
     case nukeFinalConfirm
+}
+
+struct SettingsTabView: View {
+    var profile: UserProfile
+
+    var body: some View {
+        NavigationStack {
+            SettingsView(profile: profile)
+        }
+    }
 }
 
 #Preview {

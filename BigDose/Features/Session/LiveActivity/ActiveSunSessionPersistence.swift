@@ -5,6 +5,7 @@ enum ActiveSunSessionPersistence {
         from plan: SunSessionPlan,
         elapsedSeconds: TimeInterval,
         isPaused: Bool,
+        acknowledgedSafetyAlertIDs: [String] = [],
         now: Date = .now
     ) -> ActiveSunSessionRecord {
         ActiveSunSessionRecord(
@@ -24,7 +25,8 @@ enum ActiveSunSessionPersistence {
             longitude: plan.longitude,
             elapsedSeconds: elapsedSeconds,
             isPaused: isPaused,
-            updatedAt: now
+            updatedAt: now,
+            acknowledgedSafetyAlertIDs: acknowledgedSafetyAlertIDs
         )
     }
 
@@ -56,9 +58,15 @@ enum ActiveSunSessionPersistence {
     static func persist(
         plan: SunSessionPlan,
         elapsedSeconds: TimeInterval,
-        isPaused: Bool
+        isPaused: Bool,
+        acknowledgedSafetyAlertIDs: [String] = []
     ) {
-        let record = record(from: plan, elapsedSeconds: elapsedSeconds, isPaused: isPaused)
+        let record = record(
+            from: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused,
+            acknowledgedSafetyAlertIDs: acknowledgedSafetyAlertIDs
+        )
         ActiveSunSessionStore.save(record)
     }
 

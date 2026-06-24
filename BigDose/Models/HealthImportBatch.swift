@@ -12,6 +12,7 @@ final class HealthImportBatch {
     var workoutCount: Int = 0
     var acceptedExposureCount: Int = 0
     var skippedCount: Int = 0
+    var daylightDayCount: Int = 0
     var note: String = ""
 
     init(
@@ -22,6 +23,7 @@ final class HealthImportBatch {
         workoutCount: Int = 0,
         acceptedExposureCount: Int = 0,
         skippedCount: Int = 0,
+        daylightDayCount: Int = 0,
         note: String = ""
     ) {
         self.importedAt = importedAt
@@ -31,6 +33,7 @@ final class HealthImportBatch {
         self.workoutCount = workoutCount
         self.acceptedExposureCount = acceptedExposureCount
         self.skippedCount = skippedCount
+        self.daylightDayCount = daylightDayCount
         self.note = note
     }
 }

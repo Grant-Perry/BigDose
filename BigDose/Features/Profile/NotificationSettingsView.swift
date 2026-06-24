@@ -86,7 +86,7 @@ struct NotificationSettingsView: View {
                         .foregroundStyle(.white.opacity(0.68))
 
                 default:
-                    Text("BigDose schedules iOS notifications so reminders can arrive even when the app is closed. Sun session safety alerts also fire in the background during an active session.")
+                Text("BigDose schedules iOS notifications so reminders can arrive even when the app is closed. Sun session safety alerts and active session reminders also fire in the background during an open session.")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.68))
                 }
@@ -121,6 +121,14 @@ struct NotificationSettingsView: View {
                     .foregroundStyle(.white.opacity(0.62))
 
                 Toggle("Session safety guidance", isOn: binding(\.wantsRiskAlerts))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle("Active session reminders", isOn: binding(\.wantsActiveSessionReminders))
+                    Text("Nudge when an open sun session runs past your goal or safe max.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.52))
+                }
+
                 Toggle("Supplement reminders", isOn: binding(\.wantsSupplementReminders))
                 Toggle("Lab retest reminders", isOn: binding(\.wantsLabReminders))
                 Toggle("Weekly progress", isOn: binding(\.wantsWeeklyProgressAlerts))

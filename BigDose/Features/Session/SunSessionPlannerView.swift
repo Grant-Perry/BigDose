@@ -94,24 +94,31 @@ struct SunSessionPlannerView: View {
             BigDoseGradientBackground()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
                     header
                     windowStatusCard
-                    if isFirstLiveSunSession {
-                        SunSafetyIntroBanner(
-                            goalMinutes: goalMinutes,
-                            safeMaxMinutes: safeExitMinutes
-                        )
-                    }
                     controls
-                    safetyTimelineCard
-                    estimateCard
-                    startButton
+                    sessionSummaryCard
                 }
-                .padding(18)
-                .padding(.bottom, 30)
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
             }
             .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                startButton
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+                    .padding(.bottom, 12)
+                    .background {
+                        LinearGradient(
+                            colors: [.clear, Color.black.opacity(0.55)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
+                    }
+            }
         }
         .onChange(of: exposedBodySurfaceArea) { _, _ in
             durationSeconds = plan.clampedPlannedDuration(durationSeconds)
@@ -142,24 +149,21 @@ struct SunSessionPlannerView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button(action: onCancel) {
                 Image(systemName: "chevron.left")
-                    .font(.bigDoseHeader(.title2).weight(.bold))
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
+                    .frame(width: 38, height: 38)
                     .background(.white.opacity(0.10), in: .circle)
             }
 
-            Spacer()
-
             Text("Plan Your Session")
-                .font(.bigDoseHeader(.title2).weight(.semibold))
+                .font(.bigDoseHeader(.headline).weight(.semibold))
                 .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
 
-            Spacer()
-
-            Color.clear.frame(width: 46, height: 46)
+            Color.clear.frame(width: 38, height: 38)
         }
     }
 
@@ -195,47 +199,50 @@ struct SunSessionPlannerView: View {
     }
 
     private var controls: some View {
-        VStack(spacing: 10) {
-            Button {
-                isShowingSkinExposure = true
-            } label: {
-                plannerRow(
-                    icon: "person.fill",
-                    title: "Exposed Skin",
-                    value: "\(Int(exposedBodySurfaceArea * 100))%"
-                )
-            }
-            .buttonStyle(.plain)
-
-            Menu {
-                ForEach(CloudCoverPreset.allCases) { preset in
-                    Button(preset.title) {
-                        cloudCover = preset
-                    }
+        GlassCard(cornerRadius: 20) {
+            VStack(spacing: 0) {
+                Button {
+                    isShowingSkinExposure = true
+                } label: {
+                    compactPlannerRow(
+                        icon: "person.fill",
+                        title: "Exposed Skin",
+                        value: "\(Int(exposedBodySurfaceArea * 100))%"
+                    )
                 }
-            } label: {
-                plannerRow(icon: "cloud.sun.fill", title: "Clouds / Shade", value: cloudCover.title)
-            }
+                .buttonStyle(.plain)
 
-            GlassCard(cornerRadius: 24) {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
+                rowDivider
+
+                Menu {
+                    ForEach(CloudCoverPreset.allCases) { preset in
+                        Button(preset.title) {
+                            cloudCover = preset
+                        }
+                    }
+                } label: {
+                    compactPlannerRow(
+                        icon: "cloud.sun.fill",
+                        title: "Clouds / Shade",
+                        value: cloudCover.title
+                    )
+                }
+
+                rowDivider
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline) {
                         HStack(spacing: 4) {
                             Text("Planned Time")
-                                .font(.bigDoseHeader(.headline).weight(.semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
-                            InfoCircleButton(topic: .plannedTime, compact: true)
+                            InfoCircleButton(topic: .plannedTime, iconSize: 11, compact: true)
                         }
 
-                        Text("Recommended ~\(Int((plan.recommendedDurationSeconds / 60).rounded())) min · capped at safe max")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.55))
-                    }
+                        Spacer(minLength: 8)
 
-                    HStack {
-                        Spacer()
                         Text("\(Int(durationSeconds / 60)) min")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.solarGold)
                     }
 
@@ -254,158 +261,135 @@ struct SunSessionPlannerView: View {
                                     durationSeconds = presetSeconds
                                 }
                             }
-                            .font(.caption.weight(.semibold))
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(durationSeconds == presetSeconds ? .black : .white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 8)
                             .background(
                                 durationSeconds == presetSeconds ? Color.solarGold : .white.opacity(0.08),
-                                in: .rect(cornerRadius: 12)
+                                in: .rect(cornerRadius: 10)
                             )
                         }
                     }
                 }
+                .padding(.top, 12)
             }
         }
     }
 
-    private var safetyTimelineCard: some View {
+    private var rowDivider: some View {
+        Divider()
+            .overlay(.white.opacity(0.10))
+            .padding(.vertical, 10)
+    }
+
+    private var sessionSummaryCard: some View {
         GlassCard(cornerRadius: 20) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 4) {
                     Text("Your Limits Today")
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
-                    Spacer()
-                    InfoCircleButton(topic: .minToMED, compact: true)
+                    InfoCircleButton(topic: .minToMED, iconSize: 11, compact: true)
+                    Spacer(minLength: 0)
                 }
 
-                if isFirstLiveSunSession {
-                    Text("BigDose alerts you at each milestone during your session.")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.55))
-                }
+                Text("\(profile.skinType.title) skin · UV \(weather.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(Int(exposedBodySurfaceArea * 100))% exposed")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.52))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
                 if let timeline = plan.safetyTimelineMinutes {
-                    Text("\(profile.skinType.title) skin · UV \(weather.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(Int(exposedBodySurfaceArea * 100))% exposed")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.55))
-
-                    safetyTimelineRow(
-                        icon: "arrow.triangle.2.circlepath",
-                        title: "Turn over by",
-                        detail: "~\(timeline.turnOver) min"
-                    )
-                    safetyTimelineRow(
-                        icon: "figure.walk",
-                        title: "Start heading in by",
-                        detail: "~\(timeline.wrapUp) min"
-                    )
-                    safetyTimelineRow(
-                        icon: "hand.raised.fill",
-                        title: "Safe exit by",
-                        detail: "~\(timeline.safeExit) min",
-                        tint: .solarOrange
-                    )
+                    HStack(spacing: 8) {
+                        limitMetric(
+                            icon: "arrow.triangle.2.circlepath",
+                            label: "Turn",
+                            value: "~\(timeline.turnOver)m"
+                        )
+                        limitMetric(
+                            icon: "figure.walk",
+                            label: "Head in",
+                            value: "~\(timeline.wrapUp)m"
+                        )
+                        limitMetric(
+                            icon: "hand.raised.fill",
+                            label: "Exit",
+                            value: "~\(timeline.safeExit)m",
+                            tint: .solarOrange
+                        )
+                    }
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(.solarOrange)
                         Text("No meaningful UV estimate right now.")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.solarOrange)
-                    }
-                }
-            }
-        }
-    }
-
-    private func safetyTimelineRow(icon: String, title: String, detail: String, tint: Color = .white) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.solarGold)
-                .frame(width: 22)
-
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(tint.opacity(0.78))
-
-            Spacer()
-
-            Text(detail)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
-        }
-    }
-
-    private var estimateCard: some View {
-        GlassCard {
-            VStack(spacing: 16) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("~\(goalMinutes) min")
-                            .font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(.solarGold)
-                        HStack(spacing: 4) {
-                            Text("to reach goal")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.6))
-                            InfoCircleButton(topic: .toReachGoal, compact: true)
-                        }
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "arrow.right")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.35))
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 6) {
-                        Text("~\(safeExitMinutes) min")
-                            .font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(.solarOrange)
-                        HStack(spacing: 4) {
-                            Text("safe max")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.6))
-                            InfoCircleButton(topic: .safeMax, compact: true)
-                        }
-                    }
-                }
-
-                Divider().overlay(.white.opacity(0.12))
-
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(Int(durationSeconds / 60)) min")
-                            .font(.system(size: 32, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text("planned time")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.solarOrange)
+                    }
+                }
+
+                Divider().overlay(.white.opacity(0.10))
+
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(spacing: 4) {
+                        Text("Goal ~\(goalMinutes)m")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.solarGold)
+                        InfoCircleButton(topic: .toReachGoal, iconSize: 10, compact: true)
                     }
 
-                    Spacer()
+                    Text("·")
+                        .foregroundStyle(.white.opacity(0.28))
 
-                    VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Text("Safe max ~\(safeExitMinutes)m")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.solarOrange)
+                        InfoCircleButton(topic: .safeMax, iconSize: 10, compact: true)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("\(Int(estimate.estimatedIU.rounded()))")
-                            .font(.system(size: 32, weight: .semibold))
+                            .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(plan.isTraceVitaminDConditions ? .white.opacity(0.55) : .white)
-                        HStack(spacing: 4) {
-                            Text(plan.isTraceVitaminDConditions ? "IU trace est." : "IU estimated")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.6))
-                            if plan.isTraceVitaminDConditions {
-                                InfoCircleButton(topic: .estimatedIU, compact: true)
-                            }
+                        Text(plan.isTraceVitaminDConditions ? "IU trace" : "IU")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        if plan.isTraceVitaminDConditions {
+                            InfoCircleButton(topic: .estimatedIU, iconSize: 10, compact: true)
                         }
                     }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                 }
             }
         }
+    }
+
+    private func limitMetric(icon: String, label: String, value: String, tint: Color = .white) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.solarGold)
+
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.52))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            Text(value)
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(tint == .white ? .white : tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 12))
     }
 
     private var startButton: some View {
@@ -446,27 +430,27 @@ struct SunSessionPlannerView: View {
         }
     }
 
-    private func plannerRow(icon: String, title: String, value: String) -> some View {
-        GlassCard(cornerRadius: 22) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.bigDoseHeader(.title3).weight(.semibold))
-                    .foregroundStyle(.solarGold)
+    private func compactPlannerRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.solarGold)
+                .frame(width: 20)
 
-                Text(title)
-                    .font(.bigDoseHeader(.headline).weight(.semibold))
-                    .foregroundStyle(.white)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
 
-                Spacer()
+            Spacer(minLength: 8)
 
-                Text(value)
-                    .font(.bigDoseHeader(.headline).weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.68))
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
 
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.42))
-            }
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white.opacity(0.32))
         }
+        .contentShape(.rect)
     }
 }

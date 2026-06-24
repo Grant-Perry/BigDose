@@ -5,6 +5,7 @@ struct BigDoseRootView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var profiles: [UserProfile]
     @State private var appState = BigDoseAppState()
+    @State private var healthKitImportService = HealthKitImportService()
 
     private var profile: UserProfile? {
         profiles.first
@@ -29,6 +30,10 @@ struct BigDoseRootView: View {
                     Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
                         ProfileView()
                     }
+
+                    Tab(AppTab.settings.title, systemImage: AppTab.settings.symbolName, value: .settings) {
+                        SettingsTabView(profile: profile)
+                    }
                 }
                 .tint(.solarGold)
             } else {
@@ -44,6 +49,10 @@ struct BigDoseRootView: View {
             OptimalDailyIUMigration.applyIfNeeded(to: profile, modelContext: modelContext)
             guard profile.isOnboardingComplete else { return }
             await BigDoseNotificationCoordinator.refreshManagedAlerts(
+                profile: profile,
+                modelContext: modelContext
+            )
+            await healthKitImportService.silentRefreshIfNeeded(
                 profile: profile,
                 modelContext: modelContext
             )

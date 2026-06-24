@@ -4,6 +4,7 @@ import UIKit
 
 struct ActiveSunSessionView: View {
     var wantsSessionSafetyAlerts: Bool
+    var wantsActiveSessionReminders: Bool
     var wantsNannyMode: Bool
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
@@ -18,10 +19,14 @@ struct ActiveSunSessionView: View {
     @State private var didShowPrepareExitAlert = false
     @State private var didShowGuidanceLimitAlert = false
     @State private var didShowNannyReminderAlert = false
+    @State private var didShowFullMEDAlert = false
+    @State private var didShowGoalReachedAlert = false
     @State private var isShowingSkinCoverage = false
     @State private var isShowingGoalPicker = false
     @State private var isShowingCancelConfirmation = false
     @State private var isShowingStopConfirmation = false
+    @State private var isShowingStaleSessionAlert = false
+    @State private var isShowingInactivityRecoveryAlert = false
     @State private var isShowingFirstSessionGuide = false
     @State private var backgroundLiveActivitySyncTask: Task<Void, Never>?
     @State private var sessionEnded = false
@@ -33,12 +38,14 @@ struct ActiveSunSessionView: View {
     init(
         plan: SunSessionPlan,
         wantsSessionSafetyAlerts: Bool,
+        wantsActiveSessionReminders: Bool = true,
         wantsNannyMode: Bool = true,
         onCancel: @escaping () -> Void,
         onComplete: @escaping (SunSessionResult) -> Void
     ) {
         _plan = State(initialValue: plan)
         self.wantsSessionSafetyAlerts = wantsSessionSafetyAlerts
+        self.wantsActiveSessionReminders = wantsActiveSessionReminders
         self.wantsNannyMode = wantsNannyMode
         self.onCancel = onCancel
         self.onComplete = onComplete
@@ -52,8 +59,28 @@ struct ActiveSunSessionView: View {
         plan.goalProgress(at: elapsedSeconds)
     }
 
+    private var goalProgressUncapped: Double {
+        plan.goalProgressUncapped(at: elapsedSeconds)
+    }
+
+    private var goalRingProgress: Double {
+        min(goalProgressUncapped, 1)
+    }
+
+    private var overGoalRingProgress: Double {
+        max(0, goalProgressUncapped - 1)
+    }
+
+    private var medUsedPercentText: String {
+        String(format: "%.1f%%", plan.medUsedFraction(at: elapsedSeconds) * 100)
+    }
+
     private var medUsedPercent: Int {
         plan.medUsedPercent(at: elapsedSeconds)
+    }
+
+    private var hasPassedTurnOver: Bool {
+        elapsedSeconds >= plan.turnOverAlertSeconds
     }
 
     private var iuRateColor: Color {
@@ -64,17 +91,29 @@ struct ActiveSunSessionView: View {
         ZStack {
             BigDoseGradientBackground()
 
-            VStack(spacing: 22) {
-                header
-                if plan.isOutsideVitaminDWindow {
-                    outsideWindowBanner
+            ScrollView {
+                VStack(spacing: 0) {
+                    header
+                        .padding(.bottom, 16)
+
+                    if plan.isOutsideVitaminDWindow {
+                        outsideWindowBanner
+                            .padding(.bottom, 14)
+                    }
+
+                    heroDialSection
+                        .padding(.bottom, 20)
+
+                    sessionControls
+                        .padding(.bottom, 22)
+
+                    modifiersCard
                 }
-                timerDial
-                controls
-                modifiersCard
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.top, 2)
+                .padding(.bottom, 32)
             }
-            .padding(18)
+            .scrollIndicators(.hidden)
         }
         .onReceive(timer) { _ in
             consumeLiveActivityCommands()
@@ -87,15 +126,19 @@ struct ActiveSunSessionView: View {
             elapsedSeconds += 1
             syncLiveActivity()
             BigDoseWidgetReloader.reloadHomeWidget()
-            evaluateSafetyAlerts()
+            evaluateSessionAlerts()
         }
         .task {
             restoreSessionStateIfNeeded()
             persistSessionState()
             await refreshSessionSafetyNotifications()
+            await refreshActiveSessionReminder()
             consumeLiveActivityCommands()
             guard !sessionEnded else { return }
             syncLiveActivity()
+            guard !isShowingInactivityRecoveryAlert else { return }
+            evaluateSessionAlerts()
+            evaluateStaleSessionAlert()
 
             if !hasSeenFirstSunSessionGuide {
                 isShowingFirstSessionGuide = true
@@ -104,6 +147,7 @@ struct ActiveSunSessionView: View {
         .onChange(of: isPaused) { _, _ in
             persistSessionState()
             syncLiveActivity()
+            Task { await refreshActiveSessionReminder() }
         }
         .onChange(of: plan.exposedBodySurfaceArea) { _, _ in
             syncLiveActivity()
@@ -124,6 +168,7 @@ struct ActiveSunSessionView: View {
                 backgroundLiveActivitySyncTask = nil
                 consumeLiveActivityCommands()
                 syncLiveActivity()
+                evaluateStaleSessionAlert()
             case .inactive, .background:
                 syncLiveActivity()
                 startBackgroundLiveActivitySyncIfNeeded()
@@ -152,21 +197,44 @@ struct ActiveSunSessionView: View {
                     actions: [.default("Got it")]
                 )
             case .overLimit(let percent):
+                if percent == SunSessionSafetyThresholds.fullMEDPercent {
+                    BigDoseAlertContent(
+                        title: overLimitAlertTitle(for: percent),
+                        message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
+                        actions: [
+                            .destructive("Stop Session") { complete() },
+                            .default("I'm Still Out Here")
+                        ]
+                    )
+                } else {
+                    BigDoseAlertContent(
+                        title: overLimitAlertTitle(for: percent),
+                        message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
+                        actions: [.default("I'm Still Out Here")]
+                    )
+                }
+            case .goalReached:
                 BigDoseAlertContent(
-                    title: overLimitAlertTitle(for: percent),
-                    message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
-                    actions: [.default("I'm Still Out Here")]
+                    title: "Goal reached",
+                    message: plan.safetyAlertMessage(for: .goalReached, elapsedSeconds: elapsedSeconds),
+                    actions: [.default("Got it")]
                 )
             }
         }
-        .onChange(of: activeAlert) { _, alert in
-            guard let alert else { return }
-            BigDoseAlertFeedback.present(kind: alert.feedbackKind)
+        .onChange(of: activeAlert) { oldValue, newValue in
+            if let newValue {
+                BigDoseAlertFeedback.present(kind: newValue.feedbackKind)
+            }
+
+            if newValue == nil, oldValue != nil {
+                evaluateSessionAlerts()
+            }
         }
         .sheet(isPresented: $isShowingFirstSessionGuide) {
             FirstSunSessionGuideView {
                 hasSeenFirstSunSessionGuide = true
                 isShowingFirstSessionGuide = false
+                evaluateSessionAlerts()
             }
             .interactiveDismissDisabled()
         }
@@ -196,121 +264,366 @@ struct ActiveSunSessionView: View {
                 .cancel("Keep Going")
             ]
         )
+        .bigDoseAlert(
+            "Still tracking sun",
+            isPresented: $isShowingStaleSessionAlert,
+            message: ActiveSessionReminderService.staleSessionMessage(for: plan, elapsedSeconds: elapsedSeconds),
+            actions: [
+                .destructive("Stop & Save") { complete() },
+                .default("Keep Going")
+            ]
+        )
+        .bigDoseAlert(
+            "Resume sun session?",
+            isPresented: $isShowingInactivityRecoveryAlert,
+            message: inactivityRecoveryMessage,
+            actions: [
+                .default("Still Outside") { resumeAfterInactivityRecovery() },
+                .destructive("Stop & Save") { complete() },
+                .cancel("Cancel Session") { cancel() }
+            ]
+        )
+    }
+
+    private var inactivityRecoveryMessage: String {
+        guard let record = ActiveSunSessionStore.load() else {
+            return "BigDose lost contact with this session. Away time was not added. Still outside, or stop and save?"
+        }
+
+        return ActiveSessionRecoveryService.recoveryMessage(for: record, plan: plan)
     }
 
     private var outsideWindowBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "moon.stars.fill")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.solarGold)
+
             Text(plan.isTraceVitaminDConditions ? "Outside D window — trace vitamin D only" : "Outside D window")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.78))
+                .foregroundStyle(.white.opacity(0.72))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.white.opacity(0.08), in: .rect(cornerRadius: 14))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .bigDoseGlass(cornerRadius: 16)
     }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(plan.locationName)
-                    .font(.bigDoseHeader(.title2).weight(.semibold))
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(plan.locationName.uppercased())
+                    .font(.bigDoseHeader(.title2))
+                    .tracking(1.4)
                     .foregroundStyle(.white)
-                Text("\(Int(plan.currentTemperatureFahrenheit.rounded()))° · UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1)))) · \(plan.cloudCover.title)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.62))
+                    .padding(.top, 2)
+
+                HStack(spacing: 6) {
+                    weatherChip("\(Int(plan.currentTemperatureFahrenheit.rounded()))°")
+                    weatherChip("UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1))))")
+                    weatherChip(plan.cloudCover.title)
+                }
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
-            HStack(spacing: 16) {
-                Button("Cancel") {
-                    isShowingCancelConfirmation = true
+            Button("Cancel") {
+                isShowingCancelConfirmation = true
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.white.opacity(0.48))
+            .padding(.top, 6)
+        }
+    }
+
+    private func weatherChip(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.55))
+    }
+
+    private var heroDialSection: some View {
+        VStack(spacing: 14) {
+            dialGoalCaption
+
+            ZStack {
+                SunSessionGlassDial(
+                    goalProgress: goalRingProgress,
+                    overGoalProgress: overGoalRingProgress,
+                    goalProgressAtFullMED: plan.goalProgressAtFullMED,
+                    medUsedFraction: plan.medUsedFraction(at: elapsedSeconds),
+                    goalDurationMinutes: plan.goalDurationMinutes,
+                    diameter: 278,
+                    lineWidth: 16,
+                    isPaused: isPaused
+                )
+
+                dialCenterContent
+
+                if isPaused {
+                    pausedOverlay
                 }
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.62))
+            }
+
+            dialGoalFooter
+                .padding(.top, -2)
+
+            safetyMetricsStrip
+                .padding(.top, 6)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(dialAccessibilityLabel)
+    }
+
+    private var dialGoalCaption: some View {
+        VStack(spacing: 3) {
+            Text("\(Int(plan.targetIU.rounded())) IU GOAL")
+                .font(.caption.weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(.solarGold.opacity(0.88))
+
+            Text("\(plan.goalDurationMinutes) MIN RING")
+                .font(.caption2.weight(.semibold))
+                .tracking(0.9)
+                .foregroundStyle(.white.opacity(0.38))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var dialGoalFooter: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("0 min")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+
+                goalTimeStatusLabel
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("\(plan.goalDurationMinutes) min")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+
+                goalPercentBadge
+            }
+        }
+        .padding(.horizontal, 28)
+    }
+
+    @ViewBuilder
+    private var goalTimeStatusLabel: some View {
+        if let minutesToGoal = plan.minutesToGoal(at: elapsedSeconds) {
+            Text("~\(minutesToGoal) min to goal")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white.opacity(0.55))
+        } else if goalProgressUncapped >= 1 {
+            Text("Goal reached")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(overGoalRingProgress > 0 ? Color.gpRedPink : Color.solarGold)
+        }
+    }
+
+    private var goalPercentBadge: some View {
+        HStack(spacing: 5) {
+            Text("\(Int(goalProgressUncapped * 100))% OF GOAL")
+                .font(.caption.weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(overGoalRingProgress > 0 ? Color.gpRedPink : Color.solarGold)
+
+            InfoCircleButton(topic: .sessionGoal, compact: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            (overGoalRingProgress > 0 ? Color.gpRedPink : Color.solarGold).opacity(0.12),
+            in: .capsule
+        )
+    }
+
+    private var dialCenterContent: some View {
+        VStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(Int(estimatedIU.rounded()))")
+                    .font(.bigDoseDisplay(68))
+                    .foregroundStyle(.white)
+                    .contentTransition(.numericText())
+
+                Text("IU")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+
+            Text(durationText(elapsedSeconds))
+                .font(.system(size: 34, weight: .light, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.78))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+
+            iuRateBadge
+
+            if plan.isTraceVitaminDConditions {
+                Text("trace D — scaled for low sun angle")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.38))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var iuRateBadge: some View {
+        HStack(spacing: 4) {
+            Text("\(Int(plan.liveIUProductionRatePerMinute.rounded()))")
+                .font(.bigDoseHeader(.headline))
+            Text("IU/MIN")
+                .font(.caption2.weight(.bold))
+                .tracking(1.1)
+        }
+        .foregroundStyle(iuRateColor)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(iuRateColor.opacity(0.12), in: .capsule)
+        .overlay {
+            Capsule()
+                .stroke(iuRateColor.opacity(0.22), lineWidth: 1)
+        }
+        .padding(.top, 4)
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+    }
+
+    private var pausedOverlay: some View {
+        Text("PAUSED")
+            .font(.caption.weight(.black))
+            .tracking(2.4)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(.black.opacity(0.45), in: .capsule)
+            .overlay {
+                Capsule()
+                    .stroke(.white.opacity(0.18), lineWidth: 1)
+            }
+            .offset(y: 122)
+    }
+
+    private var safetyMetricsStrip: some View {
+        HStack(alignment: .top, spacing: 10) {
+            safetyMetricCell(
+                value: countdownText(plan.medRemainingSeconds(at: elapsedSeconds)),
+                label: "min to MED",
+                valueColor: .gpHiGreen,
+                infoTopic: .minToMED,
+                usesMonospacedValue: true
+            )
+
+            safetyMetricCell(
+                value: medUsedPercentText,
+                label: medUsedLabel,
+                valueColor: medUsedColor,
+                infoTopic: .medUsed,
+                showsOverBadge: medUsedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent,
+                usesMonospacedValue: true
+            )
+
+            if hasPassedTurnOver {
+                safetyMetricCell(
+                    value: countdownText(plan.medRemainingSeconds(at: elapsedSeconds)),
+                    label: "min to 100% MED",
+                    valueColor: .gpHiGreen,
+                    infoTopic: .minToMED,
+                    usesMonospacedValue: true
+                )
+            } else {
+                safetyMetricCell(
+                    value: countdownText(plan.turnOverRemainingSeconds(at: elapsedSeconds)),
+                    label: "min to roll-over",
+                    valueColor: .gpHiGreen,
+                    infoTopic: BigDoseInfoTopic.minToRollOver,
+                    usesMonospacedValue: true
+                )
             }
         }
     }
 
-    private var timerDial: some View {
-        GlassCard {
-            ZStack {
-                Circle()
-                    .stroke(.white.opacity(0.12), lineWidth: 18)
+    private var medUsedLabel: String {
+        "MED (burn risk)"
+    }
 
-                Circle()
-                    .trim(from: 0, to: goalProgress)
-                    .stroke(
-                        LinearGradient(colors: [.solarOrange, .solarGold], startPoint: .bottomLeading, endPoint: .topTrailing),
-                        style: StrokeStyle(lineWidth: 18, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .shadow(color: .solarGold.opacity(0.35), radius: 16)
-                    .animation(.smooth, value: goalProgress)
+    private func safetyMetricCell(
+        value: String,
+        label: String,
+        valueColor: Color,
+        infoTopic: BigDoseInfoTopic? = nil,
+        showsOverBadge: Bool = false,
+        usesMonospacedValue: Bool = false
+    ) -> some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 4) {
+                Text(value)
+                    .font(valueFont(monospaced: usesMonospacedValue))
+                    .foregroundStyle(valueColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
-                VStack(spacing: 8) {
-                    Text(durationText(elapsedSeconds))
-                        .font(.system(size: 40, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.white)
-
-                    if plan.medTimeSeconds > 0 {
-                        Text("\(Int(plan.durationSeconds / 60)) min planned · guidance limit ~\(Int(plan.stopAlertSeconds / 60)) min")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.solarOrange)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    Text("\(Int(estimatedIU.rounded())) IU")
-                        .font(.system(size: 52, weight: .semibold))
-                        .foregroundStyle(.white)
-
-                    Text("\(Int(plan.liveIUProductionRatePerMinute.rounded())) IU/min")
-                        .font(.bigDoseHeader(.headline).weight(.semibold))
-                        .foregroundStyle(iuRateColor)
-
-                    if plan.isTraceVitaminDConditions {
-                        Text("trace D — scaled for low sun angle")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.48))
-                    }
-
-                    if let minutesToGoal = plan.minutesToGoal(at: elapsedSeconds) {
-                        Text("~\(minutesToGoal) min to goal")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.62))
-                    } else if goalProgress >= 1 {
-                        Text("Goal reached")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.solarGold)
-                    }
-
-                    HStack(spacing: 4) {
-                        Text("\(Int(goalProgress * 100))% of goal")
-                            .font(.bigDoseHeader(.title2).weight(.semibold))
-                            .foregroundStyle(.solarGold)
-                        InfoCircleButton(topic: .sessionGoal, compact: true)
-                    }
-
-                    HStack(spacing: 4) {
-                        Text("MED used (burn risk): \(medUsedPercent)%")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(medUsedColor)
-                        if medUsedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
-                            Text("OVER")
-                                .font(.caption2.weight(.black))
-                                .foregroundStyle(.red)
-                        }
-                        InfoCircleButton(topic: .medUsed, compact: true)
-                    }
+                if showsOverBadge {
+                    Text("OVER")
+                        .font(.system(size: 8, weight: .black))
+                        .foregroundStyle(Color.gpRedPink)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.gpRedPink.opacity(0.18), in: .capsule)
                 }
             }
-            .frame(height: 330)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Sun session timer, \(Int(estimatedIU.rounded())) of \(Int(plan.targetIU.rounded())) IU, \(Int(goalProgress * 100)) percent of goal")
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity)
+            .frame(height: 38)
+
+            HStack(alignment: .top, spacing: 3) {
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+
+                if let infoTopic {
+                    InfoCircleButton(topic: infoTopic, compact: true)
+                        .padding(.top, 1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(height: 32, alignment: .top)
         }
+        .frame(maxWidth: .infinity, minHeight: 108, maxHeight: 108)
+        .padding(.horizontal, 6)
+        .bigDoseGlass(cornerRadius: 18)
+    }
+
+    private func valueFont(monospaced: Bool) -> Font {
+        if monospaced {
+            .system(size: 30, weight: .semibold, design: .monospaced)
+        } else {
+            .bigDoseDisplay(42)
+        }
+    }
+
+    private func countdownText(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded(.down)))
+        let minutes = total / 60
+        let remainder = total % 60
+        return "\(minutes):\(String(format: "%02d", remainder))"
+    }
+
+    private var dialAccessibilityLabel: String {
+        "Sun session timer, \(Int(estimatedIU.rounded())) of \(Int(plan.targetIU.rounded())) IU, \(Int(goalProgressUncapped * 100)) percent of goal"
     }
 
     private var medUsedColor: Color {
@@ -324,105 +637,108 @@ struct ActiveSunSessionView: View {
         }
     }
 
-    private var controls: some View {
-        HStack(alignment: .center, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 4) {
-                    Text("\(plan.medRemainingMinutes(at: elapsedSeconds))")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.green)
-                    InfoCircleButton(topic: .minToMED, compact: true)
-                }
-
-                Text("min to MED (burn risk)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.62))
-            }
-
-            Spacer()
-
-            Button {
+    private var sessionControls: some View {
+        HStack(spacing: 28) {
+            SessionControlButton(style: .pause(isPaused: isPaused)) {
                 withAnimation(.smooth) {
                     isPaused.toggle()
                 }
-            } label: {
-                Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .background {
-                        Circle()
-                            .fill(isPaused ? AnyShapeStyle(Color.green) : AnyShapeStyle(.blue.gradient))
-                    }
             }
-            .accessibilityLabel(isPaused ? "Resume session" : "Pause session")
 
-            Button {
+            SessionControlButton(style: .stop) {
                 isShowingStopConfirmation = true
-            } label: {
-                Image(systemName: "stop.fill")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .background(Color.red, in: .circle)
             }
-            .accessibilityLabel("Stop and save session")
         }
-        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
     }
 
     private var modifiersCard: some View {
-        GlassCard(cornerRadius: 24) {
-            VStack(spacing: 12) {
-                Button {
-                    isShowingSkinCoverage = true
-                } label: {
-                    sessionRow(
-                        "Skin Coverage",
-                        SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
-                        "person.fill"
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Divider().overlay(.white.opacity(0.12))
-
-                Menu {
-                    ForEach(CloudCoverPreset.allCases) { preset in
-                        Button(preset.title) {
-                            plan.cloudCover = preset
-                        }
-                    }
-                } label: {
-                    sessionRow("Clouds", plan.cloudCover.title, "cloud.sun.fill")
-                }
-
-                Divider().overlay(.white.opacity(0.12))
-
-                Button {
-                    isShowingGoalPicker = true
-                } label: {
-                    sessionRow("Goal", "\(Int(plan.targetIU.rounded())) IU", "target")
-                }
-                .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            Button {
+                isShowingSkinCoverage = true
+            } label: {
+                sessionModifierRow(
+                    title: "Skin Coverage",
+                    value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
+                    icon: "person.fill"
+                )
             }
+            .buttonStyle(.plain)
+
+            modifierDivider
+
+            Menu {
+                ForEach(CloudCoverPreset.allCases) { preset in
+                    Button(preset.title) {
+                        plan.cloudCover = preset
+                    }
+                }
+            } label: {
+                sessionModifierRow(
+                    title: "Clouds",
+                    value: plan.cloudCover.title,
+                    icon: "cloud.sun.fill"
+                )
+            }
+
+            modifierDivider
+
+            Button {
+                isShowingGoalPicker = true
+            } label: {
+                sessionModifierRow(
+                    title: "Goal",
+                    value: "\(Int(plan.targetIU.rounded())) IU",
+                    icon: "target"
+                )
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.vertical, 6)
+        .bigDoseGlass(cornerRadius: 24)
     }
 
-    private func sessionRow(_ title: String, _ value: String, _ icon: String) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .foregroundStyle(.white)
-            Spacer()
-            Text(value)
-                .font(.bigDoseHeader(.headline).weight(.semibold))
-                .foregroundStyle(.white.opacity(0.68))
-                .multilineTextAlignment(.trailing)
-            Image(systemName: "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white.opacity(0.42))
+    private var modifierDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.08))
+            .frame(height: 1)
+            .padding(.horizontal, 18)
+    }
+
+    private func sessionModifierRow(title: String, value: String, icon: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.07))
+                    .frame(width: 38, height: 38)
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.solarGold)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.uppercased())
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.3)
+                    .foregroundStyle(.white.opacity(0.38))
+
+                Text(value)
+                    .font(.bigDoseHeader(.headline))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white.opacity(0.28))
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .contentShape(.rect)
     }
 
     private func restoreSessionStateIfNeeded() {
@@ -431,21 +747,126 @@ struct ActiveSunSessionView: View {
             return
         }
 
+        if ActiveSessionRecoveryService.needsRecovery(for: record) {
+            elapsedSeconds = ActiveSessionRecoveryService.restoredElapsedSeconds(for: record)
+            isPaused = true
+            isShowingInactivityRecoveryAlert = true
+            restoreAcknowledgedSafetyAlerts(from: record)
+            return
+        }
+
         elapsedSeconds = max(elapsedSeconds, record.currentElapsed())
         isPaused = record.isPaused
+        restoreAcknowledgedSafetyAlerts(from: record)
+        syncHistoricalSafetyAcknowledgements()
+    }
+
+    private func resumeAfterInactivityRecovery() {
+        withAnimation(.smooth) {
+            isPaused = false
+        }
+        persistSessionState()
+        syncLiveActivity()
+        Task {
+            await refreshSessionSafetyNotifications()
+            await refreshActiveSessionReminder()
+        }
+        evaluateSessionAlerts()
+        evaluateStaleSessionAlert()
     }
 
     private func persistSessionState() {
         ActiveSunSessionPersistence.persist(
             plan: plan,
             elapsedSeconds: elapsedSeconds,
-            isPaused: isPaused
+            isPaused: isPaused,
+            acknowledgedSafetyAlertIDs: currentAcknowledgedSafetyAlertIDs()
         )
         BigDoseWidgetActiveSessionUpdater.publish(
             plan: plan,
             elapsedSeconds: elapsedSeconds,
             isPaused: isPaused
         )
+        Task { await refreshActiveSessionReminder() }
+    }
+
+    private func currentAcknowledgedSafetyAlertIDs() -> [String] {
+        var ids: [String] = []
+        if didShowGoalReachedAlert { ids.append(ActiveSunSessionSafetyAlertID.goalReached) }
+        if didShowTurnOverAlert { ids.append(ActiveSunSessionSafetyAlertID.turnOver) }
+        if didShowMedWarningAlert { ids.append(ActiveSunSessionSafetyAlertID.medWarning) }
+        if didShowPrepareExitAlert { ids.append(ActiveSunSessionSafetyAlertID.prepareExit) }
+        if didShowGuidanceLimitAlert {
+            ids.append(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent))
+        }
+        if didShowNannyReminderAlert {
+            ids.append(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent))
+        }
+        if didShowFullMEDAlert {
+            ids.append(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent))
+        }
+        return ids
+    }
+
+    private func restoreAcknowledgedSafetyAlerts(from record: ActiveSunSessionRecord) {
+        applyAcknowledgedSafetyAlertIDs(Set(record.acknowledgedSafetyAlertIDs))
+    }
+
+    private func syncHistoricalSafetyAcknowledgements() {
+        var ids = Set(currentAcknowledgedSafetyAlertIDs())
+
+        if plan.hasReachedGoal(at: elapsedSeconds) {
+            ids.insert(ActiveSunSessionSafetyAlertID.goalReached)
+        }
+        if elapsedSeconds >= plan.turnOverAlertSeconds {
+            ids.insert(ActiveSunSessionSafetyAlertID.turnOver)
+        }
+        if elapsedSeconds >= plan.medWarningSeconds {
+            ids.insert(ActiveSunSessionSafetyAlertID.medWarning)
+        }
+        if wantsNannyMode {
+            if elapsedSeconds >= plan.prepareExitAlertSeconds {
+                ids.insert(ActiveSunSessionSafetyAlertID.prepareExit)
+            }
+
+            let currentMedPercent = medUsedPercent
+            if currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
+                ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent))
+            }
+            if currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent {
+                ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent))
+            }
+            if plan.hasReachedFullMED(at: elapsedSeconds) {
+                ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent))
+            }
+        }
+
+        let previousIDs = Set(currentAcknowledgedSafetyAlertIDs())
+        guard ids != previousIDs else { return }
+
+        applyAcknowledgedSafetyAlertIDs(ids)
+        persistSessionState()
+    }
+
+    private func applyAcknowledgedSafetyAlertIDs(_ ids: Set<String>) {
+        didShowGoalReachedAlert = ids.contains(ActiveSunSessionSafetyAlertID.goalReached)
+        didShowTurnOverAlert = ids.contains(ActiveSunSessionSafetyAlertID.turnOver)
+        didShowMedWarningAlert = ids.contains(ActiveSunSessionSafetyAlertID.medWarning)
+        didShowPrepareExitAlert = ids.contains(ActiveSunSessionSafetyAlertID.prepareExit)
+        didShowGuidanceLimitAlert = ids.contains(
+            ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+        )
+        didShowNannyReminderAlert = ids.contains(
+            ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+        )
+        didShowFullMEDAlert = ids.contains(
+            ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent)
+        )
+    }
+
+    private func markSafetyAlertShown(_ alertID: String) {
+        applyAcknowledgedSafetyAlertIDs(Set(currentAcknowledgedSafetyAlertIDs() + [alertID]))
+        persistSessionState()
     }
 
     private func syncLiveActivity() {
@@ -507,6 +928,7 @@ struct ActiveSunSessionView: View {
         backgroundLiveActivitySyncTask?.cancel()
         backgroundLiveActivitySyncTask = nil
         SessionSafetyNotificationService.cancelSessionNotifications()
+        ActiveSessionReminderService.cancel()
 
         let result = SunSessionResult(
             plan: plan,
@@ -526,6 +948,7 @@ struct ActiveSunSessionView: View {
         backgroundLiveActivitySyncTask?.cancel()
         backgroundLiveActivitySyncTask = nil
         SessionSafetyNotificationService.cancelSessionNotifications()
+        ActiveSessionReminderService.cancel()
         SunSessionSessionCleanup.finishSession(clearPendingCommandFor: plan.liveActivitySessionID)
         onCancel()
     }
@@ -534,35 +957,80 @@ struct ActiveSunSessionView: View {
         await SessionSafetyNotificationService.schedule(
             for: plan,
             enabled: wantsSessionSafetyAlerts,
-            wantsNannyMode: wantsNannyMode
+            wantsNannyMode: wantsNannyMode,
+            elapsedSeconds: elapsedSeconds
         )
+    }
+
+    private func refreshActiveSessionReminder() async {
+        await ActiveSessionReminderService.schedule(
+            for: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused,
+            enabled: wantsActiveSessionReminders
+        )
+    }
+
+    private func evaluateStaleSessionAlert() {
+        guard !sessionEnded, !isShowingFirstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
+        guard activeAlert == nil, !isShowingStopConfirmation else { return }
+        guard ActiveSessionReminderService.isStale(
+            for: plan,
+            elapsedSeconds: elapsedSeconds,
+            isPaused: isPaused
+        ) else { return }
+
+        isShowingStaleSessionAlert = true
+    }
+
+    private func evaluateSessionAlerts() {
+        guard !isShowingFirstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
+        guard activeAlert == nil else { return }
+        evaluateGoalAlert()
+        guard activeAlert == nil else { return }
+        evaluateSafetyAlerts()
+    }
+
+    private func evaluateGoalAlert() {
+        guard !didShowGoalReachedAlert else { return }
+        guard plan.hasReachedGoal(at: elapsedSeconds) else { return }
+
+        markSafetyAlertShown(ActiveSunSessionSafetyAlertID.goalReached)
+        activeAlert = .goalReached
     }
 
     private func evaluateSafetyAlerts() {
         guard wantsSessionSafetyAlerts else { return }
+
         if !didShowTurnOverAlert, elapsedSeconds >= plan.turnOverAlertSeconds {
-            didShowTurnOverAlert = true
+            markSafetyAlertShown(ActiveSunSessionSafetyAlertID.turnOver)
             activeAlert = .turnOver
             SessionSafetyNotificationService.cancelTurnOverNotification()
+            return
         }
 
         if !didShowMedWarningAlert, elapsedSeconds >= plan.medWarningSeconds {
-            didShowMedWarningAlert = true
+            markSafetyAlertShown(ActiveSunSessionSafetyAlertID.medWarning)
             activeAlert = .medWarning
             SessionSafetyNotificationService.cancelMedWarningNotification()
+            return
         }
 
+        guard wantsNannyMode else { return }
+
         if !didShowPrepareExitAlert, elapsedSeconds >= plan.prepareExitAlertSeconds {
-            didShowPrepareExitAlert = true
+            markSafetyAlertShown(ActiveSunSessionSafetyAlertID.prepareExit)
             activeAlert = .prepareExit(countdown: plan.prepareExitCountdownText)
             SessionSafetyNotificationService.cancelPrepareExitNotification()
+            return
         }
 
         let currentMedPercent = medUsedPercent
-        guard activeAlert == nil else { return }
 
         if !didShowGuidanceLimitAlert, currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
-            didShowGuidanceLimitAlert = true
+            markSafetyAlertShown(
+                ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+            )
             activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
             SessionSafetyNotificationService.cancelOverLimitNotification(
                 for: SunSessionSafetyThresholds.guidanceLimitPercent
@@ -570,13 +1038,25 @@ struct ActiveSunSessionView: View {
             return
         }
 
-        guard wantsNannyMode else { return }
-        guard !didShowNannyReminderAlert, currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent else { return }
+        if !didShowNannyReminderAlert, currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent {
+            markSafetyAlertShown(
+                ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+            )
+            activeAlert = .overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+            SessionSafetyNotificationService.cancelOverLimitNotification(
+                for: SunSessionSafetyThresholds.nannyReminderPercent
+            )
+            return
+        }
 
-        didShowNannyReminderAlert = true
-        activeAlert = .overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+        guard !didShowFullMEDAlert, plan.hasReachedFullMED(at: elapsedSeconds) else { return }
+
+        markSafetyAlertShown(
+            ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent)
+        )
+        activeAlert = .overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent)
         SessionSafetyNotificationService.cancelOverLimitNotification(
-            for: SunSessionSafetyThresholds.nannyReminderPercent
+            for: SunSessionSafetyThresholds.fullMEDPercent
         )
     }
 
@@ -585,6 +1065,8 @@ struct ActiveSunSessionView: View {
             "Past guidance limit"
         } else if percent == SunSessionSafetyThresholds.nannyReminderPercent {
             "Still in the sun — 98% MED (burn risk)"
+        } else if percent == SunSessionSafetyThresholds.fullMEDPercent {
+            "100% MED (burn risk) — stop now"
         } else {
             "Still in the sun — \(percent)% MED (burn risk)"
         }
@@ -602,6 +1084,7 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
     case medWarning
     case prepareExit(countdown: String)
     case overLimit(percent: Int)
+    case goalReached
 
     var id: String {
         switch self {
@@ -613,12 +1096,14 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
             "prepareExit"
         case .overLimit(let percent):
             "overLimit.\(percent)"
+        case .goalReached:
+            "goalReached"
         }
     }
 
     var feedbackKind: BigDoseAlertFeedback.Kind {
         switch self {
-        case .turnOver, .medWarning, .prepareExit:
+        case .turnOver, .medWarning, .prepareExit, .goalReached:
             .warning
         case .overLimit:
             .critical

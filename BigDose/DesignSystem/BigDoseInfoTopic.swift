@@ -5,6 +5,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
     case riskUsed
     case med
     case minToMED
+    case minToRollOver
     case medUsed
     case sessionGoal
     case skinType
@@ -30,6 +31,8 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
     case typicalSkinExposure
     case usualSunscreen
     case casualOutdoorTime
+    case incidentalDaylight
+    case importedSun
     case dailyIUTarget
 
     var id: String { rawValue }
@@ -44,8 +47,10 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             "MED (burn risk)"
         case .minToMED:
             "Min to MED (burn risk)"
+        case .minToRollOver:
+            "Min to Roll-Over"
         case .medUsed:
-            "MED Used (burn risk)"
+            "MED (burn risk) Used"
         case .sessionGoal:
             "Session Goal"
         case .skinType:
@@ -94,6 +99,10 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             "Usual Sunscreen"
         case .casualOutdoorTime:
             "Casual Outdoor Time"
+        case .incidentalDaylight:
+            "Incidental Sun"
+        case .importedSun:
+            "Imported Sun"
         case .dailyIUTarget:
             "Daily IU Target"
         }
@@ -113,7 +122,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Shows how much of your personal **MED (burn risk)** a sample exposure would use — based on your **skin type**, **UV** and about **12 minutes** of sun.
 
-            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED Used (burn risk)** climb in real time instead.
+            **How to use:** **Lower is safer.** Past about **75%**, conditions are getting risky. During a live sun session, watch **MED (burn risk) Used** climb in real time instead.
 
             **Tip:** Open the **MED (burn risk)** info panel for the full burn-threshold explainer.
             """
@@ -121,7 +130,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **MED (burn risk)** — *minimal erythema dose* — is Science-based estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
 
-            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED Used (burn risk) %** and warn at **50%** (turn over), **75%** (wrap up soon) and **95%** (guidance limit). **Nanny** adds one extra reminder at **98%** while you stay out.
+            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED (burn risk) Used %** and warn at **50%** (turn over) and **75%** (wrap up soon). **Nanny** adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out.
 
             **What it is not:** A **medical measurement** or a guarantee you will or won't burn. BigDose warns — **only you stop the session**.
             """
@@ -129,17 +138,25 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Counts down the estimated **minutes until MED (burn risk)** at the current **UV**, **cloud** and **sunscreen** settings.
 
-            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose also alerts you earlier — at **75%** and **95%** of MED (burn risk).
+            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose alerts at **75%**. **Nanny** adds exit prep and a **95%** guidance alert.
 
             **Watch for:** When **UV is low**, this number can look very long — that does not mean unlimited safe exposure.
+            """
+        case .minToRollOver:
+            """
+            **What it does:** Counts down until BigDose's **turn-over** milestone — about **50% of your estimated MED (burn risk)** at the current **UV** and exposure settings.
+
+            **How to use:** When this hits zero, **flip sides**, **rotate** or **change exposure** so one area of skin does not take all the UV. BigDose also sends a **Turn over** alert at that point.
+
+            **Good to know:** Even exposure helps you reach your vitamin D goal with less burn risk on any single spot.
             """
         case .medUsed:
             """
             **What it does:** Shows how much of your estimated **MED (burn risk)** this session has used so far — based on **elapsed time**, **UV**, **skin type** and exposure settings.
 
-            **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **95%**, you are at the guidance limit — **only you stop it**. Exposure past **100%** counts toward **Sun risk today** on Home.
+            **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **95%**, you are at the guidance limit — **only you stop it**. **Nanny** alerts at **95%** and **98%**. Exposure past **100%** counts toward **Sun risk today** on Home.
 
-            **Tip:** Goal progress and **MED Used (burn risk)** measure different things — vitamin D gained vs. burn risk consumed.
+            **Tip:** Goal progress and **MED (burn risk) Used** measure different things — vitamin D gained vs. burn risk consumed.
             """
         case .sessionGoal:
             """
@@ -147,7 +164,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
 
             **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
 
-            **Good to know:** Goal progress and **MED Used (burn risk)** measure different things — vitamin D gained vs. burn risk consumed.
+            **Good to know:** Goal progress and **MED (burn risk) Used** measure different things — vitamin D gained vs. burn risk consumed.
             """
         case .skinType:
             """
@@ -235,7 +252,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **95%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
 
-            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose still alerts earlier at **50%**, **75%** and **95%** while you stay out.
+            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose alerts at **50%** and **75%** while you stay out. **Nanny** adds exit prep and the **95%** guidance alert.
 
             **What it is not:** A guarantee you will or won't burn. Use **Your Limits Today** for turn-over and exit milestones.
             """
@@ -275,19 +292,19 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **UVB** triggers **vitamin D production** in your skin. Sun exposure also **burns skin**, contributes to **photoaging** and raises **long-term skin cancer risk** with repeated overexposure.
 
-            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED Used (burn risk)**, warn at **50%**, **75%** and **95%** and stay vigilant about when to come out of the sun — **only you stop the session**.
+            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED (burn risk) Used**, warn at **50%** and **75%** and stay vigilant about when to come out of the sun — **only you stop the session**.
 
-            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds one extra reminder at **98% MED (burn risk)** while you stay out. Turn it off anytime for the **95%** guidance alert only — over-limit tracking still applies past **100%**.
+            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out. Turn it off anytime for **50%** and **75%** warnings only — over-limit tracking still applies past **100%**.
 
             **What it is not:** Medical-grade sun protection or a guarantee you will or won't burn. Use shade, clothing and sunscreen beyond what BigDose models.
             """
         case .sessionSafetyAlerts:
             """
-            **What it does:** **Turn-over**, **wrap-up** and **guidance-limit** alerts during live sun sessions — plus matching **background notifications** when the app is closed.
+            **What it does:** **Turn-over** and **wrap-up** alerts during live sun sessions — plus matching **background notifications** when the app is closed. **Nanny** adds exit prep and **guidance-limit** alerts.
 
             **How to use:** Keep this **on** unless you are confident tracking burn risk yourself. BigDose uses your **skin type** and live **UV** to personalize every threshold.
 
-            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for one extra reminder at **98% MED (burn risk)**. **Nanny** defaults **on** and can be turned off anytime.
+            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for exit prep, the **95%** guidance alert and a **98%** reminder. **Nanny** defaults **on** and can be turned off anytime.
             """
         case .labResult25OHD:
             """
@@ -353,6 +370,24 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             **How to use:** Estimate **unplanned** outdoor time. This is **not** the same as a **tracked sun session** in BigDose.
 
             **Good to know:** A **general background habit** for estimates and context — not something you set again at the start of each sun session.
+            """
+        case .incidentalDaylight:
+            """
+            **What it is:** **Incidental sun** from Apple Watch **Time in Daylight** — outdoor minutes BigDose converts to **~IU** with a **Holick estimate**.
+
+            **How to use:** Sync **Apple Health** to import one **daily total** per day. BigDose subtracts minutes already credited from **tracked sessions** and **imported workouts** so the same outdoor time is not counted twice.
+
+            **What it is not:** A lab result or measured vitamin D. Values use **assumed UV**, **lower exposed-skin defaults** and your **Dose DNA** skin type — treat as **guidance**.
+            """
+        case .importedSun:
+            """
+            **What it is:** **Imported sun** from **outdoor workouts** in Apple Health — walking, running, hiking, cycling and similar activities logged by apps like your workout tracker.
+
+            **How BigDose uses it:** Each workout becomes a **Holick estimate** in **~IU** using workout **duration**, your **Dose DNA** skin type, **typical exposed skin** and **conservative assumed UV** — not the UV at that moment.
+
+            **Good to know:** Indoor workouts and duplicates are skipped. Time already counted in **Incidental** or **Tracked** sessions is subtracted so the same outdoor minutes are not credited twice.
+
+            **What it is not:** A measured vitamin D result. Sync **Apple Health** from **Profile → Manage Data** to review or refresh imports.
             """
         }
     }

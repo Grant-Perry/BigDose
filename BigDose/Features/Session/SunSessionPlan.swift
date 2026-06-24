@@ -92,6 +92,23 @@ struct SunSessionPlan: Equatable {
         max(0, Int(((medTimeSeconds - elapsedSeconds) / 60).rounded()))
     }
 
+    func medRemainingSeconds(at elapsedSeconds: TimeInterval) -> TimeInterval {
+        max(0, medTimeSeconds - elapsedSeconds)
+    }
+
+    func turnOverRemainingMinutes(at elapsedSeconds: TimeInterval) -> Int {
+        max(0, Int(((turnOverAlertSeconds - elapsedSeconds) / 60).rounded()))
+    }
+
+    func turnOverRemainingSeconds(at elapsedSeconds: TimeInterval) -> TimeInterval {
+        max(0, turnOverAlertSeconds - elapsedSeconds)
+    }
+
+    /// Estimated minutes to reach the session IU goal at the current production rate.
+    var goalDurationMinutes: Int {
+        max(1, Int(ceil(goalDurationSeconds / 60)))
+    }
+
     func safetyAlertMessage(for alert: SunSessionSafetyAlertKind, elapsedSeconds: TimeInterval) -> String {
         let medPercent = medUsedPercent(at: elapsedSeconds)
         let skin = skinType.title
@@ -105,6 +122,10 @@ struct SunSessionPlan: Equatable {
             return "You are at about \(medPercent)% of MED (burn risk). Start heading inside — your recommended stop point is in \(countdown)."
         case .overLimit(let percent):
             return overLimitAlertMessage(for: percent)
+        case .goalReached:
+            let currentIU = Int(estimatedIU(at: elapsedSeconds).rounded())
+            let goalIU = Int(targetIU.rounded())
+            return "You hit your \(goalIU) IU goal at about \(currentIU) IU. Vitamin D keeps accumulating while you stay out — burn risk does too."
         }
     }
 
@@ -112,6 +133,9 @@ struct SunSessionPlan: Equatable {
         let skin = skinType.title
         if percent == SunSessionSafetyThresholds.guidanceLimitPercent {
             return "You are at about \(percent)% of your estimated MED (burn risk) for \(skin) skin — BigDose's conservative guidance limit. Ending now is the safer call, but only you can stop this session."
+        }
+        if percent == SunSessionSafetyThresholds.fullMEDPercent {
+            return "You have used your full estimated MED (burn risk) for \(skin) skin at this UV — the dose that would start to redden skin. Staying out any longer is strongly ill-advised. Continued exposure adds real burn and skin cancer risk. Only you can stop this session."
         }
         return "You are at about \(percent)% of your estimated MED (burn risk) for \(skin) skin — past BigDose's guidance limit. Continued exposure adds burn and skin cancer risk. Only you can stop this session."
     }
@@ -123,7 +147,21 @@ struct SunSessionPlan: Equatable {
 
     func goalProgress(at elapsedSeconds: TimeInterval) -> Double {
         guard targetIU > 0 else { return 0 }
-        return min(estimatedIU(at: elapsedSeconds) / targetIU, 1)
+        return min(goalProgressUncapped(at: elapsedSeconds), 1)
+    }
+
+    func goalProgressUncapped(at elapsedSeconds: TimeInterval) -> Double {
+        guard targetIU > 0 else { return 0 }
+        return estimatedIU(at: elapsedSeconds) / targetIU
+    }
+
+    /// Ring fraction where estimated MED (burn risk) reaches 100% at current UV and settings.
+    var goalProgressAtFullMED: Double {
+        goalProgressUncapped(at: medTimeSeconds)
+    }
+
+    func hasReachedFullMED(at elapsedSeconds: TimeInterval) -> Bool {
+        medUsedFraction(at: elapsedSeconds) >= 1
     }
 
     func minutesToGoal(at elapsedSeconds: TimeInterval) -> Int? {
@@ -176,9 +214,8 @@ struct SunSessionPlan: Equatable {
     }
 
     var turnOverAlertSeconds: TimeInterval {
-        let halfSession = durationSeconds / 2
-        guard medTimeSeconds > 0 else { return halfSession }
-        return min(halfSession, medTimeSeconds * 0.5)
+        guard medTimeSeconds > 0 else { return durationSeconds / 2 }
+        return medTimeSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
     }
 
     var medWarningSeconds: TimeInterval {
@@ -250,6 +287,7 @@ enum SunSessionSafetyAlertKind {
     case medWarning
     case prepareExit(countdown: String)
     case overLimit(percent: Int)
+    case goalReached
 }
 
 struct SunSessionResult: Equatable {

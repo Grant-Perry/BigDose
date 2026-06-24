@@ -118,6 +118,8 @@ struct ExposureSessionDTO: Codable {
     var estimatedIU: Double
     var peakMedUsedPercent: Int
     var medOverLimitPercent: Int
+    var cloudCoverRaw: String
+    var skinTypeRaw: String
     var exposedBodySurfaceArea: Double
     var sunscreenFactor: Double
     var source: ExposureSource
@@ -136,6 +138,8 @@ struct ExposureSessionDTO: Codable {
         estimatedIU = model.estimatedIU
         peakMedUsedPercent = model.peakMedUsedPercent
         medOverLimitPercent = model.medOverLimitPercent
+        cloudCoverRaw = model.cloudCoverRaw
+        skinTypeRaw = model.skinTypeRaw
         exposedBodySurfaceArea = model.exposedBodySurfaceArea
         sunscreenFactor = model.sunscreenFactor
         source = model.source
@@ -156,6 +160,8 @@ struct ExposureSessionDTO: Codable {
             estimatedIU: estimatedIU,
             peakMedUsedPercent: peakMedUsedPercent,
             medOverLimitPercent: medOverLimitPercent,
+            cloudCoverRaw: cloudCoverRaw,
+            skinTypeRaw: skinTypeRaw,
             exposedBodySurfaceArea: exposedBodySurfaceArea,
             sunscreenFactor: sunscreenFactor,
             source: source,

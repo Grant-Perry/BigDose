@@ -48,17 +48,6 @@ private struct ProfileContent: View {
             }
             .navigationTitle("Profile")
             .toolbarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView(profile: profile)
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                    }
-                    .accessibilityLabel("Settings")
-                }
-            }
         }
     }
 

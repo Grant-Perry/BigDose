@@ -7,6 +7,7 @@ struct HealthImportView: View {
     @Query(sort: \HealthImportBatch.importedAt, order: .reverse) private var importBatches: [HealthImportBatch]
     @State private var service = HealthKitImportService()
     @State private var candidates: [HealthWorkoutImportCandidate] = []
+    @State private var daylightPreview: DaylightImportPreview?
     @State private var isLoading = false
     @State private var statusMessage = "Review outdoor workouts from the last 90 days before BigDose counts them."
     @State private var highlightedBatchDate: Date?
@@ -47,6 +48,10 @@ struct HealthImportView: View {
                             candidateRow(candidate)
                         }
                     }
+
+                    if let daylightPreview, daylightPreview.daysWithDaylight > 0 {
+                        daylightPreviewCard(daylightPreview)
+                    }
                 }
                 .padding(18)
                 .padding(.bottom, 40)
@@ -76,7 +81,7 @@ struct HealthImportView: View {
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("BigDose reads workouts only after permission. Outdoor workouts are imported with a visible confidence note and conservative vitamin D assumptions.")
+                Text("BigDose reads workouts and Apple Watch Time in Daylight after permission. Outdoor workouts are imported with a visible confidence note. Time in Daylight becomes one daily incidental sun row per day using a Holick estimate.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
@@ -90,14 +95,14 @@ struct HealthImportView: View {
                 Button {
                     commitImport()
                 } label: {
-                    Label("Import Selected Workouts", systemImage: "checkmark.circle.fill")
+                    Label("Import from Apple Health", systemImage: "checkmark.circle.fill")
                         .font(.bigDoseHeader(.headline).weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
                 .buttonStyle(.bordered)
                 .tint(.solarGold)
-                .disabled(candidates.filter(\.shouldImport).isEmpty)
+                .disabled(candidates.filter(\.shouldImport).isEmpty && (daylightPreview?.daysWithDaylight ?? 0) == 0)
             }
         }
     }
@@ -114,6 +119,12 @@ struct HealthImportView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
 
+                    if batch.daylightDayCount > 0 {
+                        Text("\(batch.daylightDayCount) daylight days synced")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
                     Label("View import log", systemImage: "chevron.right")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.solarGold)
@@ -128,6 +139,33 @@ struct HealthImportView: View {
                 Text("items")
                     .font(.bigDoseHeader(.headline).weight(.bold))
                     .foregroundStyle(.white.opacity(0.68))
+            }
+        }
+    }
+
+    private func daylightPreviewCard(_ preview: DaylightImportPreview) -> some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Time in Daylight")
+                    .font(.bigDoseHeader(.headline).weight(.black))
+                    .foregroundStyle(.white)
+
+                Text("\(preview.daysWithDaylight) days with incidental daylight in the last \(preview.lookbackDays) days. BigDose will add one daily History row per day using a Holick estimate after subtracting workouts and tracked sessions.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack {
+                    Text("~\(Int(preview.totalEstimatedIU.rounded())) IU total")
+                        .font(.bigDoseHeader(.headline).weight(.black))
+                        .foregroundStyle(.solarGold)
+
+                    Spacer()
+
+                    Text("\(Int(preview.totalNetMinutes.rounded())) min net")
+                        .font(.caption.weight(.black))
+                        .foregroundStyle(.white.opacity(0.62))
+                }
             }
         }
     }
@@ -173,10 +211,22 @@ struct HealthImportView: View {
             profile?.healthKitImportStatus = .authorized
             let existingIDs = Set(importedItems.map(\.externalIdentifier))
             candidates = try await service.fetchWorkoutCandidates(existingIDs: existingIDs)
-            statusMessage = candidates.isEmpty ? "No recent workouts were found in Apple Health." : "Review what BigDose found before importing."
+
+            if let profile {
+                daylightPreview = try await service.fetchDaylightPreview(profile: profile, modelContext: modelContext)
+            } else {
+                daylightPreview = nil
+            }
+
+            if candidates.isEmpty && (daylightPreview?.daysWithDaylight ?? 0) == 0 {
+                statusMessage = "No recent workouts or Time in Daylight were found in Apple Health."
+            } else {
+                statusMessage = "Review what BigDose found before importing."
+            }
             try? modelContext.save()
         } catch {
             profile?.healthKitImportStatus = .failed
+            daylightPreview = nil
             statusMessage = error.localizedDescription
             try? modelContext.save()
         }
@@ -184,10 +234,17 @@ struct HealthImportView: View {
 
     private func commitImport() {
         guard let profile else { return }
-        let result = service.commit(candidates: candidates, profile: profile, modelContext: modelContext)
-        highlightedBatchDate = result.importedAt
-        candidates.removeAll()
-        statusMessage = "Import complete. Tap Latest Import to review what was imported."
+        Task {
+            let result = await service.commit(candidates: candidates, profile: profile, modelContext: modelContext)
+            highlightedBatchDate = result.importedAt
+            candidates.removeAll()
+            daylightPreview = nil
+            if result.daylightDayCount > 0 {
+                statusMessage = "Import complete. \(result.daylightDayCount) daylight days synced. Tap Latest Import to review."
+            } else {
+                statusMessage = "Import complete. Tap Latest Import to review what was imported."
+            }
+        }
     }
 }
 

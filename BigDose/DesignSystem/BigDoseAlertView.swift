@@ -163,7 +163,7 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
                     trailingImageName: trailingImageName
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.94)))
-                .zIndex(1)
+                .zIndex(999)
             }
         }
         .animation(.smooth(duration: 0.28), value: isPresented)
@@ -193,7 +193,7 @@ private struct BigDoseAlertItemModifier<Item: Identifiable & Equatable>: ViewMod
                     actions: wrappedActions(for: alertContent.actions)
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.94)))
-                .zIndex(1)
+                .zIndex(999)
             }
         }
         .animation(.smooth(duration: 0.28), value: item)
