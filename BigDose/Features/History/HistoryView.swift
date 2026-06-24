@@ -248,7 +248,7 @@ struct HistoryView: View {
         HStack(alignment: .center, spacing: TodayLedgerLayout.rowSpacing) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.gpDeltaPurple)
+                .foregroundStyle(Color.gpRedPink)
                 .frame(width: TodayLedgerLayout.iconWidth, height: TodayLedgerLayout.rowMinHeight, alignment: .center)
 
             Text("Past 100% MED")
@@ -259,7 +259,7 @@ struct HistoryView: View {
 
             Text(SunSessionDurationFormatting.compact(seconds))
                 .font(.system(size: 22, weight: .black))
-                .foregroundStyle(Color.gpDeltaPurple)
+                .foregroundStyle(Color.gpRedPink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(width: TodayLedgerLayout.valueWidth, alignment: .trailing)
