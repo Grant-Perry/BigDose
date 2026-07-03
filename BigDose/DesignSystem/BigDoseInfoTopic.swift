@@ -130,7 +130,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **MED (burn risk)** — *minimal erythema dose* — is Science-based estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
 
-            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED (burn risk) Used %** and warn at **50%** (turn over) and **75%** (wrap up soon). **Nanny** adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out.
+            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED (burn risk) Used %** and warn at **50%** (turn over). **Nanny** adds **75%** (wrap up soon), the **95%** guidance alert and a **98%** reminder while you stay out.
 
             **What it is not:** A **medical measurement** or a guarantee you will or won't burn. BigDose warns — **only you stop the session**.
             """
@@ -138,7 +138,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Counts down the estimated **minutes until MED (burn risk)** at the current **UV**, **cloud** and **sunscreen** settings.
 
-            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. BigDose alerts at **75%**. **Nanny** adds exit prep and a **95%** guidance alert.
+            **How to use:** Plan to **turn over**, **seek shade** or **end the session** before this hits zero. **Nanny** alerts at **75%** (wrap up) and adds a **95%** guidance alert.
 
             **Watch for:** When **UV is low**, this number can look very long — that does not mean unlimited safe exposure.
             """
@@ -154,7 +154,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Shows how much of your estimated **MED (burn risk)** this session has used so far — based on **elapsed time**, **UV**, **skin type** and exposure settings.
 
-            **How to use:** Under **50%** is comfortable headroom. Past **75%**, BigDose recommends **wrapping up**. Past **95%**, you are at the guidance limit — **only you stop it**. **Nanny** alerts at **95%** and **98%**. Exposure past **100%** counts toward **Sun risk today** on Home.
+            **How to use:** Under **50%** is comfortable headroom. **Nanny** alerts at **75%** (wrap up), **95%** and **98%**. A stop-now warning always fires at **100%** — **only you stop it**. Exposure past **100%** counts toward **Sun risk today** on Home.
 
             **Tip:** Goal progress and **MED (burn risk) Used** measure different things — vitamin D gained vs. burn risk consumed.
             """
@@ -252,7 +252,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **95%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
 
-            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose alerts at **50%** and **75%** while you stay out. **Nanny** adds exit prep and the **95%** guidance alert.
+            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose alerts at **50%** while you stay out. **Nanny** adds **75%** wrap-up and the **95%** guidance alert.
 
             **What it is not:** A guarantee you will or won't burn. Use **Your Limits Today** for turn-over and exit milestones.
             """
@@ -292,19 +292,19 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **UVB** triggers **vitamin D production** in your skin. Sun exposure also **burns skin**, contributes to **photoaging** and raises **long-term skin cancer risk** with repeated overexposure.
 
-            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED (burn risk) Used**, warn at **50%** and **75%** and stay vigilant about when to come out of the sun — **only you stop the session**.
+            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED (burn risk) Used**, warn at **50%** and stay vigilant about when to come out of the sun — **only you stop the session**.
 
-            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out. Turn it off anytime for **50%** and **75%** warnings only — over-limit tracking still applies past **100%**.
+            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds **75%** wrap-up, the **95%** guidance alert and a **98%** reminder while you stay out. Turn it off anytime for **50%** turn-over only — over-limit tracking still applies past **100%**.
 
             **What it is not:** Medical-grade sun protection or a guarantee you will or won't burn. Use shade, clothing and sunscreen beyond what BigDose models.
             """
         case .sessionSafetyAlerts:
             """
-            **What it does:** **Turn-over** and **wrap-up** alerts during live sun sessions — plus matching **background notifications** when the app is closed. **Nanny** adds exit prep and **guidance-limit** alerts.
+            **What it does:** **Turn-over** and **stop-now** alerts during live sun sessions — plus matching **background notifications** when the app is closed. **Nanny** adds **75%** wrap-up and **guidance-limit** alerts.
 
             **How to use:** Keep this **on** unless you are confident tracking burn risk yourself. BigDose uses your **skin type** and live **UV** to personalize every threshold.
 
-            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for exit prep, the **95%** guidance alert and a **98%** reminder. **Nanny** defaults **on** and can be turned off anytime.
+            **Good to know:** Pair with **Nanny** in **Settings → Session Safety** for **75%** wrap-up, the **95%** guidance alert and a **98%** reminder. **Nanny** defaults **on** and can be turned off anytime.
             """
         case .labResult25OHD:
             """

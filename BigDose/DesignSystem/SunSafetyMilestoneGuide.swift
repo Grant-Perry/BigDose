@@ -21,7 +21,7 @@ struct SunSafetyMilestoneGuide: View {
                     icon: "figure.walk",
                     title: "Wrap up",
                     detail: "~75% of MED (burn risk)",
-                    note: "Start heading inside or into shade."
+                    note: "Start heading inside or into shade. Requires Nanny in Settings → Session Safety."
                 )
                 milestoneRow(
                     icon: "hand.raised.fill",

@@ -10,17 +10,17 @@ enum SessionSafetyNotificationService {
         "bigdose.session.overLimit.\(percent)"
     }
 
-    private static var overLimitPercents: [Int] {
+    private static var nannyOverLimitPercents: [Int] {
         [
             SunSessionSafetyThresholds.guidanceLimitPercent,
-            SunSessionSafetyThresholds.nannyReminderPercent,
-            SunSessionSafetyThresholds.fullMEDPercent
+            SunSessionSafetyThresholds.nannyReminderPercent
         ]
     }
 
     private static var sessionIdentifiers: [String] {
         var identifiers = [turnOverIdentifier, medWarningIdentifier, prepareExitIdentifier]
-        identifiers.append(contentsOf: overLimitPercents.map(overLimitIdentifier(for:)))
+        identifiers.append(overLimitIdentifier(for: SunSessionSafetyThresholds.fullMEDPercent))
+        identifiers.append(contentsOf: nannyOverLimitPercents.map(overLimitIdentifier(for:)))
         return identifiers
     }
 
@@ -52,23 +52,27 @@ enum SessionSafetyNotificationService {
                 seconds: remainingSeconds(until: plan.turnOverAlertSeconds, elapsedSeconds: elapsedSeconds)
             )
 
+            if wantsNannyMode {
+                await schedule(
+                    identifier: medWarningIdentifier,
+                    title: "Approaching exposure limit",
+                    body: "About 75% of your estimated MED (burn risk) for \(skin) skin at this UV. Consider wrapping up soon.",
+                    seconds: remainingSeconds(until: plan.medWarningSeconds, elapsedSeconds: elapsedSeconds)
+                )
+            }
+
             await schedule(
-                identifier: medWarningIdentifier,
-                title: "Approaching exposure limit",
-                body: "About 75% of your estimated MED (burn risk) for \(skin) skin at this UV. Consider wrapping up soon.",
-                seconds: remainingSeconds(until: plan.medWarningSeconds, elapsedSeconds: elapsedSeconds)
+                identifier: overLimitIdentifier(for: SunSessionSafetyThresholds.fullMEDPercent),
+                title: overLimitNotificationTitle(for: SunSessionSafetyThresholds.fullMEDPercent),
+                body: plan.overLimitAlertMessage(for: SunSessionSafetyThresholds.fullMEDPercent),
+                seconds: remainingSeconds(
+                    until: plan.secondsToReachMedPercent(SunSessionSafetyThresholds.fullMEDPercent),
+                    elapsedSeconds: elapsedSeconds
+                )
             )
 
             if wantsNannyMode {
-                let exitCountdown = plan.prepareExitCountdownText
-                await schedule(
-                    identifier: prepareExitIdentifier,
-                    title: "Get ready to exit sun",
-                    body: "Past 75% of MED (burn risk) — start heading inside. Guidance limit in \(exitCountdown).",
-                    seconds: remainingSeconds(until: plan.prepareExitAlertSeconds, elapsedSeconds: elapsedSeconds)
-                )
-
-                for percent in overLimitPercents {
+                for percent in nannyOverLimitPercents {
                     await schedule(
                         identifier: overLimitIdentifier(for: percent),
                         title: overLimitNotificationTitle(for: percent),
@@ -101,10 +105,6 @@ enum SessionSafetyNotificationService {
 
     static func cancelMedWarningNotification() {
         cancel(identifier: medWarningIdentifier)
-    }
-
-    static func cancelPrepareExitNotification() {
-        cancel(identifier: prepareExitIdentifier)
     }
 
     static func cancelOverLimitNotification(for percent: Int) {

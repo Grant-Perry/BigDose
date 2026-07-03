@@ -35,7 +35,12 @@ enum DailySunPlanService {
             targetIU: Double(profile.preferredDailyIU)
         )
 
-        let displayWindow = vitaminDWindowDisplay(latitude: latitude, longitude: longitude, now: now)
+        let displayWindow = vitaminDWindowDisplay(
+            latitude: latitude,
+            longitude: longitude,
+            weather: weather,
+            now: now
+        )
         let nextOpportunity = nextVitaminDOpportunity(from: displayWindow, now: now)
 
         return DailySunPlan(
@@ -68,15 +73,27 @@ enum DailySunPlanService {
     static func vitaminDWindowDisplay(
         latitude: Double,
         longitude: Double,
+        weather: BigDoseWeatherSnapshot? = nil,
         now: Date = .now
     ) -> VitaminDWindowDisplay {
         let calendar = Calendar.current
         let todayStart = calendar.startOfDay(for: now)
-        let todaySnapshot = SolarGeometryService.vitaminDWindow(
+        let todaySunEvents = weather?.preferredTodaySunEvents(calendar: calendar)
+            ?? weather?.resolvedSunEvents(on: todayStart, calendar: calendar)
+        var todaySnapshot = SolarGeometryService.vitaminDWindow(
             latitude: latitude,
             longitude: longitude,
-            date: todayStart
+            date: todayStart,
+            sunEvents: todaySunEvents
         )
+        if let todaySunEvents {
+            SunEventApplication.apply(
+                todaySunEvents,
+                to: &todaySnapshot,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
 
         if let start = todaySnapshot.windowStart,
            let end = todaySnapshot.windowEnd,
@@ -85,27 +102,73 @@ enum DailySunPlanService {
                 snapshot: todaySnapshot,
                 isToday: true,
                 nextOpportunityStart: now < start ? start : nil,
-                nextOpportunityTiming: .today
+                nextOpportunityTiming: .today,
+                previousDaylightDuration: daylightDuration(
+                    for: todaySnapshot.referenceDay,
+                    latitude: latitude,
+                    longitude: longitude,
+                    weather: weather,
+                    calendar: calendar
+                )
             )
         }
 
         let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart.addingTimeInterval(86_400)
-        let tomorrowSnapshot = SolarGeometryService.vitaminDWindow(
+        let tomorrowSunEvents = weather?.resolvedSunEvents(on: tomorrowStart, calendar: calendar)
+        var tomorrowSnapshot = SolarGeometryService.vitaminDWindow(
             latitude: latitude,
             longitude: longitude,
-            date: tomorrowStart
+            date: tomorrowStart,
+            sunEvents: tomorrowSunEvents
         )
+        if let tomorrowSunEvents {
+            SunEventApplication.apply(
+                tomorrowSunEvents,
+                to: &tomorrowSnapshot,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
 
         return VitaminDWindowDisplay(
             snapshot: tomorrowSnapshot,
             isToday: false,
             nextOpportunityStart: tomorrowSnapshot.windowStart ?? tomorrowSnapshot.solarNoon,
-            nextOpportunityTiming: .tomorrow
+            nextOpportunityTiming: .tomorrow,
+            previousDaylightDuration: todaySnapshot.daylightDuration
         )
     }
 
-    static func vitaminDWindowDisplay(for plan: DailySunPlan, now: Date = .now) -> VitaminDWindowDisplay {
-        vitaminDWindowDisplay(latitude: plan.latitude, longitude: plan.longitude, now: now)
+    private static func daylightDuration(
+        for referenceDay: Date,
+        latitude: Double,
+        longitude: Double,
+        weather: BigDoseWeatherSnapshot?,
+        calendar: Calendar
+    ) -> TimeInterval? {
+        guard let previousDay = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: referenceDay)) else {
+            return nil
+        }
+
+        let previousSunEvents = weather?.resolvedSunEvents(on: previousDay, calendar: calendar)
+        var snapshot = SolarGeometryService.vitaminDWindow(
+            latitude: latitude,
+            longitude: longitude,
+            date: previousDay
+        )
+        if let previousSunEvents {
+            SunEventApplication.apply(
+                previousSunEvents,
+                to: &snapshot,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
+        return snapshot.daylightDuration
+    }
+
+    static func vitaminDWindowDisplay(for plan: DailySunPlan, weather: BigDoseWeatherSnapshot? = nil, now: Date = .now) -> VitaminDWindowDisplay {
+        vitaminDWindowDisplay(latitude: plan.latitude, longitude: plan.longitude, weather: weather, now: now)
     }
 
     /// Best remaining sunlight highlight — never surfaces a past time as if it is still upcoming.

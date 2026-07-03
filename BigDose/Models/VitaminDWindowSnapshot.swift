@@ -24,6 +24,22 @@ struct VitaminDWindowSnapshot: Equatable {
         return BigDoseDurationComponents(duration: duration)
     }
 
+    var daylightDuration: TimeInterval? {
+        guard let sunrise, let sunset else { return nil }
+        let span = sunset.timeIntervalSince(sunrise)
+        guard span > 0 else { return nil }
+        return span
+    }
+
+    var daylightDurationComponents: BigDoseDurationComponents? {
+        guard let daylightDuration else { return nil }
+        return BigDoseDurationComponents(duration: daylightDuration)
+    }
+
+    var daylightDurationLabel: String? {
+        daylightDurationComponents?.compactLabel
+    }
+
     func remainingDuration(from now: Date = .now) -> TimeInterval? {
         guard let windowEnd else { return nil }
 
@@ -58,6 +74,7 @@ struct VitaminDWindowDisplay: Equatable {
     var isToday: Bool
     var nextOpportunityStart: Date?
     var nextOpportunityTiming: BestSunlightHighlight.Timing
+    var previousDaylightDuration: TimeInterval?
 
     var isWindowOpenNow: Bool {
         isToday && nextOpportunityStart == nil && snapshot.hasWindow
@@ -122,5 +139,53 @@ struct VitaminDWindowDisplay: Equatable {
     func remainingWindowDurationComponents(at now: Date) -> BigDoseDurationComponents? {
         guard isWindowOpenNow else { return nil }
         return snapshot.remainingDurationComponents(now: now)
+    }
+
+    var daylightDurationDeltaLabel: String {
+        guard let current = snapshot.daylightDuration else { return "" }
+        guard let previous = previousDaylightDuration else {
+            return "Compared to yesterday unavailable"
+        }
+        return Self.daylightDurationDeltaLabel(
+            current: current,
+            previous: previous,
+            referenceDayName: isToday ? "yesterday" : "today"
+        )
+    }
+
+    static func daylightDurationDeltaLabel(
+        current: TimeInterval,
+        previous: TimeInterval,
+        referenceDayName: String
+    ) -> String {
+        let delta = current - previous
+        if delta == 0 {
+            return "Same as \(referenceDayName)"
+        }
+
+        let amount = formatDaylightDeltaAmount(abs(delta))
+        if delta > 0 {
+            return "\(amount) > \(referenceDayName)"
+        }
+        return "\(amount) < \(referenceDayName)"
+    }
+
+    static func formatDaylightDeltaAmount(_ interval: TimeInterval) -> String {
+        let seconds = abs(interval)
+        if seconds < 1 {
+            return "\(max(1, Int((seconds * 1_000).rounded())))ms"
+        }
+        if seconds < 60 {
+            return "\(max(1, Int(seconds.rounded())))s"
+        }
+
+        let components = BigDoseDurationComponents(duration: seconds)
+        if components.hours > 0, components.minutes > 0 {
+            return "\(components.hours)h \(components.minutes)min"
+        }
+        if components.hours > 0 {
+            return "\(components.hours)h"
+        }
+        return "\(components.minutes)min"
     }
 }

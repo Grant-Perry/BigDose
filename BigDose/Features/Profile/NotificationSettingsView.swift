@@ -97,6 +97,18 @@ struct NotificationSettingsView: View {
     private func alertCard(_ profile: UserProfile) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(NannyModeEducation.toggleTitle, isOn: binding(\.wantsNannyMode))
+
+                    Text(NannyModeEducation.fullExplanation)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.52))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+                    .overlay(.white.opacity(0.18))
+
                 Text("Sun & D Window")
                     .font(.bigDoseHeader(.subheadline).weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))

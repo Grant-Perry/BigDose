@@ -59,7 +59,8 @@ enum SolarGeometryService {
         longitude: Double,
         date: Date,
         altitudeThreshold: Double = SolarPosition.vitaminDSynthesisAltitudeDegrees,
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = .current,
+        sunEvents: SunEventOverrides? = nil
     ) -> VitaminDWindowSnapshot {
         let solarDay = solarDay(latitude: latitude, longitude: longitude, date: date, timeZone: timeZone)
         let crossings = timesAtAltitude(
@@ -69,18 +70,19 @@ enum SolarGeometryService {
             altitudeDegrees: altitudeThreshold,
             timeZone: timeZone
         )
+        let resolvedSolarNoon = sunEvents?.solarNoon ?? solarDay.solarNoon
         let noonPosition = solarPosition(
             latitude: latitude,
             longitude: longitude,
-            date: solarDay.solarNoon,
+            date: resolvedSolarNoon,
             timeZone: timeZone
         )
 
         return VitaminDWindowSnapshot(
             referenceDay: Calendar.current.startOfDay(for: date),
-            sunrise: solarDay.sunrise,
-            sunset: solarDay.sunset,
-            solarNoon: solarDay.solarNoon,
+            sunrise: sunEvents?.sunrise ?? solarDay.sunrise,
+            sunset: sunEvents?.sunset ?? solarDay.sunset,
+            solarNoon: resolvedSolarNoon,
             solarNoonAltitudeDegrees: noonPosition.altitudeDegrees,
             windowStart: crossings.morning,
             windowEnd: crossings.evening,

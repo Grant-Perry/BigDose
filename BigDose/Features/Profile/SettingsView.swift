@@ -166,7 +166,7 @@ struct SettingsView: View {
                     .font(.bigDoseHeader(.title3).weight(.semibold))
                     .foregroundStyle(.white)
 
-                Text("How far ahead of the exit alert BigDose warns you to start packing up and moving inside.")
+                Text("Optional extra guidance while a sun session is running.")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.68))
 
@@ -176,21 +176,7 @@ struct SettingsView: View {
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
-                    Text("When on, BigDose adds exit prep, the 95% guidance alert, a 98% reminder and a stop-now warning at 100% MED (burn risk). When off, you still get turn-over and wrap-up warnings at 50% and 75% — over-limit tracking on the dial still applies past 100%.")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.56))
-
-                    Divider()
-                        .overlay(.white.opacity(0.12))
-
-                    Stepper(value: prepareExitLeadPercentBinding, in: UserProfile.prepareExitLeadPercentRange, step: 5) {
-                        Text("Exit prep warning: \(profile.prepareExitLeadPercent)%")
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .tint(.solarGold)
-
-                    Text("At \(profile.prepareExitLeadPercent)%, \"Get ready to exit sun\" fires that much before the stop alert — for example, about \(profile.prepareExitLeadPercent)% of the time left to exit.")
+                    Text("When on, BigDose adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. When off, you still get turn-over at 50%. A stop-now warning always fires at 100% MED (burn risk) — over-limit tracking on the dial still applies past 100%. Change Nanny anytime in Notifications or here.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
                 }
@@ -300,16 +286,6 @@ struct SettingsView: View {
             profile?.wantsNannyMode ?? true
         } set: { value in
             profile?.wantsNannyMode = value
-            profile?.updatedAt = .now
-            try? modelContext.save()
-        }
-    }
-
-    private var prepareExitLeadPercentBinding: Binding<Int> {
-        Binding {
-            profile?.prepareExitLeadPercent ?? 20
-        } set: { value in
-            profile?.prepareExitLeadPercent = UserProfile.clampedPrepareExitLeadPercent(value)
             profile?.updatedAt = .now
             try? modelContext.save()
         }

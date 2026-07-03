@@ -8,16 +8,21 @@ struct VitaminDSunPathDiagram: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var nowBeaconPulse = false
 
+    private var chartSnapshot: VitaminDWindowSnapshot {
+        display.snapshot
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             GeometryReader { proxy in
-                let layout = SunPathLayout(size: proxy.size, snapshot: display.snapshot)
+                let layout = SunPathLayout(size: proxy.size, snapshot: chartSnapshot)
                 ZStack {
                     thresholdBand(layout: layout)
                     horizonLine(layout: layout)
                     sunPath(layout: layout)
                     thresholdLine(layout: layout)
                     markerLayer(layout: layout)
+                    daylightDurationLabels(layout: layout)
                     currentSunMarker(layout: layout)
                 }
             }
@@ -35,6 +40,28 @@ struct VitaminDSunPathDiagram: View {
             path.addLine(to: CGPoint(x: layout.rightX, y: layout.horizonY))
         }
         .stroke(.white.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+    }
+
+    @ViewBuilder
+    private func daylightDurationLabels(layout: SunPathLayout) -> some View {
+        if let components = chartSnapshot.daylightDurationComponents {
+            BigDoseDurationText(
+                components,
+                font: .caption2.weight(.semibold),
+                valueColor: .white.opacity(0.44),
+                unitColor: .white.opacity(0.3)
+            )
+            .position(x: layout.size.width / 2, y: layout.horizonY - 9)
+
+            if !daylightDurationDeltaLabel.isEmpty {
+                Text(daylightDurationDeltaLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .position(x: layout.size.width / 2, y: layout.horizonY + 11)
+            }
+        }
     }
 
     private func sunPath(layout: SunPathLayout) -> some View {
@@ -103,21 +130,21 @@ struct VitaminDSunPathDiagram: View {
 
     private func markerLayer(layout: SunPathLayout) -> some View {
         ZStack {
-            if let sunrise = display.snapshot.sunrise {
+            if let sunrise = chartSnapshot.sunrise {
                 sunMarker(
                     layout: layout,
                     date: sunrise,
-                    label: sunrise.formatted(date: .omitted, time: .shortened),
+                    label: BigDoseSunTimeFormat.label(for: sunrise),
                     isPeak: false,
                     size: 24
                 )
             }
 
-            if let windowStart = display.snapshot.windowStart {
+            if let windowStart = chartSnapshot.windowStart {
                 sunMarker(
                     layout: layout,
                     date: windowStart,
-                    label: windowStart.formatted(date: .omitted, time: .shortened),
+                    label: BigDoseSunTimeFormat.label(for: windowStart),
                     isPeak: false,
                     size: 28
                 )
@@ -125,28 +152,28 @@ struct VitaminDSunPathDiagram: View {
 
             sunMarker(
                 layout: layout,
-                date: display.snapshot.solarNoon,
-                label: display.snapshot.solarNoon.formatted(date: .omitted, time: .shortened),
-                detail: "\(Int(display.snapshot.solarNoonAltitudeDegrees.rounded()))°",
+                date: chartSnapshot.solarNoon,
+                label: BigDoseSunTimeFormat.label(for: chartSnapshot.solarNoon),
+                detail: "\(Int(chartSnapshot.solarNoonAltitudeDegrees.rounded()))°",
                 isPeak: true,
                 size: 38
             )
 
-            if let windowEnd = display.snapshot.windowEnd {
+            if let windowEnd = chartSnapshot.windowEnd {
                 sunMarker(
                     layout: layout,
                     date: windowEnd,
-                    label: windowEnd.formatted(date: .omitted, time: .shortened),
+                    label: BigDoseSunTimeFormat.label(for: windowEnd),
                     isPeak: false,
                     size: 28
                 )
             }
 
-            if let sunset = display.snapshot.sunset {
+            if let sunset = chartSnapshot.sunset {
                 sunMarker(
                     layout: layout,
                     date: sunset,
-                    label: sunset.formatted(date: .omitted, time: .shortened),
+                    label: BigDoseSunTimeFormat.label(for: sunset),
                     isPeak: false,
                     size: 24
                 )
@@ -160,7 +187,7 @@ struct VitaminDSunPathDiagram: View {
            let altitude = currentSunAltitude {
             let roundedAltitude = Int(altitude.rounded())
             let dotSize: CGFloat = 15
-            let noonX = layout.point(for: display.snapshot.solarNoon).x
+            let noonX = layout.point(for: chartSnapshot.solarNoon).x
             let isBeforeNoon = point.x < noonX
             let labelX = point.x + (isBeforeNoon ? -22 : 22)
             let labelY = point.y - 30
@@ -225,8 +252,8 @@ struct VitaminDSunPathDiagram: View {
             display.isToday,
             let altitude = currentSunAltitude,
             altitude > 0,
-            let sunrise = display.snapshot.sunrise,
-            let sunset = display.snapshot.sunset,
+            let sunrise = chartSnapshot.sunrise,
+            let sunset = chartSnapshot.sunset,
             now >= sunrise,
             now <= sunset
         else { return nil }
@@ -376,15 +403,29 @@ struct VitaminDSunPathDiagram: View {
     }
 
     private var accessibilitySummary: String {
-        let duration = display.snapshot.durationLabel ?? "unknown duration"
+        let duration = chartSnapshot.durationLabel ?? "unknown duration"
         let remaining = display.remainingWindowDurationLabel(at: now).map { "\($0) remaining" }
-        let start = display.snapshot.windowStart?.formatted(date: .omitted, time: .shortened) ?? "unknown"
-        let end = display.snapshot.windowEnd?.formatted(date: .omitted, time: .shortened) ?? "unknown"
+        let start = chartSnapshot.windowStart?.formatted(date: .omitted, time: .shortened) ?? "unknown"
+        let end = chartSnapshot.windowEnd?.formatted(date: .omitted, time: .shortened) ?? "unknown"
         let remainingPhrase = remaining.map { ", \($0)" } ?? ""
         let sunNowPhrase = currentSunAltitude.map { altitude in
             display.isToday && altitude > 0 ? ", sun now at \(Int(altitude.rounded())) degrees" : ""
         } ?? ""
-        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration)\(remainingPhrase)\(sunNowPhrase). Solar noon \(Int(display.snapshot.solarNoonAltitudeDegrees.rounded())) degrees."
+        let daylightPhrase = chartSnapshot.daylightDurationLabel.map { ", \($0) of daylight" } ?? ""
+        let daylightDeltaPhrase = daylightDurationDeltaLabel.isEmpty ? "" : ", \(daylightDurationDeltaLabel)"
+        return "Vitamin D window \(display.dayLabel.lowercased()) from \(start) to \(end), lasting \(duration)\(remainingPhrase)\(daylightPhrase)\(daylightDeltaPhrase)\(sunNowPhrase). Solar noon \(Int(chartSnapshot.solarNoonAltitudeDegrees.rounded())) degrees."
+    }
+
+    private var daylightDurationDeltaLabel: String {
+        guard let current = chartSnapshot.daylightDuration else { return "" }
+        guard let previous = display.previousDaylightDuration else {
+            return "Compared to yesterday unavailable"
+        }
+        return VitaminDWindowDisplay.daylightDurationDeltaLabel(
+            current: current,
+            previous: previous,
+            referenceDayName: display.isToday ? "yesterday" : "today"
+        )
     }
 }
 

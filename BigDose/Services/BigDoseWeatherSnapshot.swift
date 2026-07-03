@@ -23,6 +23,10 @@ struct BigDoseWeatherSnapshot: Equatable {
     var combinedMarkLightURL: URL?
     var combinedMarkDarkURL: URL?
     var isLive: Bool
+    var todaySunrise: Date?
+    var todaySunset: Date?
+    var todaySolarNoon: Date?
+    var todaySunEvents: SunEventOverrides?
 
     var sourceTitle: String {
         isLive ? "WeatherKit" : "Unavailable"
@@ -95,4 +99,82 @@ struct BigDoseDailyForecast: Identifiable, Equatable {
     var conditionText: String
     var precipitationChance: Double
     var precipitationAmountInches: Double
+    var sunrise: Date?
+    var sunset: Date?
+    var solarNoon: Date?
+}
+
+extension BigDoseWeatherSnapshot {
+    /// Most reliable WeatherKit sun times for today's diagram — no calendar matching required.
+    func preferredTodaySunEvents(calendar: Calendar = .current) -> SunEventOverrides? {
+        let cached = SunEventOverrides(
+            sunrise: todaySunrise,
+            sunset: todaySunset,
+            solarNoon: todaySolarNoon
+        )
+        if cached.hasAnyEvent {
+            return cached
+        }
+
+        if let todaySunEvents, todaySunEvents.hasAnyEvent {
+            return todaySunEvents
+        }
+
+        if let first = dailyForecast.first {
+            if let overrides = Self.overrides(from: first) {
+                return overrides
+            }
+        }
+
+        return nil
+    }
+
+    func resolvedSunEvents(on day: Date, calendar: Calendar = .current) -> SunEventOverrides? {
+        if calendar.isDateInToday(day), let todayEvents = preferredTodaySunEvents(calendar: calendar) {
+            return todayEvents
+        }
+
+        if let match = dailyForecast.first(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+            if let overrides = Self.overrides(from: match) {
+                return overrides
+            }
+        }
+
+        let referenceStart = calendar.startOfDay(for: observedAt)
+        let targetStart = calendar.startOfDay(for: day)
+
+        if calendar.isDate(day, inSameDayAs: observedAt) {
+            if let todayEvents = preferredTodaySunEvents(calendar: calendar) {
+                return todayEvents
+            }
+        }
+
+        if targetStart == referenceStart, let first = dailyForecast.first {
+            if let overrides = Self.overrides(from: first) {
+                return overrides
+            }
+        }
+
+        if let nextStart = calendar.date(byAdding: .day, value: 1, to: referenceStart),
+           targetStart == nextStart,
+           dailyForecast.count > 1 {
+            return Self.overrides(from: dailyForecast[1])
+        }
+
+        return nil
+    }
+
+    func sunEvents(on day: Date, calendar: Calendar = .current) -> SunEventOverrides? {
+        resolvedSunEvents(on: day, calendar: calendar)
+    }
+
+    private static func overrides(from day: BigDoseDailyForecast?) -> SunEventOverrides? {
+        guard let day else { return nil }
+        let overrides = SunEventOverrides(
+            sunrise: day.sunrise,
+            sunset: day.sunset,
+            solarNoon: day.solarNoon
+        )
+        return overrides.hasAnyEvent ? overrides : nil
+    }
 }

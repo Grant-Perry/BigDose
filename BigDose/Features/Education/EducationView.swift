@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EducationView: View {
-    private let sections = [
+    private let scienceSections = [
         EducationSection(
             symbolName: "sun.max.fill",
             title: "Sunlight Makes The Starter",
@@ -30,12 +30,12 @@ struct EducationView: View {
         EducationSection(
             symbolName: "shield.lefthalf.filled",
             title: "What MED (burn risk) Means",
-            detail: "MED (burn risk) — minimal erythema dose — is Science-based estimate of the UV exposure that would start to redden your skin. Your Fitzpatrick skin type sets the baseline. BigDose tracks MED (burn risk) Used during every live session."
+            detail: "MED (burn risk) — minimal erythema dose — is a science-based estimate of the UV exposure that would start to redden your skin. Your Fitzpatrick skin type sets the baseline. BigDose tracks MED (burn risk) Used during every live session."
         ),
         EducationSection(
             symbolName: "bell.badge.fill",
             title: "How BigDose Limits Sessions",
-            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire near 50% and wrap-up near 75%. Nanny adds exit prep, the 95% guidance alert and a 98% reminder while you stay out. Only you stop the session."
+            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire near 50%. A stop-now warning always fires at 100% MED (burn risk). Nanny adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. Only you stop the session."
         ),
         EducationSection(
             symbolName: "cross.case.fill",
@@ -61,26 +61,26 @@ struct EducationView: View {
                     }
                     .padding(.top, 18)
 
-                    ForEach(sections) { section in
-                        GlassCard(cornerRadius: 26) {
-                            HStack(alignment: .top, spacing: 14) {
-                                Image(systemName: section.symbolName)
-                                    .font(.bigDoseHeader(.title2).weight(.black))
-                                    .foregroundStyle(.solarGold)
-                                    .frame(width: 34)
+                    GlassCard(cornerRadius: 28) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Label("Why BigDose", systemImage: "sparkles")
+                                .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                                .foregroundStyle(.solarGold)
 
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(section.title)
-                                        .font(.bigDoseHeader(.headline).weight(.black))
-                                        .foregroundStyle(.white)
-
-                                    Text(section.detail)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(.white.opacity(0.7))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
+                            WhyBigDoseTaglineHeader()
                         }
+                    }
+
+                    ForEach(WhyBigDoseEducationContent.philosophySections) { section in
+                        WhyBigDoseSectionCard(section: section)
+                    }
+
+                    WhyBigDoseSectionCard(section: WhyBigDoseEducationContent.scienceFooter)
+
+                    sectionDivider(title: "The Mechanics")
+
+                    ForEach(scienceSections) { section in
+                        scienceSectionCard(section)
                     }
                 }
                 .padding(.horizontal, 18)
@@ -90,6 +90,40 @@ struct EducationView: View {
         }
         .navigationTitle("Science")
         .toolbarTitleDisplayMode(.inline)
+    }
+
+    private func sectionDivider(title: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .overlay(.white.opacity(0.18))
+
+            Text(title)
+                .font(.bigDoseHeader(.subheadline).weight(.semibold))
+                .foregroundStyle(.white.opacity(0.62))
+        }
+        .padding(.top, 4)
+    }
+
+    private func scienceSectionCard(_ section: EducationSection) -> some View {
+        GlassCard(cornerRadius: 26) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: section.symbolName)
+                    .font(.bigDoseHeader(.title2).weight(.black))
+                    .foregroundStyle(.solarGold)
+                    .frame(width: 34)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(section.title)
+                        .font(.bigDoseHeader(.headline).weight(.black))
+                        .foregroundStyle(.white)
+
+                    Text(section.detail)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 }
 

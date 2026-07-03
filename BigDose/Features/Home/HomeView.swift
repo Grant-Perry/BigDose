@@ -28,6 +28,8 @@ struct HomeView: View {
     }
 
     var body: some View {
+        @Bindable var homeViewModel = homeViewModel
+
         NavigationStack {
             ZStack {
                 BigDoseGradientBackground()
@@ -314,7 +316,14 @@ struct HomeView: View {
 
     @ViewBuilder
     private func solarGuidanceCard(now: Date) -> some View {
-        if let plan = currentPlan, let display = vitaminDWindowDisplay(for: plan, now: now) {
+        if homeViewModel.isLoading, homeViewModel.weather == nil {
+            unavailableCard(
+                title: "Solar guidance loading",
+                detail: "Waiting for Apple Weather sun times for your location.",
+                systemImage: "sun.max.fill"
+            )
+        } else if let plan = currentPlan, homeViewModel.weather != nil,
+                  let display = vitaminDWindowDisplay(for: plan, now: now) {
             GlassCard {
                 VStack(alignment: .leading, spacing: 18) {
                     solarGuidanceHeader(plan: plan, display: display, now: now)
@@ -687,7 +696,7 @@ struct HomeView: View {
                             .font(.bigDoseHeader(.headline).weight(.black))
                             .foregroundStyle(.white)
 
-                        Text("Freshman-level science. No medical cosplay.")
+                        Text(WhyBigDoseEducationContent.tagline)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
                     }
@@ -897,7 +906,11 @@ struct HomeView: View {
 
     private func vitaminDWindowDisplay(for plan: DailySunPlan, now: Date) -> VitaminDWindowDisplay? {
         guard plan.latitude != 0 || plan.longitude != 0 else { return nil }
-        return DailySunPlanService.vitaminDWindowDisplay(for: plan, now: now)
+        return DailySunPlanService.vitaminDWindowDisplay(
+            for: plan,
+            weather: homeViewModel.weather,
+            now: now
+        )
     }
 
     private func logDefaultSupplement() {

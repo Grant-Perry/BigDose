@@ -31,6 +31,7 @@ struct OnboardingView: View {
     @State private var wantsAMLightWindowAlerts = true
     @State private var wantsNextDOpportunityAlerts = true
     @State private var wantsRiskAlerts = true
+    @State private var wantsNannyMode = true
     @State private var wantsActiveSessionReminders = true
     @State private var wantsSupplementReminders = false
     @State private var wantsLabReminders = true
@@ -55,12 +56,12 @@ struct OnboardingView: View {
     @State private var metricSyncNextAction: MetricSyncNextAction?
     @State private var healthKitImportService = HealthKitImportService()
 
-    private let healthPage = 2
-    private let bodyPageIndex = 4
-    private let levelPageIndex = 5
-    private let firstResultPageIndex = 11
-    private let disclaimerPageIndex = 12
-    private let onboardingPageCount = 13
+    private let healthPage = 3
+    private let bodyPageIndex = 5
+    private let levelPageIndex = 6
+    private let firstResultPageIndex = 12
+    private let disclaimerPageIndex = 13
+    private let onboardingPageCount = 14
 
     var body: some View {
         ZStack {
@@ -76,13 +77,16 @@ struct OnboardingView: View {
                     )
                     .tag(0)
 
+                    whyBigDosePage
+                        .tag(1)
+
                     OnboardingPageView(
                         symbolName: "shield.lefthalf.filled",
                         eyebrow: "Not Medical Advice",
                         title: "Useful guidance...\nNot a diagnosis.",
                         detail: "BigDose is wellness information you can choose to use. Labs and clinicians are the source of truth for vitamin D deficiency."
                     )
-                    .tag(1)
+                    .tag(2)
 
                     OnboardingAppleHealthPage(
                         isSyncing: isSyncingHealth,
@@ -98,37 +102,37 @@ struct OnboardingView: View {
                             }
                         }
                     )
-                    .tag(2)
+                    .tag(3)
 
                     basicsPage
-                        .tag(3)
-
-                    bodyPage
                         .tag(4)
 
-                    levelPage
+                    bodyPage
                         .tag(5)
 
-                    supplementPage
+                    levelPage
                         .tag(6)
 
-                    skinTypePage
+                    supplementPage
                         .tag(7)
 
-                    sunSafetyPage
+                    skinTypePage
                         .tag(8)
 
-                    exposurePage
+                    sunSafetyPage
                         .tag(9)
 
-                    alertsPage
+                    exposurePage
                         .tag(10)
 
-                    firstResultPage
+                    alertsPage
                         .tag(11)
 
-                    disclaimerPage
+                    firstResultPage
                         .tag(12)
+
+                    disclaimerPage
+                        .tag(13)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -168,6 +172,7 @@ struct OnboardingView: View {
             wantsAMLightWindowAlerts = profile?.wantsAMLightWindowAlerts ?? true
             wantsNextDOpportunityAlerts = profile?.wantsNextDOpportunityAlerts ?? true
             wantsRiskAlerts = profile?.wantsRiskAlerts ?? true
+            wantsNannyMode = profile?.wantsNannyMode ?? true
             wantsActiveSessionReminders = profile?.wantsActiveSessionReminders ?? true
             wantsSupplementReminders = profile?.wantsSupplementReminders ?? false
             wantsLabReminders = profile?.wantsLabReminders ?? true
@@ -373,6 +378,42 @@ struct OnboardingView: View {
         }
     }
 
+    private var whyBigDosePage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingHeader(
+                    symbolName: "sparkles",
+                    eyebrow: "Why BigDose",
+                    title: WhyBigDoseEducationContent.tagline,
+                    infoTopic: .sunSafetyOverview
+                )
+
+                Text(WhyBigDoseEducationContent.onboardingTeaser)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(WhyBigDoseEducationContent.philosophySections) { section in
+                    CollapsibleGlassCard(style: .hidden) {
+                        Label(section.title, systemImage: section.symbolName)
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+                    } content: {
+                        Text(section.detail)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Text("Read the full freshman-science walkthrough anytime in Profile → Science.")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(22)
+        }
+    }
+
     private var sunSafetyPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -414,12 +455,12 @@ struct OnboardingView: View {
                         .foregroundStyle(.solarGold)
                 } content: {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("During a live sun session, BigDose warns you when it is time to turn over, wrap up and come out of the sun — including background notifications when the app is closed. Only you stop the session.")
+                        Text("During a live sun session, BigDose warns you when it is time to turn over and come out of the sun — including background notifications when the app is closed. Nanny adds wrap-up at 75%. Only you stop the session.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("**Nanny in Settings → Session Safety** is on by default. She adds exit prep, the **95%** guidance alert and a **98%** reminder while you stay out. Turn **Nanny** off anytime for **50%** and **75%** warnings only — over-limit tracking still applies past **100%**.")
+                        Text("**Nanny in Settings → Session Safety** is on by default. She adds **wrap-up at 75%**, the **95%** guidance alert and a **98%** reminder while you stay out. A stop-now warning always fires at **100%** MED (burn risk). Turn **Nanny** off anytime for **50%** turn-over only — over-limit tracking still applies past **100%**.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -692,6 +733,18 @@ struct OnboardingView: View {
 
                 GlassCard {
                     VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle(NannyModeEducation.toggleTitle, isOn: $wantsNannyMode)
+
+                            Text(NannyModeEducation.fullExplanation)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Divider()
+                            .overlay(.white.opacity(0.18))
+
                         Text("Sun & D Window")
                             .font(.bigDoseHeader(.subheadline).weight(.semibold))
                             .foregroundStyle(.white.opacity(0.62))
@@ -717,7 +770,7 @@ struct OnboardingView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Toggle("Session safety guidance", isOn: $wantsRiskAlerts)
 
-                            Text("Turn-over, wrap-up and stop alerts during live sun sessions — plus background notifications.")
+                            Text("Turn-over and stop alerts during live sun sessions — plus background notifications. Nanny adds wrap-up at 75%.")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.55))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -809,6 +862,12 @@ struct OnboardingView: View {
                         eyebrow: "Before You Enter",
                         title: "Use BigDose at your own risk."
                     )
+
+                    Text("...be your own nanny!")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .multilineTextAlignment(.center)
 
                     GlassCard {
                         VStack(alignment: .leading, spacing: 14) {
@@ -961,6 +1020,7 @@ struct OnboardingView: View {
         activeProfile.wantsAMLightWindowAlerts = wantsAMLightWindowAlerts
         activeProfile.wantsNextDOpportunityAlerts = wantsNextDOpportunityAlerts
         activeProfile.wantsRiskAlerts = wantsRiskAlerts
+        activeProfile.wantsNannyMode = wantsNannyMode
         activeProfile.wantsActiveSessionReminders = wantsActiveSessionReminders
         activeProfile.wantsSupplementReminders = wantsSupplementReminders
         activeProfile.wantsLabReminders = wantsLabReminders

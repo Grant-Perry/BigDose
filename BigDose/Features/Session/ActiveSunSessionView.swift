@@ -16,7 +16,6 @@ struct ActiveSunSessionView: View {
     @State private var activeAlert: SunSessionSafetyAlert?
     @State private var didShowTurnOverAlert = false
     @State private var didShowMedWarningAlert = false
-    @State private var didShowPrepareExitAlert = false
     @State private var didShowGuidanceLimitAlert = false
     @State private var didShowNannyReminderAlert = false
     @State private var didShowFullMEDAlert = false
@@ -189,12 +188,6 @@ struct ActiveSunSessionView: View {
                     title: "Approaching exposure limit",
                     message: plan.safetyAlertMessage(for: .medWarning, elapsedSeconds: elapsedSeconds),
                     actions: [.default("OK")]
-                )
-            case .prepareExit(let countdown):
-                BigDoseAlertContent(
-                    title: "Get ready to exit sun",
-                    message: plan.safetyAlertMessage(for: .prepareExit(countdown: countdown), elapsedSeconds: elapsedSeconds),
-                    actions: [.default("Got it")]
                 )
             case .overLimit(let percent):
                 if percent == SunSessionSafetyThresholds.fullMEDPercent {
@@ -795,7 +788,6 @@ struct ActiveSunSessionView: View {
         if didShowGoalReachedAlert { ids.append(ActiveSunSessionSafetyAlertID.goalReached) }
         if didShowTurnOverAlert { ids.append(ActiveSunSessionSafetyAlertID.turnOver) }
         if didShowMedWarningAlert { ids.append(ActiveSunSessionSafetyAlertID.medWarning) }
-        if didShowPrepareExitAlert { ids.append(ActiveSunSessionSafetyAlertID.prepareExit) }
         if didShowGuidanceLimitAlert {
             ids.append(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent))
         }
@@ -821,14 +813,10 @@ struct ActiveSunSessionView: View {
         if elapsedSeconds >= plan.turnOverAlertSeconds {
             ids.insert(ActiveSunSessionSafetyAlertID.turnOver)
         }
-        if elapsedSeconds >= plan.medWarningSeconds {
+        if wantsNannyMode, elapsedSeconds >= plan.medWarningSeconds {
             ids.insert(ActiveSunSessionSafetyAlertID.medWarning)
         }
         if wantsNannyMode {
-            if elapsedSeconds >= plan.prepareExitAlertSeconds {
-                ids.insert(ActiveSunSessionSafetyAlertID.prepareExit)
-            }
-
             let currentMedPercent = medUsedPercent
             if currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
                 ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent))
@@ -836,9 +824,9 @@ struct ActiveSunSessionView: View {
             if currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent {
                 ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent))
             }
-            if plan.hasReachedFullMED(at: elapsedSeconds) {
-                ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent))
-            }
+        }
+        if plan.hasReachedFullMED(at: elapsedSeconds) {
+            ids.insert(ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.fullMEDPercent))
         }
 
         let previousIDs = Set(currentAcknowledgedSafetyAlertIDs())
@@ -852,7 +840,6 @@ struct ActiveSunSessionView: View {
         didShowGoalReachedAlert = ids.contains(ActiveSunSessionSafetyAlertID.goalReached)
         didShowTurnOverAlert = ids.contains(ActiveSunSessionSafetyAlertID.turnOver)
         didShowMedWarningAlert = ids.contains(ActiveSunSessionSafetyAlertID.medWarning)
-        didShowPrepareExitAlert = ids.contains(ActiveSunSessionSafetyAlertID.prepareExit)
         didShowGuidanceLimitAlert = ids.contains(
             ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
         )
@@ -1009,46 +996,43 @@ struct ActiveSunSessionView: View {
             return
         }
 
-        if !didShowMedWarningAlert, elapsedSeconds >= plan.medWarningSeconds {
-            markSafetyAlertShown(ActiveSunSessionSafetyAlertID.medWarning)
-            activeAlert = .medWarning
-            SessionSafetyNotificationService.cancelMedWarningNotification()
-            return
+        if wantsNannyMode {
+            if !didShowMedWarningAlert, elapsedSeconds >= plan.medWarningSeconds {
+                markSafetyAlertShown(ActiveSunSessionSafetyAlertID.medWarning)
+                activeAlert = .medWarning
+                SessionSafetyNotificationService.cancelMedWarningNotification()
+                return
+            }
+
+            let currentMedPercent = medUsedPercent
+
+            if !didShowGuidanceLimitAlert, currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
+                markSafetyAlertShown(
+                    ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+                )
+                activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
+                SessionSafetyNotificationService.cancelOverLimitNotification(
+                    for: SunSessionSafetyThresholds.guidanceLimitPercent
+                )
+                return
+            }
+
+            if !didShowNannyReminderAlert, currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent {
+                markSafetyAlertShown(
+                    ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+                )
+                activeAlert = .overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
+                SessionSafetyNotificationService.cancelOverLimitNotification(
+                    for: SunSessionSafetyThresholds.nannyReminderPercent
+                )
+                return
+            }
         }
 
-        guard wantsNannyMode else { return }
+        evaluateFullMEDAlert()
+    }
 
-        if !didShowPrepareExitAlert, elapsedSeconds >= plan.prepareExitAlertSeconds {
-            markSafetyAlertShown(ActiveSunSessionSafetyAlertID.prepareExit)
-            activeAlert = .prepareExit(countdown: plan.prepareExitCountdownText)
-            SessionSafetyNotificationService.cancelPrepareExitNotification()
-            return
-        }
-
-        let currentMedPercent = medUsedPercent
-
-        if !didShowGuidanceLimitAlert, currentMedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent {
-            markSafetyAlertShown(
-                ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
-            )
-            activeAlert = .overLimit(percent: SunSessionSafetyThresholds.guidanceLimitPercent)
-            SessionSafetyNotificationService.cancelOverLimitNotification(
-                for: SunSessionSafetyThresholds.guidanceLimitPercent
-            )
-            return
-        }
-
-        if !didShowNannyReminderAlert, currentMedPercent >= SunSessionSafetyThresholds.nannyReminderPercent {
-            markSafetyAlertShown(
-                ActiveSunSessionSafetyAlertID.overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
-            )
-            activeAlert = .overLimit(percent: SunSessionSafetyThresholds.nannyReminderPercent)
-            SessionSafetyNotificationService.cancelOverLimitNotification(
-                for: SunSessionSafetyThresholds.nannyReminderPercent
-            )
-            return
-        }
-
+    private func evaluateFullMEDAlert() {
         guard !didShowFullMEDAlert, plan.hasReachedFullMED(at: elapsedSeconds) else { return }
 
         markSafetyAlertShown(
@@ -1082,7 +1066,6 @@ struct ActiveSunSessionView: View {
 private enum SunSessionSafetyAlert: Identifiable, Equatable {
     case turnOver
     case medWarning
-    case prepareExit(countdown: String)
     case overLimit(percent: Int)
     case goalReached
 
@@ -1092,8 +1075,6 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
             "turnOver"
         case .medWarning:
             "medWarning"
-        case .prepareExit:
-            "prepareExit"
         case .overLimit(let percent):
             "overLimit.\(percent)"
         case .goalReached:
@@ -1103,7 +1084,7 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
 
     var feedbackKind: BigDoseAlertFeedback.Kind {
         switch self {
-        case .turnOver, .medWarning, .prepareExit, .goalReached:
+        case .turnOver, .medWarning, .goalReached:
             .warning
         case .overLimit:
             .critical
