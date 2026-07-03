@@ -115,7 +115,7 @@ struct SunSessionPlan: Equatable {
 
         switch alert {
         case .turnOver:
-            return "You are at about \(medPercent)% of your estimated MED (burn risk) for \(skin) skin at this UV. Flip sides, rotate or change exposure so one area doesn't take all of it."
+            return turnOverAlertMessage(at: elapsedSeconds)
         case .medWarning:
             return "You are at about \(medPercent)% of your estimated MED (burn risk) — the UV dose that would start to redden \(skin) skin. Consider wrapping up soon."
         case .prepareExit(let countdown):
@@ -214,8 +214,38 @@ struct SunSessionPlan: Equatable {
     }
 
     var turnOverAlertSeconds: TimeInterval {
-        guard medTimeSeconds > 0 else { return durationSeconds / 2 }
-        return medTimeSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
+        let halfSession = durationSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
+        guard medTimeSeconds > 0 else { return halfSession }
+        let halfMED = medTimeSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
+        return min(halfSession, halfMED)
+    }
+
+    var turnOverAlertBasis: TurnOverAlertBasis {
+        let halfSession = durationSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
+        guard medTimeSeconds > 0 else { return .sessionHalfway }
+        let halfMED = medTimeSeconds * Double(SunSessionSafetyThresholds.turnOverPercent) / 100
+        return halfSession <= halfMED ? .sessionHalfway : .medFiftyPercent
+    }
+
+    func turnOverAlertMessage(at elapsedSeconds: TimeInterval) -> String {
+        let skin = skinType.title
+        switch turnOverAlertBasis {
+        case .sessionHalfway:
+            return "You're halfway through your planned session. Flip sides, rotate or change exposure so one area of skin doesn't take all the UV."
+        case .medFiftyPercent:
+            let medPercent = medUsedPercent(at: elapsedSeconds)
+            return "You are at about \(medPercent)% of your estimated MED (burn risk) for \(skin) skin at this UV. Flip sides, rotate or change exposure so one area doesn't take all of it."
+        }
+    }
+
+    var turnOverNotificationMessage: String {
+        let skin = skinType.title
+        switch turnOverAlertBasis {
+        case .sessionHalfway:
+            return "Halfway through your planned session — flip sides or rotate exposure."
+        case .medFiftyPercent:
+            return "About 50% of your estimated MED (burn risk) for \(skin) skin — flip sides or rotate exposure."
+        }
     }
 
     var medWarningSeconds: TimeInterval {
@@ -250,6 +280,11 @@ struct SunSessionPlan: Equatable {
         let secondsPart = total % 60
         return "\(minutes):\(String(format: "%02d", secondsPart))"
     }
+}
+
+enum TurnOverAlertBasis: Equatable {
+    case sessionHalfway
+    case medFiftyPercent
 }
 
 struct SunSessionSafetyTimeline: Equatable {

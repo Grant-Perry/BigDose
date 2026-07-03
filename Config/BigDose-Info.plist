@@ -15,11 +15,13 @@
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
-	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
-	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>BebasNeue-Regular.ttf</string>
+		<string>PlusJakartaSans-Variable.ttf</string>
+		<string>PlusJakartaSans-Italic-Variable.ttf</string>
+		<string>InstrumentSerif-Regular.ttf</string>
+		<string>InstrumentSerif-Italic.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

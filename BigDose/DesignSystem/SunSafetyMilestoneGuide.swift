@@ -14,8 +14,8 @@ struct SunSafetyMilestoneGuide: View {
                 milestoneRow(
                     icon: "arrow.triangle.2.circlepath",
                     title: "Turn over",
-                    detail: "~50% of MED (burn risk)",
-                    note: "Flip sides or rotate so one area does not take all the UV."
+                    detail: "Halfway through session or ~50% MED",
+                    note: "Whichever comes first — flip sides or rotate so one area does not take all the UV."
                 )
                 milestoneRow(
                     icon: "figure.walk",

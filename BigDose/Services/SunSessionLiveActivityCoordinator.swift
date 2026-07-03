@@ -122,8 +122,7 @@ final class SunSessionLiveActivityCoordinator {
             guard let self else { return }
 
             self.lastPushedContentState = mergedState
-            let staleDate = mergedState.isPaused ? nil : Date.now.addingTimeInterval(1)
-            await activity.update(ActivityContent(state: mergedState, staleDate: staleDate))
+            await activity.update(ActivityContent(state: mergedState, staleDate: nil))
         }
     }
 

@@ -385,12 +385,13 @@ struct OnboardingView: View {
                     symbolName: "sparkles",
                     eyebrow: "Why BigDose",
                     title: WhyBigDoseEducationContent.tagline,
+                    usesHeroTagline: true,
                     infoTopic: .sunSafetyOverview
                 )
 
                 Text(WhyBigDoseEducationContent.onboardingTeaser)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.72))
+                    .font(.bigDoseBody(.subheadline, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.74))
                     .fixedSize(horizontal: false, vertical: true)
 
                 ForEach(WhyBigDoseEducationContent.philosophySections) { section in
@@ -455,12 +456,12 @@ struct OnboardingView: View {
                         .foregroundStyle(.solarGold)
                 } content: {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("During a live sun session, BigDose warns you when it is time to turn over and come out of the sun — including background notifications when the app is closed. Nanny adds wrap-up at 75%. Only you stop the session.")
+                        Text("During a live sun session, BigDose warns you when it is time to turn over — at halfway through your planned session or at 50% MED (burn risk), whichever comes first — including background notifications when the app is closed. Nanny adds wrap-up at 75%. Only you stop the session.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("**Nanny in Settings → Session Safety** is on by default. She adds **wrap-up at 75%**, the **95%** guidance alert and a **98%** reminder while you stay out. A stop-now warning always fires at **100%** MED (burn risk). Turn **Nanny** off anytime for **50%** turn-over only — over-limit tracking still applies past **100%**.")
+                        Text("**Nanny in Settings → Session Safety** is on by default. She adds **wrap-up at 75%**, the **95%** guidance alert and a **98%** reminder while you stay out. A stop-now warning always fires at **100%** MED (burn risk). Turn **Nanny** off anytime for **turn-over only** — halfway through your planned session or **50% MED (burn risk)**, whichever comes first. Over-limit tracking still applies past **100%**.")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.white.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -770,7 +771,7 @@ struct OnboardingView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Toggle("Session safety guidance", isOn: $wantsRiskAlerts)
 
-                            Text("Turn-over and stop alerts during live sun sessions — plus background notifications. Nanny adds wrap-up at 75%.")
+                            Text("Turn-over at halfway through your planned session or at 50% MED (burn risk) — whichever comes first — plus stop alerts during live sun sessions and background notifications. Nanny adds wrap-up at 75%.")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.55))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1281,46 +1282,64 @@ private struct OnboardingHeader: View {
     var symbolName: String
     var eyebrow: String
     var title: String
+    var usesHeroTagline = false
     var infoTopic: BigDoseInfoTopic?
 
     init(
         symbolName: String,
         eyebrow: String,
         title: String,
+        usesHeroTagline: Bool = false,
         infoTopic: BigDoseInfoTopic? = nil
     ) {
         self.symbolName = symbolName
         self.eyebrow = eyebrow
         self.title = title
+        self.usesHeroTagline = usesHeroTagline
         self.infoTopic = infoTopic
     }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(alignment: usesHeroTagline ? .leading : .center, spacing: 14) {
             Image(systemName: symbolName)
                 .font(.system(size: 52, weight: .semibold))
                 .foregroundStyle(.solarGold)
                 .symbolEffect(.bounce, value: title)
+                .frame(maxWidth: .infinity, alignment: usesHeroTagline ? .leading : .center)
 
             Text(eyebrow.uppercased())
                 .font(.caption.weight(.semibold))
                 .tracking(1.8)
                 .foregroundStyle(.solarGold)
+                .frame(maxWidth: .infinity, alignment: usesHeroTagline ? .leading : .center)
 
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(title)
-                    .font(.bigDoseHeader(.largeTitle))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.82)
-                    .fixedSize(horizontal: false, vertical: true)
+            if usesHeroTagline {
+                HStack(alignment: .top, spacing: 8) {
+                    BigDoseHeroTitle(
+                        primaryLine: WhyBigDoseEducationContent.heroPrimaryLine,
+                        accentLine: WhyBigDoseEducationContent.heroAccentLine
+                    )
 
-                if let infoTopic {
-                    InfoCircleButton(topic: infoTopic, compact: true)
+                    if let infoTopic {
+                        InfoCircleButton(topic: infoTopic, compact: true)
+                    }
                 }
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(title)
+                        .font(.bigDoseHeader(.largeTitle))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let infoTopic {
+                        InfoCircleButton(topic: infoTopic, compact: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 }

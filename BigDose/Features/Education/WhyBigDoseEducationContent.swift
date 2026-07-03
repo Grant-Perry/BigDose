@@ -2,7 +2,10 @@ import SwiftUI
 
 /// Shared copy for the "Why BigDose" product story — onboarding, Science tab and nudges.
 enum WhyBigDoseEducationContent {
-    static let tagline = "Dose your D\nDefend your skin."
+    static let heroPrimaryLine = "Dose your D..."
+    static let heroAccentLine = "Defend your Skin!"
+    /// Legacy combined tagline — prefer `BigDoseHeroTitle` for display.
+    static var tagline: String { "\(heroPrimaryLine)\n\(heroAccentLine)" }
     static let subtitle = "Most sun advice picks one lane. BigDose tracks vitamin D progress and burn risk at the same time — so you can get outside without guessing."
 
     static let philosophySections: [WhyBigDoseSection] = [
@@ -37,7 +40,7 @@ enum WhyBigDoseEducationContent {
             symbolName: "hand.raised.fill",
             title: "We Guide. You Decide.",
             detail: """
-            BigDose warns at turn-over (~50% MED) and stop-now (100% MED). \
+            BigDose warns to turn over at halfway through your planned session or at ~50% MED (burn risk) — whichever comes first — and stop-now at 100% MED. \
             Optional Nanny adds wrap-up (~75%), tighter guidance at 95% and 98%. We never end a session for you. \
             The estimates are deliberately conservative — missing a little D is easier to fix than reversing sun damage.
             """
@@ -65,8 +68,9 @@ enum NannyModeEducation {
 
     static let fullExplanation = """
     During live sun sessions, BigDose tracks your burn risk (MED Used) and warns you at key milestones. \
+    Turn-over fires at halfway through your planned session or at 50% MED (burn risk) — whichever comes first. \
     With Nanny on, you also get wrap-up near 75%, the 95% guidance alert and a 98% reminder if you keep going — extra guardrails for staying out past the wrap-up window. \
-    With Nanny off, you still get turn-over near 50% and stop-now at 100% MED (burn risk) when session safety guidance is on. \
+    With Nanny off, you still get turn-over and stop-now at 100% MED (burn risk) when session safety guidance is on. \
     BigDose never ends a session for you — only you can stop and save.
     """
 }
@@ -83,14 +87,15 @@ struct WhyBigDoseTaglineHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(WhyBigDoseEducationContent.tagline)
-                .font(.system(.title, weight: .bold))
-                .foregroundStyle(.white)
+            BigDoseHeroTitle(
+                primaryLine: WhyBigDoseEducationContent.heroPrimaryLine,
+                accentLine: WhyBigDoseEducationContent.heroAccentLine
+            )
 
             if showsSubtitle {
                 Text(WhyBigDoseEducationContent.subtitle)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.68))
+                    .font(.bigDoseLede(.callout))
+                    .foregroundStyle(.white.opacity(0.74))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -115,8 +120,8 @@ struct WhyBigDoseSectionCard: View {
                         .foregroundStyle(.white)
 
                     Text(section.detail)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.bigDoseBody(.subheadline, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.74))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

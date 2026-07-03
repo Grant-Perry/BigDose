@@ -1,6 +1,5 @@
 import Combine
 import SwiftUI
-import UIKit
 
 struct ActiveSunSessionView: View {
     var wantsSessionSafetyAlerts: Bool
@@ -27,7 +26,6 @@ struct ActiveSunSessionView: View {
     @State private var isShowingStaleSessionAlert = false
     @State private var isShowingInactivityRecoveryAlert = false
     @State private var isShowingFirstSessionGuide = false
-    @State private var backgroundLiveActivitySyncTask: Task<Void, Never>?
     @State private var sessionEnded = false
 
     @AppStorage("hasSeenFirstSunSessionGuide") private var hasSeenFirstSunSessionGuide = false
@@ -123,7 +121,6 @@ struct ActiveSunSessionView: View {
 
             guard !isPaused, !sessionEnded else { return }
             elapsedSeconds += 1
-            syncLiveActivity()
             BigDoseWidgetReloader.reloadHomeWidget()
             evaluateSessionAlerts()
         }
@@ -163,14 +160,11 @@ struct ActiveSunSessionView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                backgroundLiveActivitySyncTask?.cancel()
-                backgroundLiveActivitySyncTask = nil
                 consumeLiveActivityCommands()
                 syncLiveActivity()
                 evaluateStaleSessionAlert()
             case .inactive, .background:
                 syncLiveActivity()
-                startBackgroundLiveActivitySyncIfNeeded()
             @unknown default:
                 break
             }
@@ -868,23 +862,6 @@ struct ActiveSunSessionView: View {
         )
     }
 
-    private func startBackgroundLiveActivitySyncIfNeeded() {
-        guard !isPaused, !sessionEnded else { return }
-
-        backgroundLiveActivitySyncTask?.cancel()
-        backgroundLiveActivitySyncTask = Task { @MainActor in
-            await SunSessionLiveActivityBackgroundPusher.run(
-                shouldContinue: {
-                    !sessionEnded && !isPaused && UIApplication.shared.applicationState != .active
-                },
-                tick: {
-                    syncLiveActivity()
-                }
-            )
-            backgroundLiveActivitySyncTask = nil
-        }
-    }
-
     private func consumeLiveActivityCommands() {
         guard let command = SunSessionLiveActivityCommandStore.consume(for: plan.liveActivitySessionID) else {
             return
@@ -912,8 +889,6 @@ struct ActiveSunSessionView: View {
         guard !sessionEnded else { return }
         sessionEnded = true
 
-        backgroundLiveActivitySyncTask?.cancel()
-        backgroundLiveActivitySyncTask = nil
         SessionSafetyNotificationService.cancelSessionNotifications()
         ActiveSessionReminderService.cancel()
 
@@ -932,8 +907,6 @@ struct ActiveSunSessionView: View {
         guard !sessionEnded else { return }
         sessionEnded = true
 
-        backgroundLiveActivitySyncTask?.cancel()
-        backgroundLiveActivitySyncTask = nil
         SessionSafetyNotificationService.cancelSessionNotifications()
         ActiveSessionReminderService.cancel()
         SunSessionSessionCleanup.finishSession(clearPendingCommandFor: plan.liveActivitySessionID)

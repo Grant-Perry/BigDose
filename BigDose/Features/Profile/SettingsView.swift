@@ -176,7 +176,7 @@ struct SettingsView: View {
                         .foregroundStyle(.white)
                         .tint(.solarGold)
 
-                    Text("When on, BigDose adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. When off, you still get turn-over at 50%. A stop-now warning always fires at 100% MED (burn risk) — over-limit tracking on the dial still applies past 100%. Change Nanny anytime in Notifications or here.")
+                    Text("When on, BigDose adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. When off, you still get turn-over at halfway through your planned session or at 50% MED (burn risk) — whichever comes first. A stop-now warning always fires at 100% MED (burn risk) — over-limit tracking on the dial still applies past 100%. Change Nanny anytime in Notifications or here.")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.56))
                 }

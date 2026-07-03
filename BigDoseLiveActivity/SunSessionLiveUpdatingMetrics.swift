@@ -1,15 +1,25 @@
 import SwiftUI
 
-/// Live metrics driven by ContentState pushes from the app while the session runs.
+/// Static metrics snapshot; pass live values from SunSessionLiveUpdatingMetricsView when running.
 struct SunSessionLiveActivityLiveMetricsColumn: View {
     let attributes: SunSessionActivityAttributes
     let state: SunSessionActivityAttributes.ContentState
+    var estimatedIU: Double?
+    var goalProgress: Double?
     var iuFont: Font = .system(size: 30, weight: .black, design: .rounded)
     var progressWidth: CGFloat = 96
 
+    private var resolvedEstimatedIU: Double {
+        estimatedIU ?? state.estimatedIU
+    }
+
+    private var resolvedGoalProgress: Double {
+        goalProgress ?? state.goalProgress
+    }
+
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text("\(Int(state.estimatedIU.rounded())) IU")
+            Text("\(Int(resolvedEstimatedIU.rounded())) IU")
                 .font(iuFont)
                 .foregroundStyle(.white)
                 .monospacedDigit()
@@ -21,7 +31,7 @@ struct SunSessionLiveActivityLiveMetricsColumn: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
 
-            ProgressView(value: state.goalProgress)
+            ProgressView(value: resolvedGoalProgress)
                 .tint(WidgetBrandColors.solarGold)
                 .frame(width: progressWidth)
         }

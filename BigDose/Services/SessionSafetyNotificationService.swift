@@ -48,7 +48,7 @@ enum SessionSafetyNotificationService {
             await schedule(
                 identifier: turnOverIdentifier,
                 title: "Turn over",
-                body: "About 50% of your estimated MED (burn risk) for \(skin) skin — flip sides or rotate exposure.",
+                body: plan.turnOverNotificationMessage,
                 seconds: remainingSeconds(until: plan.turnOverAlertSeconds, elapsedSeconds: elapsedSeconds)
             )
 

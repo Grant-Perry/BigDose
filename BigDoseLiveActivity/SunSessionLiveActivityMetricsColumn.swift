@@ -7,11 +7,15 @@ struct SunSessionLiveActivityMetricsColumn: View {
     var progressWidth: CGFloat = 112
 
     var body: some View {
-        SunSessionLiveActivityLiveMetricsColumn(
-            attributes: attributes,
-            state: state,
-            iuFont: iuFont,
-            progressWidth: progressWidth
-        )
+        SunSessionLiveUpdatingMetricsView(attributes: attributes, state: state) { estimatedIU, goalProgress in
+            SunSessionLiveActivityLiveMetricsColumn(
+                attributes: attributes,
+                state: state,
+                estimatedIU: estimatedIU,
+                goalProgress: goalProgress,
+                iuFont: iuFont,
+                progressWidth: progressWidth
+            )
+        }
     }
 }

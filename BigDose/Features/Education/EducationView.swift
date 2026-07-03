@@ -35,7 +35,7 @@ struct EducationView: View {
         EducationSection(
             symbolName: "bell.badge.fill",
             title: "How BigDose Limits Sessions",
-            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire near 50%. A stop-now warning always fires at 100% MED (burn risk). Nanny adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. Only you stop the session."
+            detail: "Safe max caps planned time at about 95% of MED (burn risk). Turn-over alerts fire at halfway through your planned session or at 50% MED (burn risk) — whichever comes first. A stop-now warning always fires at 100% MED (burn risk). Nanny adds wrap-up at 75%, the 95% guidance alert and a 98% reminder while you stay out. Only you stop the session."
         ),
         EducationSection(
             symbolName: "cross.case.fill",

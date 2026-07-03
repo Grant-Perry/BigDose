@@ -80,8 +80,20 @@ struct SunSessionGoalDialView: View {
     }
 
     private var progressLabelOverlay: some View {
+        Group {
+            if !isPaused, let interval = goalTimerInterval {
+                TimelineView(.animation(minimumInterval: 1.0, paused: false)) { timeline in
+                    progressLabel(for: liveProgress(at: timeline.date, interval: interval))
+                }
+            } else {
+                progressLabel(for: clampedProgress)
+            }
+        }
+    }
+
+    private func progressLabel(for progress: Double) -> some View {
         VStack(spacing: progressCaption == nil ? 0 : 1) {
-            Text("\(Int(clampedProgress * 100))%")
+            Text("\(Int(min(max(progress, 0), 1) * 100))%")
                 .font(.system(size: overlayFontSize, weight: .black, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.75)
@@ -95,6 +107,13 @@ struct SunSessionGoalDialView: View {
         .foregroundStyle(.white)
         .shadow(color: .black.opacity(0.78), radius: 2, y: 1)
         .frame(width: innerDiameter, height: innerDiameter)
+    }
+
+    private func liveProgress(at date: Date, interval: ClosedRange<Date>) -> Double {
+        let duration = interval.upperBound.timeIntervalSince(interval.lowerBound)
+        guard duration > 0 else { return clampedProgress }
+        let elapsed = date.timeIntervalSince(interval.lowerBound)
+        return min(max(elapsed / duration, 0), 1)
     }
 
     private var accessibilityLabelText: String {

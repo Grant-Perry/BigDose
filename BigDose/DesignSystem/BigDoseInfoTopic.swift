@@ -130,7 +130,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **MED (burn risk)** — *minimal erythema dose* — is Science-based estimate of how much **UV exposure** would start to **redden your skin**, based on your **Fitzpatrick skin type** in **Dose DNA**.
 
-            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED (burn risk) Used %** and warn at **50%** (turn over). **Nanny** adds **75%** (wrap up soon), the **95%** guidance alert and a **98%** reminder while you stay out.
+            **How BigDose uses it:** During a sun session we count down to MED (burn risk), show **MED (burn risk) Used %** and warn to **turn over** at **halfway through your planned session** or **50% MED (burn risk)** — whichever comes first. **Nanny** adds **75%** (wrap up soon), the **95%** guidance alert and a **98%** reminder while you stay out.
 
             **What it is not:** A **medical measurement** or a guarantee you will or won't burn. BigDose warns — **only you stop the session**.
             """
@@ -144,11 +144,11 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
         case .minToRollOver:
             """
-            **What it does:** Counts down until BigDose's **turn-over** milestone — about **50% of your estimated MED (burn risk)** at the current **UV** and exposure settings.
+            **What it does:** Counts down until BigDose's **turn-over** milestone — **halfway through your planned session** or **50% of your estimated MED (burn risk)**, whichever comes first at the current **UV** and exposure settings.
 
             **How to use:** When this hits zero, **flip sides**, **rotate** or **change exposure** so one area of skin does not take all the UV. BigDose also sends a **Turn over** alert at that point.
 
-            **Good to know:** Even exposure helps you reach your vitamin D goal with less burn risk on any single spot.
+            **Good to know:** On a short planned session, turn-over may arrive before **50% MED (burn risk) Used**. Even exposure helps you reach your vitamin D goal with less burn risk on any single spot.
             """
         case .medUsed:
             """
@@ -236,7 +236,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Sets a **planned guide** for this sun session. BigDose **never auto-ends** — you stop when you are ready.
 
-            **How to use:** Use the slider or tap **To goal** or **Safe max**. **Safe max** caps the plan at about **95%** of MED (burn risk) for today's **UV**, **skin type** and **exposure** settings.
+            **How to use:** Use the slider or tap **To goal** or **Safe max**. **Safe max** caps the plan at about **95%** of MED (burn risk) for today's **UV**, **skin type** and **exposure** settings. Turn-over alerts use this planned time — **halfway through your session** or **50% MED (burn risk)**, whichever comes first.
 
             **Good to know:** Shorter planned time is fine if you only need a few minutes of D. Longer is not safer — **Safe max** is the ceiling.
             """
@@ -252,7 +252,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** The longest **planned session** BigDose allows at current conditions — set at about **95%** of your estimated **MED (burn risk)** for your **skin type**, **UV**, **clouds** and **sunscreen** settings.
 
-            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. BigDose alerts at **50%** while you stay out. **Nanny** adds **75%** wrap-up and the **95%** guidance alert.
+            **How to use:** Treat this as a **planning ceiling**, not a target. Tap **Safe max (~X min)** when you want the full guided window. Turn-over alerts fire at **halfway through your planned session** or **50% MED (burn risk)** — whichever comes first. **Nanny** adds **75%** wrap-up and the **95%** guidance alert.
 
             **What it is not:** A guarantee you will or won't burn. Use **Your Limits Today** for turn-over and exit milestones.
             """
@@ -292,15 +292,15 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it is:** **UVB** triggers **vitamin D production** in your skin. Sun exposure also **burns skin**, contributes to **photoaging** and raises **long-term skin cancer risk** with repeated overexposure.
 
-            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED (burn risk) Used**, warn at **50%** and stay vigilant about when to come out of the sun — **only you stop the session**.
+            **How BigDose protects you:** We estimate your personal **MED (burn risk)** from **skin type**, **UV**, **clouds** and **sunscreen**. During live sun sessions we track **MED (burn risk) Used**, warn to **turn over** at **halfway through your planned session** or **50% MED (burn risk)** — whichever comes first — and stay vigilant about when to come out of the sun — **only you stop the session**.
 
-            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds **75%** wrap-up, the **95%** guidance alert and a **98%** reminder while you stay out. Turn it off anytime for **50%** turn-over only — over-limit tracking still applies past **100%**.
+            **Nanny:** In **Settings → Session Safety**, **Nanny** defaults **on** and adds **75%** wrap-up, the **95%** guidance alert and a **98%** reminder while you stay out. Turn it off anytime for **turn-over only** — over-limit tracking still applies past **100%**.
 
             **What it is not:** Medical-grade sun protection or a guarantee you will or won't burn. Use shade, clothing and sunscreen beyond what BigDose models.
             """
         case .sessionSafetyAlerts:
             """
-            **What it does:** **Turn-over** and **stop-now** alerts during live sun sessions — plus matching **background notifications** when the app is closed. **Nanny** adds **75%** wrap-up and **guidance-limit** alerts.
+            **What it does:** **Turn-over** at **halfway through your planned session** or **50% MED (burn risk)** — whichever comes first — plus **stop-now** alerts during live sun sessions and matching **background notifications** when the app is closed. **Nanny** adds **75%** wrap-up and **guidance-limit** alerts.
 
             **How to use:** Keep this **on** unless you are confident tracking burn risk yourself. BigDose uses your **skin type** and live **UV** to personalize every threshold.
 
