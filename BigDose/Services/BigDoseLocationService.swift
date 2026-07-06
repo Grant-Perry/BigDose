@@ -9,7 +9,8 @@ enum BigDoseLocationError: Error {
 @MainActor
 final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
-    private var continuation: CheckedContinuation<CLLocation, Error>?
+    private var pendingContinuations: [CheckedContinuation<CLLocation, Error>] = []
+    private var isRequestInFlight = false
     private var locationUnknownRetryCount = 0
 
     override init() {
@@ -19,50 +20,58 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func requestCurrentLocation() async throws -> CLLocation {
-        return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
+        try await withCheckedThrowingContinuation { continuation in
+            pendingContinuations.append(continuation)
+            guard !isRequestInFlight else { return }
 
-            switch manager.authorizationStatus {
-            case .notDetermined:
-                manager.requestWhenInUseAuthorization()
-            case .authorizedAlways, .authorizedWhenInUse:
-                manager.requestLocation()
-            case .denied, .restricted:
-                resume(throwing: BigDoseLocationError.denied)
-            @unknown default:
-                resume(throwing: BigDoseLocationError.unavailable)
-            }
+            isRequestInFlight = true
+            beginLocationRequest()
+        }
+    }
+
+    private func beginLocationRequest() {
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+        case .denied, .restricted:
+            resumeAll(throwing: BigDoseLocationError.denied)
+        @unknown default:
+            resumeAll(throwing: BigDoseLocationError.unavailable)
         }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard isRequestInFlight else { return }
+
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             manager.requestLocation()
         case .denied, .restricted:
-            resume(throwing: BigDoseLocationError.denied)
+            resumeAll(throwing: BigDoseLocationError.denied)
         case .notDetermined:
             break
         @unknown default:
-            resume(throwing: BigDoseLocationError.unavailable)
+            resumeAll(throwing: BigDoseLocationError.unavailable)
         }
     }
 
     func locationManager(_: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else {
-            resume(throwing: BigDoseLocationError.unavailable)
+            resumeAll(throwing: BigDoseLocationError.unavailable)
             return
         }
 
         locationUnknownRetryCount = 0
-        resume(returning: location)
+        resumeAll(returning: location)
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         if let error = error as? CLError, error.code == .locationUnknown {
             if let cachedLocation = manager.location {
                 locationUnknownRetryCount = 0
-                resume(returning: cachedLocation)
+                resumeAll(returning: cachedLocation)
                 return
             }
 
@@ -74,16 +83,26 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
         }
 
         locationUnknownRetryCount = 0
-        resume(throwing: error)
+        resumeAll(throwing: error)
     }
 
-    private func resume(returning location: CLLocation) {
-        continuation?.resume(returning: location)
-        continuation = nil
+    private func resumeAll(returning location: CLLocation) {
+        let continuations = pendingContinuations
+        pendingContinuations = []
+        isRequestInFlight = false
+
+        for continuation in continuations {
+            continuation.resume(returning: location)
+        }
     }
 
-    private func resume(throwing error: Error) {
-        continuation?.resume(throwing: error)
-        continuation = nil
+    private func resumeAll(throwing error: Error) {
+        let continuations = pendingContinuations
+        pendingContinuations = []
+        isRequestInFlight = false
+
+        for continuation in continuations {
+            continuation.resume(throwing: error)
+        }
     }
 }

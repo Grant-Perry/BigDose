@@ -59,7 +59,7 @@ enum SunExposureAggregation {
 
         return TodaySunRiskSummary(
             liveSessionCount: todayLive.count,
-            totalMedUsedPercent: todayLive.reduce(0) { $0 + $1.peakMedUsedPercent },
+            totalMedUsedPercent: todayLive.map(\.peakMedUsedPercent).max() ?? 0,
             totalMedOverLimitPercent: todayLive.reduce(0) { $0 + $1.medOverLimitPercent }
         )
     }

@@ -583,10 +583,10 @@ struct HomeView: View {
         let sessionLabel = summary.liveSessionCount == 1 ? "1 session" : "\(summary.liveSessionCount) sessions"
 
         if summary.hasOverLimitExposure {
-            return "MED (burn risk) exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% today, including \(summary.totalMedOverLimitPercent)% past 100% MED (burn risk)."
+            return "MED (burn risk) exposure across \(sessionLabel) peaked at \(summary.totalMedUsedPercent)% today, including \(summary.totalMedOverLimitPercent)% past 100% MED (burn risk)."
         }
 
-        return "MED (burn risk) exposure across \(sessionLabel) totals \(summary.totalMedUsedPercent)% of BigDose's guidance budget today."
+        return "Peak MED (burn risk) across \(sessionLabel) reached \(summary.totalMedUsedPercent)% of BigDose's guidance budget today."
     }
 
     private var metricGrid: some View {
@@ -797,7 +797,8 @@ struct HomeView: View {
             quality: result.plan.estimate.quality,
             locationLabel: result.plan.locationName,
             latitude: result.plan.latitude,
-            longitude: result.plan.longitude
+            longitude: result.plan.longitude,
+            sessionTargetIU: result.plan.targetIU
         )
         modelContext.insert(session)
         try? modelContext.save()

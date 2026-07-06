@@ -27,6 +27,7 @@ final class ExposureSession {
     var sourceAppName: String?
     var confidence: Double = 1
     var note: String = ""
+    var sessionTargetIU: Double = 0
 
     init(
         startedAt: Date = .now,
@@ -50,7 +51,8 @@ final class ExposureSession {
         importBatchImportedAt: Date? = nil,
         sourceAppName: String? = nil,
         confidence: Double = 1,
-        note: String = ""
+        note: String = "",
+        sessionTargetIU: Double = 0
     ) {
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -74,6 +76,7 @@ final class ExposureSession {
         self.sourceAppName = sourceAppName
         self.confidence = confidence
         self.note = note
+        self.sessionTargetIU = sessionTargetIU
     }
 }
 
@@ -117,6 +120,10 @@ extension ExposureSession {
         }
 
         return "\(duration) · \(peakMedUsedPercent)% MED (burn risk) used"
+    }
+
+    func resolvedSessionTargetIU(profile: UserProfile) -> Double {
+        sessionTargetIU > 0 ? sessionTargetIU : Double(profile.preferredDailyIU)
     }
 
     func historyTimestamp(calendar: Calendar = .current) -> String {

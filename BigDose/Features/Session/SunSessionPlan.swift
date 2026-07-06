@@ -27,7 +27,7 @@ struct SunSessionPlan: Equatable {
         SunSessionEligibilityService.isOutsideVitaminDWindow(
             latitude: latitude,
             longitude: longitude,
-            now: startedAt
+            now: .now
         )
     }
 

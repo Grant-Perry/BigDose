@@ -21,6 +21,7 @@ final class SunSessionLiveActivityCoordinator {
     private var lastPushedContentState: SunSessionActivityAttributes.ContentState?
     private var pendingUpdateTask: Task<Void, Never>?
     private var pendingContentState: SunSessionActivityAttributes.ContentState?
+    private var reconcileTask: Task<Void, Never>?
 
     private init() {}
 
@@ -45,8 +46,11 @@ final class SunSessionLiveActivityCoordinator {
         let attributes = plan.liveActivityAttributes()
         let state = plan.liveActivityContentState(elapsedSeconds: elapsedSeconds, isPaused: isPaused)
 
-        Task {
-            await reconcileSingleton(with: attributes, state: state)
+        let previous = reconcileTask
+        reconcileTask = Task { @MainActor [weak self] in
+            _ = await previous?.value
+            guard let self else { return }
+            await self.reconcileSingleton(with: attributes, state: state)
         }
     }
 

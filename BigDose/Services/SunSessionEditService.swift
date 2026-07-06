@@ -19,7 +19,7 @@ enum SunSessionEditService {
             currentTemperatureFahrenheit: 72,
             skinType: skinType,
             locationName: session.locationLabel ?? "Sun session",
-            targetIU: Double(profile.preferredDailyIU),
+            targetIU: session.resolvedSessionTargetIU(profile: profile),
             exitLeadFraction: profile.prepareExitLeadFraction,
             latitude: session.latitude ?? 0,
             longitude: session.longitude ?? 0

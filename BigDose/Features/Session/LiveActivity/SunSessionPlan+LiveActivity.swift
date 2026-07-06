@@ -34,11 +34,11 @@ extension SunSessionPlan {
             )
         }
 
-        // Anchor to the real session start so the lock screen timer ticks without app updates.
+        let timing = SunSessionLiveActivityMetrics.runningStateTiming(elapsedSeconds: elapsedSeconds)
         return SunSessionActivityAttributes.ContentState(
             isPaused: false,
-            elapsedOffsetSeconds: 0,
-            runningSince: startedAt,
+            elapsedOffsetSeconds: timing.elapsedOffsetSeconds,
+            runningSince: timing.runningSince,
             estimatedIU: estimatedIU,
             goalProgress: goalProgress,
             pendingControl: .none

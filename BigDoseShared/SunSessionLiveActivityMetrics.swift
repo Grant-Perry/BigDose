@@ -22,6 +22,14 @@ nonisolated enum SunSessionLiveActivityMetrics {
         return runningSince.addingTimeInterval(-state.elapsedOffsetSeconds)
     }
 
+    /// Encodes accumulated elapsed time so lock-screen timers exclude paused intervals.
+    static func runningStateTiming(
+        elapsedSeconds: TimeInterval,
+        now: Date = .now
+    ) -> (elapsedOffsetSeconds: TimeInterval, runningSince: Date) {
+        (0, now.addingTimeInterval(-elapsedSeconds))
+    }
+
     static func estimatedIU(elapsedSeconds: TimeInterval, iuPerMinute: Double) -> Double {
         guard elapsedSeconds > 0 else { return 0 }
         return iuPerMinute * (elapsedSeconds / 60)

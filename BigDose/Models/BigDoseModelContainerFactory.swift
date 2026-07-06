@@ -31,6 +31,7 @@ enum BigDoseModelContainerFactory {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             guard isMigrationFailure(error) else { throw error }
+            try backupStoreFiles(at: configuration.url)
             try removeStoreFiles(at: configuration.url)
             return try ModelContainer(for: schema, configurations: [configuration])
         }
@@ -60,6 +61,24 @@ enum BigDoseModelContainerFactory {
         }
 
         return false
+    }
+
+    private static func backupStoreFiles(at url: URL) throws {
+        let fileManager = FileManager.default
+        let backupDirectory = url.deletingLastPathComponent().appending(
+            path: "migration-backup-\(Int(Date.now.timeIntervalSince1970))",
+            directoryHint: .isDirectory
+        )
+
+        try fileManager.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
+
+        let basePath = url.path
+        for suffix in ["", "-shm", "-wal"] {
+            let fileURL = URL(fileURLWithPath: basePath + suffix)
+            guard fileManager.fileExists(atPath: fileURL.path) else { continue }
+            let destination = backupDirectory.appending(path: fileURL.lastPathComponent)
+            try fileManager.copyItem(at: fileURL, to: destination)
+        }
     }
 
     private static func removeStoreFiles(at url: URL) throws {

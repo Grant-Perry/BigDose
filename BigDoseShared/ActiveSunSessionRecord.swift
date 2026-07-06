@@ -144,10 +144,11 @@ nonisolated struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
             )
         }
 
+        let timing = SunSessionLiveActivityMetrics.runningStateTiming(elapsedSeconds: elapsed)
         return SunSessionActivityAttributes.ContentState(
             isPaused: false,
-            elapsedOffsetSeconds: 0,
-            runningSince: startedAt,
+            elapsedOffsetSeconds: timing.elapsedOffsetSeconds,
+            runningSince: timing.runningSince,
             estimatedIU: estimatedIU,
             goalProgress: goalProgress,
             pendingControl: .none

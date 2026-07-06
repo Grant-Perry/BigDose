@@ -114,12 +114,13 @@ enum BigDoseWidgetSnapshotBuilder {
             )
         }
 
+        let timing = SunSessionLiveActivityMetrics.runningStateTiming(elapsedSeconds: elapsedSeconds)
         return ActiveSessionWidgetState(
             sessionID: plan.liveActivitySessionID,
             locationName: plan.locationName,
             isPaused: false,
-            elapsedOffsetSeconds: 0,
-            runningSince: plan.startedAt,
+            elapsedOffsetSeconds: timing.elapsedOffsetSeconds,
+            runningSince: timing.runningSince,
             iuPerMinute: plan.liveIUProductionRatePerMinute,
             targetIU: plan.targetIU,
             sessionStartedAt: plan.startedAt

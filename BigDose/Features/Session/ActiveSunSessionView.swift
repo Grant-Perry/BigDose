@@ -160,10 +160,12 @@ struct ActiveSunSessionView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                reconcileElapsedFromPersistedState()
                 consumeLiveActivityCommands()
                 syncLiveActivity()
                 evaluateStaleSessionAlert()
             case .inactive, .background:
+                persistSessionState()
                 syncLiveActivity()
             @unknown default:
                 break
@@ -746,6 +748,29 @@ struct ActiveSunSessionView: View {
         isPaused = record.isPaused
         restoreAcknowledgedSafetyAlerts(from: record)
         syncHistoricalSafetyAcknowledgements()
+    }
+
+    private func reconcileElapsedFromPersistedState() {
+        guard !sessionEnded, !isShowingInactivityRecoveryAlert else { return }
+        guard let record = ActiveSunSessionStore.load(),
+              record.sessionID == plan.liveActivitySessionID else {
+            return
+        }
+
+        if ActiveSessionRecoveryService.needsRecovery(for: record) {
+            evaluateStaleSessionAlert()
+            return
+        }
+
+        let persistedElapsed = record.currentElapsed()
+        guard persistedElapsed > elapsedSeconds else { return }
+
+        elapsedSeconds = persistedElapsed
+        isPaused = record.isPaused
+        syncHistoricalSafetyAcknowledgements()
+        persistSessionState()
+        Task { await refreshSessionSafetyNotifications() }
+        evaluateSessionAlerts()
     }
 
     private func resumeAfterInactivityRecovery() {
