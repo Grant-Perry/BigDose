@@ -99,6 +99,8 @@ struct SunSessionPlannerView: View {
                     windowStatusCard
                     controls
                     sessionSummaryCard
+                    BigDoseWeatherAttributionView(weather: weather)
+                        .padding(.top, 2)
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 12)

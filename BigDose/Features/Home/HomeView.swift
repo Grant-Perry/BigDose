@@ -178,10 +178,7 @@ struct HomeView: View {
                         weatherExpandedDetails(weather)
                     }
 
-                    BigDoseWeatherAttributionView(
-                        weather: weather,
-                        statusMessage: homeViewModel.statusMessage
-                    )
+                    BigDoseWeatherAttributionView(weather: weather)
                 }
                 .animation(.smooth(duration: 0.32), value: isShowingMoreWeather)
                 .clipped()
@@ -763,6 +760,7 @@ struct HomeView: View {
         case .activeSunSession(let plan):
             ActiveSunSessionView(
                 plan: plan,
+                weatherAttribution: homeViewModel.weather.map(BigDoseWeatherAttribution.init(weather:)),
                 wantsSessionSafetyAlerts: activeProfile.wantsRiskAlerts,
                 wantsActiveSessionReminders: activeProfile.wantsActiveSessionReminders,
                 wantsNannyMode: activeProfile.wantsNannyMode,
@@ -1069,58 +1067,6 @@ private struct SupplementLogActionButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Log \(iu) IU supplement")
-    }
-}
-
-private struct BigDoseWeatherAttributionView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    var weather: BigDoseWeatherSnapshot
-    var statusMessage: String?
-
-    private var markURL: URL? {
-        colorScheme == .dark ? weather.combinedMarkDarkURL : weather.combinedMarkLightURL
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            if let statusMessage {
-                Text(statusMessage)
-                    .font(.caption2.weight(.semibold))
-            }
-
-            if let markURL {
-                AsyncImage(url: markURL) { image in
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 14)
-                } placeholder: {
-                    Text("Weather")
-                        .font(.caption2.weight(.bold))
-                }
-            } else {
-                Text("Weather")
-                    .font(.caption2.weight(.bold))
-            }
-
-            if let url = weather.attributionURL {
-                Link("Data Sources", destination: url)
-                    .font(.caption2.weight(.semibold))
-            }
-
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(.white.opacity(0.58))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabelText)
-    }
-
-    private var accessibilityLabelText: String {
-        if let statusMessage {
-            "\(statusMessage). Weather data attribution and legal data sources."
-        } else {
-            "Weather data attribution and legal data sources"
-        }
     }
 }
 

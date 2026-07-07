@@ -5,6 +5,7 @@ struct ActiveSunSessionView: View {
     var wantsSessionSafetyAlerts: Bool
     var wantsActiveSessionReminders: Bool
     var wantsNannyMode: Bool
+    var weatherAttribution: BigDoseWeatherAttribution = .standard
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
 
@@ -34,6 +35,7 @@ struct ActiveSunSessionView: View {
 
     init(
         plan: SunSessionPlan,
+        weatherAttribution: BigDoseWeatherAttribution? = nil,
         wantsSessionSafetyAlerts: Bool,
         wantsActiveSessionReminders: Bool = true,
         wantsNannyMode: Bool = true,
@@ -41,6 +43,7 @@ struct ActiveSunSessionView: View {
         onComplete: @escaping (SunSessionResult) -> Void
     ) {
         _plan = State(initialValue: plan)
+        self.weatherAttribution = weatherAttribution ?? .standard
         self.wantsSessionSafetyAlerts = wantsSessionSafetyAlerts
         self.wantsActiveSessionReminders = wantsActiveSessionReminders
         self.wantsNannyMode = wantsNannyMode
@@ -312,6 +315,9 @@ struct ActiveSunSessionView: View {
                     weatherChip("UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1))))")
                     weatherChip(plan.cloudCover.title)
                 }
+
+                BigDoseWeatherAttributionView(attribution: weatherAttribution)
+                    .padding(.top, 2)
             }
 
             Spacer(minLength: 12)

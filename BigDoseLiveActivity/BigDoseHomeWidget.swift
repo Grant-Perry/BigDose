@@ -221,6 +221,8 @@ struct BigDoseHomeWidgetEntryView: View {
             Text("\(Int(entry.snapshot.todaySunIU.rounded())) / \(entry.snapshot.targetIU) IU sun")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.72))
+
+            BigDoseCompactWeatherAttributionView()
         }
     }
 
@@ -266,6 +268,8 @@ struct BigDoseHomeWidgetEntryView: View {
                         .lineLimit(1)
                 }
             }
+
+            BigDoseCompactWeatherAttributionView()
         }
     }
 

@@ -41,6 +41,8 @@ struct SunSessionLiveActivityLockScreenView: View {
             }
 
             controlRow
+
+            BigDoseCompactWeatherAttributionView()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

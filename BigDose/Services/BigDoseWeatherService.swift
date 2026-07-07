@@ -56,7 +56,7 @@ enum BigDoseWeatherService {
             hourlyForecast: upcomingHourly.prefix(72).map(mapHourlyForecast),
             dailyForecast: dailyForecast,
             attributionText: attribution?.legalAttributionText ?? "Weather data provided by Apple Weather.",
-            attributionURL: attribution?.legalPageURL ?? URL(string: "https://weatherkit.apple.com/legal-attribution.html"),
+            attributionURL: attribution?.legalPageURL ?? BigDoseWeatherAttributionLegal.pageURL,
             combinedMarkLightURL: attribution?.combinedMarkLightURL,
             combinedMarkDarkURL: attribution?.combinedMarkDarkURL,
             isLive: true,

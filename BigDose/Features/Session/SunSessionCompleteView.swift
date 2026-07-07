@@ -16,6 +16,7 @@ struct SunSessionCompleteView: View {
                     statsCard
                     factorsCard
                     editHintCard
+                    BigDoseWeatherAttributionView(attribution: .standard)
                     doneButton
                 }
                 .padding(18)
