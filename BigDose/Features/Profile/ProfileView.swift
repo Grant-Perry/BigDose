@@ -39,6 +39,7 @@ private struct ProfileContent: View {
                         goalsCard
                         dataLinksCard
                         educationLink
+                        medicalSourcesLink
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
@@ -184,6 +185,20 @@ private struct ProfileContent: View {
                 }
             }
         }
+    }
+
+    private var medicalSourcesLink: some View {
+        NavigationLink {
+            MedicalSourcesView()
+        } label: {
+            GlassCard(cornerRadius: 24) {
+                Label("Health Information Sources", systemImage: "doc.text.magnifyingglass")
+                    .font(.bigDoseHeader(.headline).weight(.black))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var educationLink: some View {

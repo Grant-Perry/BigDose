@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftData
 import SwiftUI
 
@@ -55,13 +56,17 @@ struct OnboardingView: View {
     @State private var isCheckingMetricSync = false
     @State private var metricSyncNextAction: MetricSyncNextAction?
     @State private var healthKitImportService = HealthKitImportService()
+    @State private var onboardingLocationService = BigDoseLocationService()
+    @State private var isRequestingOnboardingLocation = false
+    @State private var onboardingLocationStatus: CLAuthorizationStatus = .notDetermined
 
-    private let healthPage = 3
-    private let bodyPageIndex = 5
-    private let levelPageIndex = 6
-    private let firstResultPageIndex = 12
-    private let disclaimerPageIndex = 13
-    private let onboardingPageCount = 14
+    private let locationPageIndex = 1
+    private let healthPage = 4
+    private let bodyPageIndex = 6
+    private let levelPageIndex = 7
+    private let firstResultPageIndex = 13
+    private let disclaimerPageIndex = 14
+    private let onboardingPageCount = 15
 
     var body: some View {
         ZStack {
@@ -77,8 +82,25 @@ struct OnboardingView: View {
                     )
                     .tag(0)
 
+                    OnboardingLocationPage(
+                        authorizationStatus: onboardingLocationStatus,
+                        isRequesting: isRequestingOnboardingLocation,
+                        onEnable: {
+                            Task { await requestOnboardingLocation() }
+                        },
+                        onContinue: {
+                            withAnimation(.smooth) {
+                                page = locationPageIndex + 1
+                            }
+                        }
+                    )
+                    .tag(1)
+                    .onAppear {
+                        onboardingLocationStatus = onboardingLocationService.authorizationStatus
+                    }
+
                     whyBigDosePage
-                        .tag(1)
+                        .tag(2)
 
                     OnboardingPageView(
                         symbolName: "shield.lefthalf.filled",
@@ -86,7 +108,7 @@ struct OnboardingView: View {
                         title: "Useful guidance...\nNot a diagnosis.",
                         detail: "BigDose is wellness information you can choose to use. Labs and clinicians are the source of truth for vitamin D deficiency."
                     )
-                    .tag(2)
+                    .tag(3)
 
                     OnboardingAppleHealthPage(
                         isSyncing: isSyncingHealth,
@@ -102,44 +124,44 @@ struct OnboardingView: View {
                             }
                         }
                     )
-                    .tag(3)
+                    .tag(4)
 
                     basicsPage
-                        .tag(4)
-
-                    bodyPage
                         .tag(5)
 
-                    levelPage
+                    bodyPage
                         .tag(6)
 
-                    supplementPage
+                    levelPage
                         .tag(7)
 
-                    skinTypePage
+                    supplementPage
                         .tag(8)
 
-                    sunSafetyPage
+                    skinTypePage
                         .tag(9)
 
-                    exposurePage
+                    sunSafetyPage
                         .tag(10)
 
-                    alertsPage
+                    exposurePage
                         .tag(11)
 
-                    firstResultPage
+                    alertsPage
                         .tag(12)
 
-                    disclaimerPage
+                    firstResultPage
                         .tag(13)
+
+                    disclaimerPage
+                        .tag(14)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
                 onboardingPageDots
                     .padding(.bottom, 4)
 
-                if page != healthPage && page != disclaimerPageIndex {
+                if page != locationPageIndex && page != healthPage && page != disclaimerPageIndex {
                     primaryButton
                         .padding(.horizontal, 22)
                         .padding(.bottom, 18)
@@ -873,6 +895,11 @@ struct OnboardingView: View {
                     GlassCard {
                         VStack(alignment: .leading, spacing: 14) {
                             disclaimerSection(
+                                title: "Health information sources",
+                                body: "Vitamin D, UV and sun-safety guidance in BigDose is based on published research. You can review linked citations anytime in Profile → Health Information Sources or from any info panel in the app."
+                            )
+
+                            disclaimerSection(
                                 title: "Wellness guidance only",
                                 body: "BigDose provides informational wellness guidance about sunlight, supplements and vitamin D habits. It does not diagnose, treat, cure or prevent any disease and is not a substitute for professional medical advice, diagnosis or treatment."
                             )
@@ -960,6 +987,19 @@ struct OnboardingView: View {
         }
 
         return false
+    }
+
+    private func requestOnboardingLocation() async {
+        isRequestingOnboardingLocation = true
+        defer { isRequestingOnboardingLocation = false }
+
+        do {
+            _ = try await onboardingLocationService.requestCurrentLocation()
+        } catch {
+            // Permission result still matters even when location lookup fails.
+        }
+
+        onboardingLocationStatus = onboardingLocationService.authorizationStatus
     }
 
     private func advance() {

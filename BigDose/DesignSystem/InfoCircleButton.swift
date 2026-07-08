@@ -49,6 +49,7 @@ struct InfoCircleButton: View {
             InfoBoxView(
                 title: topic.title,
                 bodyText: topic.bodyText,
+                sources: topic.sources,
                 onClose: { isPresented = false }
             )
             .padding(12)

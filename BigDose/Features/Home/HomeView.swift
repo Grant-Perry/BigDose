@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \DailySunPlan.generatedAt, order: .reverse) private var dailyPlans: [DailySunPlan]
     @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
@@ -129,6 +130,10 @@ struct HomeView: View {
         if let weather = homeViewModel.weather {
             GlassCard {
                 VStack(alignment: .leading, spacing: 16) {
+                    if homeViewModel.isShowingCachedWeather {
+                        weatherStaleBanner
+                    }
+
                     weatherSummaryHeader(weather)
 
                     LazyVGrid(columns: weatherColumns, spacing: 9) {
@@ -186,18 +191,110 @@ struct HomeView: View {
         } else if homeViewModel.isLoading {
             weatherLoadingCard
         } else {
-            unavailableCard(
-                title: "Weather unavailable",
-                detail: homeViewModel.statusMessage,
-                systemImage: "cloud",
-                showsUnavailableSlash: true
-            )
-            .task {
-                if homeViewModel.weather == nil && !homeViewModel.isLoading {
-                    await refreshHome()
+            weatherSetupCard
+        }
+    }
+
+    private var weatherStaleBanner: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.solarGold)
+
+            Text(homeViewModel.statusMessage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Button("Refresh") {
+                Task { await refreshHome() }
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.solarGold)
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+    }
+
+    private var weatherSetupCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: weatherSetupSymbolName)
+                        .font(.bigDoseHeader(.title2).weight(.bold))
+                        .foregroundStyle(.solarGold)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(weatherSetupTitle)
+                            .font(.bigDoseHeader(.headline).weight(.black))
+                            .foregroundStyle(.white)
+
+                        Text(homeViewModel.statusMessage)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    if homeViewModel.weatherFailure == .locationDenied {
+                        Button {
+                            openAppSettings()
+                        } label: {
+                            Label("Open Settings", systemImage: "gear")
+                                .font(.caption.weight(.bold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.solarGold)
+                    }
+
+                    Button {
+                        Task { await refreshHome() }
+                    } label: {
+                        Label("Try Again", systemImage: "arrow.clockwise")
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.solarGold)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var weatherSetupTitle: String {
+        switch homeViewModel.weatherFailure {
+        case .locationDenied:
+            "Location needed for weather"
+        case .locationUnknown:
+            "Finding your location"
+        case .locationUnavailable, .weatherUnavailable, .none:
+            "Weather is loading"
+        }
+    }
+
+    private var weatherSetupSymbolName: String {
+        switch homeViewModel.weatherFailure {
+        case .locationDenied:
+            "location.slash.fill"
+        case .locationUnknown:
+            "location.circle.fill"
+        case .locationUnavailable, .weatherUnavailable, .none:
+            "cloud.sun.fill"
+        }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url)
     }
 
     private var weatherLoadingCard: some View {

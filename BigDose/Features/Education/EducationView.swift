@@ -82,6 +82,35 @@ struct EducationView: View {
                     ForEach(scienceSections) { section in
                         scienceSectionCard(section)
                     }
+
+                    NavigationLink {
+                        MedicalSourcesView()
+                    } label: {
+                        GlassCard(cornerRadius: 26) {
+                            HStack(spacing: 14) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                    .font(.bigDoseHeader(.title2).weight(.semibold))
+                                    .foregroundStyle(.solarGold)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Health Information Sources")
+                                        .font(.bigDoseHeader(.headline).weight(.black))
+                                        .foregroundStyle(.white)
+
+                                    Text("Linked citations for vitamin D, UV and sun-safety guidance.")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white.opacity(0.62))
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.bigDoseHeader(.headline).weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.5))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 32)

@@ -3,6 +3,7 @@ import SwiftUI
 struct InfoBoxView: View {
     var title: String
     var bodyText: String
+    var sources: [BigDoseMedicalSource] = []
     var width: CGFloat = 280
     var maxBodyHeight: CGFloat = 340
     var titleIcon: String?
@@ -41,11 +42,17 @@ struct InfoBoxView: View {
                 }
 
                 ScrollView {
-                    Text(formattedBody)
-                        .lineLimit(nil)
-                        .lineSpacing(5)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(formattedBody)
+                            .lineLimit(nil)
+                            .lineSpacing(5)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if !sources.isEmpty {
+                            sourcesSection
+                        }
+                    }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .frame(maxHeight: maxBodyHeight)
@@ -53,5 +60,34 @@ struct InfoBoxView: View {
             .padding(18)
             .frame(width: width, alignment: .leading)
         }
+    }
+
+    private var sourcesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .overlay(.white.opacity(0.18))
+
+            Text("Sources")
+                .font(.caption.weight(.black))
+                .foregroundStyle(.white.opacity(0.72))
+
+            ForEach(sources) { source in
+                Link(destination: source.url) {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "arrow.up.right.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.solarGold)
+
+                        Text(source.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(.white.opacity(0.82))
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }

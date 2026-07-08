@@ -23,6 +23,7 @@ struct SettingsView: View {
                     appleHealthSyncCard
                     notificationsCard
                     manageDataCard
+                    medicalSourcesCard
                     medicalCard
                     onboardingControlsCard
                 }
@@ -126,6 +127,37 @@ struct SettingsView: View {
                 .tint(.red)
             }
         }
+    }
+
+    private var medicalSourcesCard: some View {
+        NavigationLink {
+            MedicalSourcesView()
+        } label: {
+            GlassCard {
+                HStack(spacing: 14) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.bigDoseHeader(.title2).weight(.semibold))
+                        .foregroundStyle(.solarGold)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Health Information Sources")
+                            .font(.bigDoseHeader(.headline).weight(.semibold))
+                            .foregroundStyle(.white)
+
+                        Text("Linked citations for vitamin D, UV and sun-safety guidance.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var medicalCard: some View {
