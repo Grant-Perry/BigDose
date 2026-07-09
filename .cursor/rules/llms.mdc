@@ -1,0 +1,36 @@
+---
+description: LLMS — single-line text that shrinks to fit (.lineLimit(1).minimumScaleFactor(0.5))
+alwaysApply: true
+---
+
+# LLMS
+
+When Gp says **llms**, **LLMS**, or "do llms on it", apply this modifier stack to whatever view or text they are referencing:
+
+```swift
+.lineLimit(1)
+.minimumScaleFactor(0.5)
+```
+
+## When to use
+
+- Totals and subtotals in narrow columns
+- Number + unit pairs (e.g. `2259` + `IU`) that must stay on one line
+- Pills, headers and ledger values that must not wrap
+
+## How to apply
+
+- Wrap the content in the smallest container that needs to stay on one line (e.g. an `HStack` for number + unit, not the whole card).
+- Apply **llms** to that container, not to parent layouts unless the entire row is the target.
+
+## Example
+
+```swift
+HStack(alignment: .firstTextBaseline, spacing: 2) {
+    Text("2259")
+    Text("IU")
+        .foregroundStyle(.secondary)
+}
+.lineLimit(1)
+.minimumScaleFactor(0.5)
+```
