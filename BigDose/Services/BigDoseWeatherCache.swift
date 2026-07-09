@@ -16,7 +16,7 @@ enum BigDoseWeatherCache {
             return nil
         }
 
-        return cached.snapshot
+        return cached.snapshotForDisplay()
     }
 }
 
@@ -75,8 +75,19 @@ private struct CachedWeatherSnapshot: Codable {
         todaySolarNoon = snapshot.todaySolarNoon
     }
 
-    var snapshot: BigDoseWeatherSnapshot {
-        BigDoseWeatherSnapshot(
+    func snapshotForDisplay(calendar: Calendar = .current) -> BigDoseWeatherSnapshot {
+        // Absolute "today" sun stamps are only valid on the observation calendar day.
+        let sunEventsAreForToday = calendar.isDateInToday(observedAt)
+        let sunrise = sunEventsAreForToday ? todaySunrise : nil
+        let sunset = sunEventsAreForToday ? todaySunset : nil
+        let solarNoon = sunEventsAreForToday ? todaySolarNoon : nil
+        let todaySunEvents = SunEventOverrides(
+            sunrise: sunrise,
+            sunset: sunset,
+            solarNoon: solarNoon
+        )
+
+        return BigDoseWeatherSnapshot(
             locationName: locationName,
             temperatureFahrenheit: temperatureFahrenheit,
             feelsLikeFahrenheit: feelsLikeFahrenheit,
@@ -99,20 +110,10 @@ private struct CachedWeatherSnapshot: Codable {
             combinedMarkLightURL: combinedMarkLightURLString.flatMap(URL.init(string:)),
             combinedMarkDarkURL: combinedMarkDarkURLString.flatMap(URL.init(string:)),
             isLive: false,
-            todaySunrise: todaySunrise,
-            todaySunset: todaySunset,
-            todaySolarNoon: todaySolarNoon,
-            todaySunEvents: SunEventOverrides(
-                sunrise: todaySunrise,
-                sunset: todaySunset,
-                solarNoon: todaySolarNoon
-            ).hasAnyEvent
-                ? SunEventOverrides(
-                    sunrise: todaySunrise,
-                    sunset: todaySunset,
-                    solarNoon: todaySolarNoon
-                )
-                : nil
+            todaySunrise: sunrise,
+            todaySunset: sunset,
+            todaySolarNoon: solarNoon,
+            todaySunEvents: todaySunEvents.hasAnyEvent ? todaySunEvents : nil
         )
     }
 }

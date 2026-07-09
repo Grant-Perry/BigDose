@@ -99,7 +99,7 @@ struct HomeView: View {
             targetIU: activeProfile.preferredDailyIU,
             vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
             now: now,
-            isSunSessionStartEnabled: homeViewModel.weather != nil,
+            isSunSessionStartEnabled: homeViewModel.hasLiveWeather,
             showsNoUsefulUV: showsNoUsefulUV(now: now),
             onStartSunSession: { sessionRoute = .typePicker }
         )
@@ -130,7 +130,7 @@ struct HomeView: View {
         if let weather = homeViewModel.weather {
             GlassCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    if homeViewModel.isShowingCachedWeather {
+                    if homeViewModel.showsWeatherStatusBanner {
                         weatherStaleBanner
                     }
 
@@ -197,7 +197,7 @@ struct HomeView: View {
 
     private var weatherStaleBanner: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "clock.arrow.circlepath")
+            Image(systemName: weatherBannerSymbolName)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.solarGold)
 
@@ -207,6 +207,15 @@ struct HomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 0)
+
+            if homeViewModel.weatherFailure == .locationDenied {
+                Button("Settings") {
+                    openAppSettings()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.solarGold)
+                .buttonStyle(.plain)
+            }
 
             Button("Refresh") {
                 Task { await refreshHome() }
@@ -218,6 +227,16 @@ struct HomeView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(.white.opacity(0.06), in: .rect(cornerRadius: 14))
+    }
+
+    private var weatherBannerSymbolName: String {
+        if homeViewModel.weatherFailure == .locationDenied {
+            return "location.slash.fill"
+        }
+        if homeViewModel.isUsingApproximateLocation {
+            return "location.fill"
+        }
+        return "clock.arrow.circlepath"
     }
 
     private var weatherSetupCard: some View {
@@ -416,7 +435,7 @@ struct HomeView: View {
                 detail: "Waiting for Apple Weather sun times for your location.",
                 systemImage: "sun.max.fill"
             )
-        } else if let plan = currentPlan, homeViewModel.weather != nil,
+        } else if let plan = currentPlan, homeViewModel.hasLiveWeather,
                   let display = vitaminDWindowDisplay(for: plan, now: now) {
             GlassCard {
                 VStack(alignment: .leading, spacing: 18) {
@@ -434,7 +453,7 @@ struct HomeView: View {
                     }
 
                     StartSunSessionActionButton(
-                        isEnabled: homeViewModel.weather != nil,
+                        isEnabled: homeViewModel.hasLiveWeather,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
                         size: .compact
                     ) {
@@ -446,6 +465,14 @@ struct HomeView: View {
                     }
                 }
             }
+        } else if homeViewModel.isShowingCachedWeather {
+            unavailableCard(
+                title: "Solar guidance paused",
+                detail: homeViewModel.weatherFailure == .locationDenied
+                    ? "Turn on Location for BigDose in Settings to refresh live weather and today’s sunlight window."
+                    : "Showing last saved weather only. Pull to refresh when live Apple Weather is available.",
+                systemImage: "sun.max.trianglebadge.exclamationmark.fill"
+            )
         } else {
             unavailableCard(
                 title: "Solar guidance unavailable",
@@ -563,7 +590,7 @@ struct HomeView: View {
                 )
 
                 StartSunSessionActionButton(
-                    isEnabled: homeViewModel.weather != nil,
+                    isEnabled: homeViewModel.hasLiveWeather,
                     showsNoUsefulUV: showsNoUsefulUV(now: now),
                     size: .compact
                 ) {
@@ -584,7 +611,7 @@ struct HomeView: View {
 
                 VStack(spacing: 12) {
                     StartSunSessionActionButton(
-                        isEnabled: homeViewModel.weather != nil,
+                        isEnabled: homeViewModel.hasLiveWeather,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
                         size: .regular
                     ) {
@@ -685,7 +712,14 @@ struct HomeView: View {
 
     private var metricGrid: some View {
         LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
-            MetricPill(title: "UV Index", value: homeViewModel.weather?.uvIndex.formatted(.number.precision(.fractionLength(1))) ?? "Unavailable", systemImage: "sun.max.fill", infoTopic: .uvIndex)
+            MetricPill(
+                title: "UV Index",
+                value: homeViewModel.hasLiveWeather
+                    ? (homeViewModel.weather?.uvIndex.formatted(.number.precision(.fractionLength(1))) ?? "Unavailable")
+                    : "Unavailable",
+                systemImage: "sun.max.fill",
+                infoTopic: .uvIndex
+            )
             MetricPill(title: "Risk Used", value: "\(estimate.riskPercent)%", systemImage: "shield.lefthalf.filled", infoTopic: .med)
             MetricPill(title: "Skin Type", value: activeProfile.skinType.title, systemImage: "person.crop.square", infoTopic: .skinType)
             MetricPill(title: "Goal", value: "\(Int(activeProfile.goalNanogramsPerMilliliter)) ng/mL", systemImage: "target", infoTopic: .goal)
@@ -693,7 +727,12 @@ struct HomeView: View {
     }
 
     private var recommendationSummary: String {
-        guard let weather = homeViewModel.weather else {
+        guard homeViewModel.hasLiveWeather, let weather = homeViewModel.weather else {
+            if homeViewModel.isShowingCachedWeather {
+                return homeViewModel.weatherFailure == .locationDenied
+                    ? "Turn on Location in Settings to refresh live UV before estimating today’s sunlight dose."
+                    : "Live Apple Weather is unavailable. Pull to refresh before estimating today’s sunlight dose."
+            }
             return "BigDose needs current WeatherKit UV data before estimating today’s sunlight dose."
         }
 
@@ -824,7 +863,7 @@ struct HomeView: View {
             }
 
         case .sunPlanner:
-            if let weather = homeViewModel.weather, let plan = currentPlan {
+            if let weather = homeViewModel.weather, homeViewModel.hasLiveWeather, let plan = currentPlan {
                 SunSessionPlannerView(
                     profile: activeProfile,
                     weather: weather,
@@ -833,6 +872,14 @@ struct HomeView: View {
                     isFirstLiveSunSession: isFirstLiveSunSession,
                     onCancel: { sessionRoute = .typePicker },
                     onStart: { plan in sessionRoute = .activeSunSession(plan) }
+                )
+            } else if homeViewModel.isShowingCachedWeather {
+                HomeUnavailableSheet(
+                    title: "Live Weather Required",
+                    message: homeViewModel.weatherFailure == .locationDenied
+                        ? "Turn on Location for BigDose in Settings, then refresh Home for live UV before starting a sun session."
+                        : "BigDose needs live Apple Weather UV data before starting a sun session. Pull to refresh on Home.",
+                    onClose: { sessionRoute = nil }
                 )
             } else if homeViewModel.weather != nil {
                 HomeUnavailableSheet(

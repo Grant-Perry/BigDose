@@ -18,8 +18,11 @@ final class HomeViewModel {
     var statusMessage = "Loading current location and Apple Weather."
     var weatherFailure: WeatherLoadFailure?
     var isShowingCachedWeather = false
+    var isUsingApproximateLocation = false
 
     private let locationService = BigDoseLocationService()
+    private var locationRetryCount = 0
+    private let maxLocationRetries = 3
 
     init() {
         if let cached = BigDoseWeatherCache.load() {
@@ -34,42 +37,100 @@ final class HomeViewModel {
         weatherFailure = nil
         defer { isLoading = false }
 
-        let location: CLLocation
+        let resolved: BigDoseResolvedLocation
 
         do {
-            location = try await locationService.requestCurrentLocation()
+            resolved = try await resolveLocationWithRetries()
         } catch {
             applyWeatherFailure(for: error)
             return
         }
 
+        isUsingApproximateLocation = resolved.isApproximate
+
         do {
-            let snapshot = try await BigDoseWeatherService.weather(for: location)
+            let snapshot = try await BigDoseWeatherService.weather(for: resolved.location)
             weather = snapshot
             dailyPlan = nil
             isShowingCachedWeather = false
             weatherFailure = nil
-            statusMessage = "WeatherKit data"
+            locationRetryCount = 0
+            statusMessage = resolved.isApproximate
+                ? "Showing weather near you while we refine your exact location. Pull to refresh anytime."
+                : "WeatherKit data"
             BigDoseWeatherCache.save(snapshot)
+            BigDoseLocationCache.save(resolved.location)
         } catch {
             applyWeatherFailure(for: error)
         }
     }
 
+    private func resolveLocationWithRetries() async throws -> BigDoseResolvedLocation {
+        var lastError: Error = BigDoseLocationError.unavailable
+
+        for attempt in 0..<maxLocationRetries {
+            locationRetryCount = attempt
+            if attempt > 0 {
+                statusMessage = "Still locating you for local weather…"
+                try? await Task.sleep(for: .seconds(Double(attempt) * 1.5))
+            }
+
+            do {
+                return try await locationService.resolveLocationForWeather()
+            } catch BigDoseLocationError.denied {
+                throw BigDoseLocationError.denied
+            } catch {
+                lastError = error
+            }
+        }
+
+        throw lastError
+    }
+
     func refresh(profile: UserProfile) async {
         await refresh()
 
-        guard let weather else { return }
+        // Cached weather is display-only — never drive plans, UV math or sessions.
+        guard let weather, hasLiveWeather else { return }
 
         do {
-            let location = try await locationService.requestCurrentLocation()
-            dailyPlan = DailySunPlanService.makePlan(profile: profile, weather: weather, location: location)
+            let resolved = try await locationService.resolveLocationForWeather()
+            dailyPlan = DailySunPlanService.makePlan(
+                profile: profile,
+                weather: weather,
+                location: resolved.location
+            )
+            if resolved.isApproximate {
+                isUsingApproximateLocation = true
+                if weatherFailure == nil {
+                    statusMessage = "Showing weather near you while we refine your exact location. Pull to refresh anytime."
+                }
+            }
         } catch {
-            dailyPlan = nil
-            if weatherFailure == nil {
-                statusMessage = solarGuidanceMessage(for: error)
+            // Still try plan generation from any cached coordinate so solar guidance is not blank.
+            if let cachedLocation = BigDoseLocationCache.load() {
+                dailyPlan = DailySunPlanService.makePlan(
+                    profile: profile,
+                    weather: weather,
+                    location: cachedLocation
+                )
+                isUsingApproximateLocation = true
+            } else {
+                dailyPlan = nil
+                if weatherFailure == nil {
+                    statusMessage = solarGuidanceMessage(for: error)
+                }
             }
         }
+    }
+
+    /// Live WeatherKit snapshot only. Cached fallback must not enable sessions or plan generation.
+    var hasLiveWeather: Bool {
+        weather != nil && !isShowingCachedWeather
+    }
+
+    var showsWeatherStatusBanner: Bool {
+        isShowingCachedWeather || isUsingApproximateLocation || weatherFailure == .locationDenied
     }
 
     var locationAuthorizationStatus: CLAuthorizationStatus {
@@ -82,7 +143,7 @@ final class HomeViewModel {
         latitude: Double = 0,
         longitude: Double = 0
     ) -> VitaminDExposureEstimate {
-        guard let weather else {
+        guard hasLiveWeather, let weather else {
             return VitaminDExposureEstimate(
                 estimatedIU: 0,
                 targetDurationSeconds: 0,
@@ -113,17 +174,29 @@ final class HomeViewModel {
     }
 
     private func applyWeatherFailure(for error: Error) {
-        weatherFailure = failureKind(for: error)
+        let kind = failureKind(for: error)
+        weatherFailure = kind
+        isUsingApproximateLocation = false
 
         if let cached = BigDoseWeatherCache.load() {
             weather = cached
+            dailyPlan = nil
             isShowingCachedWeather = true
-            statusMessage = cachedStatusMessage(for: cached)
+            statusMessage = cachedFailureStatusMessage(kind: kind, snapshot: cached)
         } else {
             weather = nil
             dailyPlan = nil
             isShowingCachedWeather = false
             statusMessage = weatherCardMessage(for: error)
+        }
+    }
+
+    private func cachedFailureStatusMessage(kind: WeatherLoadFailure, snapshot: BigDoseWeatherSnapshot) -> String {
+        switch kind {
+        case .locationDenied:
+            "Location is off. Showing last saved weather — enable Location in Settings for live UV."
+        case .locationUnavailable, .locationUnknown, .weatherUnavailable:
+            cachedStatusMessage(for: snapshot)
         }
     }
 

@@ -106,18 +106,26 @@ struct BigDoseDailyForecast: Identifiable, Equatable {
 
 extension BigDoseWeatherSnapshot {
     /// Most reliable WeatherKit sun times for today's diagram — no calendar matching required.
+    /// Absolute timestamps from a prior-day cache must not override today's geometry.
     func preferredTodaySunEvents(calendar: Calendar = .current) -> SunEventOverrides? {
         let cached = SunEventOverrides(
-            sunrise: todaySunrise,
-            sunset: todaySunset,
-            solarNoon: todaySolarNoon
+            sunrise: Self.eventIfToday(todaySunrise, calendar: calendar),
+            sunset: Self.eventIfToday(todaySunset, calendar: calendar),
+            solarNoon: Self.eventIfToday(todaySolarNoon, calendar: calendar)
         )
         if cached.hasAnyEvent {
             return cached
         }
 
-        if let todaySunEvents, todaySunEvents.hasAnyEvent {
-            return todaySunEvents
+        if let todaySunEvents {
+            let todayOnly = SunEventOverrides(
+                sunrise: Self.eventIfToday(todaySunEvents.sunrise, calendar: calendar),
+                sunset: Self.eventIfToday(todaySunEvents.sunset, calendar: calendar),
+                solarNoon: Self.eventIfToday(todaySunEvents.solarNoon, calendar: calendar)
+            )
+            if todayOnly.hasAnyEvent {
+                return todayOnly
+            }
         }
 
         if let first = dailyForecast.first {
@@ -176,5 +184,10 @@ extension BigDoseWeatherSnapshot {
             solarNoon: day.solarNoon
         )
         return overrides.hasAnyEvent ? overrides : nil
+    }
+
+    private static func eventIfToday(_ date: Date?, calendar: Calendar) -> Date? {
+        guard let date, calendar.isDateInToday(date) else { return nil }
+        return date
     }
 }

@@ -6,6 +6,11 @@ enum BigDoseLocationError: Error {
     case denied
 }
 
+struct BigDoseResolvedLocation: Sendable {
+    var location: CLLocation
+    var isApproximate: Bool
+}
+
 @MainActor
 final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
@@ -22,6 +27,55 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    }
+
+    /// Precise GPS when available; otherwise last known / locale-based coordinates when authorization allows.
+    func resolveLocationForWeather() async throws -> BigDoseResolvedLocation {
+        do {
+            let location = try await requestCurrentLocation()
+            BigDoseLocationCache.save(location)
+            return BigDoseResolvedLocation(location: location, isApproximate: false)
+        } catch BigDoseLocationError.denied {
+            throw BigDoseLocationError.denied
+        } catch {
+            if let cached = BigDoseLocationCache.load() ?? manager.location {
+                return BigDoseResolvedLocation(location: cached, isApproximate: true)
+            }
+
+            // Authorized but no fix yet (common on cold iPad / App Review). Still load WeatherKit.
+            if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
+                let fallback = Self.localeApproximateLocation()
+                return BigDoseResolvedLocation(location: fallback, isApproximate: true)
+            }
+
+            throw error
+        }
+    }
+
+    /// Coarse city-level coordinate from the device locale so weather can load before GPS settles.
+    static func localeApproximateLocation() -> CLLocation {
+        let region = Locale.current.region?.identifier.uppercased() ?? "US"
+
+        let coordinate: (lat: Double, lon: Double) = switch region {
+        case "US": (37.3349, -122.0090) // Cupertino — Apple review default
+        case "CA": (43.6532, -79.3832)
+        case "GB": (51.5074, -0.1278)
+        case "AU": (-33.8688, 151.2093)
+        case "NZ": (-36.8485, 174.7633)
+        case "IE": (53.3498, -6.2603)
+        case "DE": (52.5200, 13.4050)
+        case "FR": (48.8566, 2.3522)
+        case "JP": (35.6762, 139.6503)
+        default: (37.3349, -122.0090)
+        }
+
+        return CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: coordinate.lat, longitude: coordinate.lon),
+            altitude: 0,
+            horizontalAccuracy: 50_000,
+            verticalAccuracy: -1,
+            timestamp: .now
+        )
     }
 
     func requestCurrentLocation() async throws -> CLLocation {
@@ -54,19 +108,43 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
 
     private func requestFreshLocation() {
         locationUnknownRetryCount = 0
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         manager.startUpdatingLocation()
         locationUpdateTimeoutTask?.cancel()
         locationUpdateTimeoutTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(12))
+            try? await Task.sleep(for: .seconds(8))
             guard let self, self.isRequestInFlight else { return }
+
+            if let cachedLocation = self.bestAvailableLocation() {
+                self.manager.stopUpdatingLocation()
+                BigDoseLocationCache.save(cachedLocation)
+                self.resumeAll(returning: cachedLocation)
+                return
+            }
+
+            // One more pass at coarser accuracy before failing.
+            self.manager.desiredAccuracy = kCLLocationAccuracyKilometer
+            self.manager.requestLocation()
+
+            try? await Task.sleep(for: .seconds(6))
+            guard self.isRequestInFlight else { return }
             self.manager.stopUpdatingLocation()
-            if let cachedLocation = self.manager.location {
+
+            if let cachedLocation = self.bestAvailableLocation() {
+                BigDoseLocationCache.save(cachedLocation)
                 self.resumeAll(returning: cachedLocation)
             } else {
                 self.resumeAll(throwing: BigDoseLocationError.unavailable)
             }
         }
         manager.requestLocation()
+    }
+
+    private func bestAvailableLocation() -> CLLocation? {
+        if let live = manager.location, live.horizontalAccuracy >= 0 {
+            return live
+        }
+        return BigDoseLocationCache.load()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -94,16 +172,18 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
         manager.stopUpdatingLocation()
         locationUpdateTimeoutTask?.cancel()
         locationUpdateTimeoutTask = nil
+        BigDoseLocationCache.save(location)
         resumeAll(returning: location)
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         if let error = error as? CLError, error.code == .locationUnknown {
-            if let cachedLocation = manager.location {
+            if let cachedLocation = bestAvailableLocation() {
                 locationUnknownRetryCount = 0
                 manager.stopUpdatingLocation()
                 locationUpdateTimeoutTask?.cancel()
                 locationUpdateTimeoutTask = nil
+                BigDoseLocationCache.save(cachedLocation)
                 resumeAll(returning: cachedLocation)
                 return
             }
@@ -119,6 +199,13 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
         manager.stopUpdatingLocation()
         locationUpdateTimeoutTask?.cancel()
         locationUpdateTimeoutTask = nil
+
+        if let cachedLocation = bestAvailableLocation() {
+            BigDoseLocationCache.save(cachedLocation)
+            resumeAll(returning: cachedLocation)
+            return
+        }
+
         resumeAll(throwing: error)
     }
 

@@ -994,7 +994,12 @@ struct OnboardingView: View {
         defer { isRequestingOnboardingLocation = false }
 
         do {
-            _ = try await onboardingLocationService.requestCurrentLocation()
+            let resolved = try await onboardingLocationService.resolveLocationForWeather()
+            BigDoseLocationCache.save(resolved.location)
+            // Prefetch WeatherKit so Dashboard is not empty on first launch after review/onboarding.
+            if let snapshot = try? await BigDoseWeatherService.weather(for: resolved.location) {
+                BigDoseWeatherCache.save(snapshot)
+            }
         } catch {
             // Permission result still matters even when location lookup fails.
         }
