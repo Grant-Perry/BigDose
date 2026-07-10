@@ -3,6 +3,9 @@ import SwiftUI
 
 @main
 struct BigDoseApp: App {
+    @AppStorage(AppAppearancePreference.storageKey)
+    private var appAppearanceRawValue = AppAppearancePreference.system.rawValue
+
     let modelContainer: ModelContainer
 
     init() {
@@ -21,8 +24,13 @@ struct BigDoseApp: App {
         WindowGroup {
             BigDoseRootView()
                 .onOpenURL(perform: handleIncomingURL)
+                .preferredColorScheme(appAppearance.colorScheme)
         }
         .modelContainer(modelContainer)
+    }
+
+    private var appAppearance: AppAppearancePreference {
+        AppAppearancePreference(rawValue: appAppearanceRawValue) ?? .system
     }
 
     private func handleIncomingURL(_ url: URL) {

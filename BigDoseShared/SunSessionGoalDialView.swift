@@ -9,6 +9,7 @@ struct SunSessionGoalDialView: View {
     var diameter: CGFloat = 58
     var lineWidth: CGFloat = 5
     var progressCaption: String?
+    var actionCaption: String?
     var liveProgressAnchor: Date?
     var iconOverscale: CGFloat = 1.22
     var showsNoUsefulUV = false
@@ -27,6 +28,10 @@ struct SunSessionGoalDialView: View {
 
     private var captionFontSize: CGFloat {
         max(8, diameter * 0.12)
+    }
+
+    private var actionCaptionFontSize: CGFloat {
+        max(7, diameter * 0.09)
     }
 
     var body: some View {
@@ -92,7 +97,7 @@ struct SunSessionGoalDialView: View {
     }
 
     private func progressLabel(for progress: Double) -> some View {
-        VStack(spacing: progressCaption == nil ? 0 : 1) {
+        VStack(spacing: progressCaption == nil && actionCaption == nil ? 0 : 1) {
             Text("\(Int(min(max(progress, 0), 1) * 100))%")
                 .font(.system(size: overlayFontSize, weight: .black, design: .rounded))
                 .monospacedDigit()
@@ -102,6 +107,13 @@ struct SunSessionGoalDialView: View {
             if let progressCaption {
                 Text(progressCaption)
                     .font(.system(size: captionFontSize, weight: .bold))
+            }
+
+            if let actionCaption {
+                Text(actionCaption)
+                    .font(.system(size: actionCaptionFontSize, weight: .black))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
             }
         }
         .foregroundStyle(.white)

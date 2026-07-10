@@ -14,65 +14,97 @@ struct SessionControlButton: View {
             }
         }
 
+        var title: String {
+            switch self {
+            case .pause(let isPaused):
+                isPaused ? "Resume" : "Pause"
+            case .stop:
+                "Stop"
+            }
+        }
+
         var tint: Color {
             switch self {
             case .pause(let isPaused):
-                isPaused ? .gpHiGreen : .blue
+                isPaused ? .gpHiGreen : .solarGoldBright
             case .stop:
                 .gpRedPink
             }
         }
 
-        var accessibilityLabel: String {
+        var accessibilityHint: String {
             switch self {
             case .pause(let isPaused):
-                isPaused ? "Resume session" : "Pause session"
+                isPaused
+                    ? "Continues adding sunlight exposure time and estimated vitamin D"
+                    : "Freezes sunlight exposure time until you resume"
             case .stop:
-                "Stop and save session"
+                "Stops the timer and lets you save this session"
             }
         }
     }
+
+    @Environment(\.colorScheme) private var colorScheme
 
     var style: Style
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial.opacity(0.55))
-                    .frame(width: 64, height: 64)
-                    .overlay {
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [style.tint.opacity(0.72), style.tint.opacity(0.38)],
-                                    center: .center,
-                                    startRadius: 4,
-                                    endRadius: 36
-                                )
-                            )
-                    }
-                    .overlay {
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.32), .white.opacity(0.08)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    }
-                    .shadow(color: style.tint.opacity(0.38), radius: 16, y: 6)
-
-                Image(systemName: style.icon)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+        Button(style.title, systemImage: style.icon, action: action)
+            .font(.title3)
+            .bold()
+            .foregroundStyle(foregroundColor)
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .background(backgroundColor, in: .rect(cornerRadius: 24))
+            .overlay {
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(borderColor, lineWidth: colorScheme == .dark ? 1.25 : 1)
             }
+            .shadow(color: shadowColor, radius: 12, y: 6)
+            .buttonStyle(.plain)
+            .accessibilityHint(style.accessibilityHint)
+    }
+
+    private var foregroundColor: Color {
+        switch style {
+        case .pause(let isPaused):
+            if colorScheme == .dark {
+                return isPaused ? .gpHiGreen : .solarGoldBright
+            }
+            return .black
+        case .stop:
+            return colorScheme == .dark ? .white : .gpRedPink
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(style.accessibilityLabel)
+    }
+
+    private var backgroundColor: Color {
+        switch style {
+        case .pause:
+            return colorScheme == .dark
+                ? .black.opacity(0.2)
+                : .solarGold.opacity(0.74)
+        case .stop:
+            return colorScheme == .dark
+                ? .gpRedPink.opacity(0.58)
+                : .gpRedPink.opacity(0.1)
+        }
+    }
+
+    private var borderColor: Color {
+        switch style {
+        case .pause(let isPaused):
+            return isPaused ? .gpHiGreen : .solarGoldBright
+        case .stop:
+            return colorScheme == .dark ? .gpRedPink : .gpRedPink.opacity(0.32)
+        }
+    }
+
+    private var shadowColor: Color {
+        switch style {
+        case .pause:
+            return .solarGold.opacity(colorScheme == .dark ? 0.24 : 0.16)
+        case .stop:
+            return .gpRedPink.opacity(colorScheme == .dark ? 0.24 : 0.1)
+        }
     }
 }

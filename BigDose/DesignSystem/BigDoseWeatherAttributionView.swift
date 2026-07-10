@@ -33,15 +33,26 @@ struct BigDoseWeatherAttributionView: View {
 
     var attribution: BigDoseWeatherAttribution
     var foregroundOpacity: Double = 0.58
+    var foregroundColor: Color = .white
 
-    init(weather: BigDoseWeatherSnapshot, foregroundOpacity: Double = 0.58) {
+    init(
+        weather: BigDoseWeatherSnapshot,
+        foregroundOpacity: Double = 0.58,
+        foregroundColor: Color = .white
+    ) {
         self.attribution = BigDoseWeatherAttribution(weather: weather)
         self.foregroundOpacity = foregroundOpacity
+        self.foregroundColor = foregroundColor
     }
 
-    init(attribution: BigDoseWeatherAttribution, foregroundOpacity: Double = 0.58) {
+    init(
+        attribution: BigDoseWeatherAttribution,
+        foregroundOpacity: Double = 0.58,
+        foregroundColor: Color = .white
+    ) {
         self.attribution = attribution
         self.foregroundOpacity = foregroundOpacity
+        self.foregroundColor = foregroundColor
     }
 
     private var markURL: URL? {
@@ -56,12 +67,16 @@ struct BigDoseWeatherAttributionView: View {
                 Text("Weather Data Sources")
                     .font(.caption2.weight(.semibold))
                     .underline()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
-            .tint(.white.opacity(min(foregroundOpacity + 0.22, 0.88)))
+            .tint(foregroundColor.opacity(min(foregroundOpacity + 0.22, 0.88)))
 
             Spacer(minLength: 0)
         }
-        .foregroundStyle(.white.opacity(foregroundOpacity))
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+        .foregroundStyle(foregroundColor.opacity(foregroundOpacity))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Apple Weather data. Weather data sources legal attribution.")
         .accessibilityHint("Opens Apple's weather data sources page.")

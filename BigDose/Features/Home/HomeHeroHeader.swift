@@ -166,15 +166,19 @@ struct HomeHeroHeader: View {
 
     private func todayGoalDialButton(diameter: CGFloat, showsNoUsefulUV: Bool = false) -> some View {
         Button(action: onStartSunSession) {
-            SunSessionGoalDialView(
-                goalProgress: todayGoalProgress,
-                goalTimerInterval: nil,
-                isPaused: true,
-                diameter: diameter,
-                lineWidth: 5,
-                progressCaption: "IU goal",
-                showsNoUsefulUV: showsNoUsefulUV
-            )
+            VStack(spacing: 7) {
+                SunSessionGoalDialView(
+                    goalProgress: todayGoalProgress,
+                    goalTimerInterval: nil,
+                    isPaused: true,
+                    diameter: diameter,
+                    lineWidth: 5,
+                    progressCaption: "IU goal",
+                    showsNoUsefulUV: showsNoUsefulUV
+                )
+
+                DashboardStartNewCaption()
+            }
             .accessibilityHidden(true)
         }
         .buttonStyle(.plain)

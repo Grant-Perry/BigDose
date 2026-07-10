@@ -32,24 +32,27 @@ struct BigDoseAlertContent {
 }
 
 struct BigDoseAlertView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var title: String
     var message: String
     var actions: [BigDoseAlertAction]
     var cornerRadius: CGFloat = 22
     var trailingImageName: String?
+    var isOpaque = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.bigDoseHeader(.headline).weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primaryTextColor)
                     .accessibilityAddTraits(.isHeader)
 
                 if !message.isEmpty {
                     Text(message)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(primaryTextColor.opacity(0.72))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -75,7 +78,10 @@ struct BigDoseAlertView: View {
             }
         }
         .padding(20)
-        .bigDoseGlass(cornerRadius: cornerRadius)
+        .bigDoseGlass(
+            cornerRadius: cornerRadius,
+            opaqueColor: isOpaque ? opaqueSurfaceColor : nil
+        )
         .overlay(alignment: .topTrailing) {
             if let trailingImageName {
                 Image(trailingImageName)
@@ -99,7 +105,7 @@ struct BigDoseAlertView: View {
         case .destructive:
             .red
         default:
-            .white
+            primaryTextColor
         }
     }
 
@@ -108,8 +114,20 @@ struct BigDoseAlertView: View {
         case .destructive:
             .red.opacity(0.18)
         default:
-            .white.opacity(0.12)
+            primaryTextColor.opacity(0.1)
         }
+    }
+
+    private var usesLightOpaqueSurface: Bool {
+        isOpaque && colorScheme == .dark
+    }
+
+    private var opaqueSurfaceColor: Color {
+        usesLightOpaqueSurface ? .white : .deepSpace
+    }
+
+    private var primaryTextColor: Color {
+        usesLightOpaqueSurface ? .black : .white
     }
 }
 
@@ -120,7 +138,8 @@ extension View {
         message: String = "",
         actions: [BigDoseAlertAction],
         backdropOpacity: Double = 0.35,
-        trailingImageName: String? = nil
+        trailingImageName: String? = nil,
+        isOpaque: Bool = false
     ) -> some View {
         modifier(
             BigDoseAlertPresentationModifier(
@@ -129,17 +148,23 @@ extension View {
                 message: message,
                 actions: actions,
                 backdropOpacity: backdropOpacity,
-                trailingImageName: trailingImageName
+                trailingImageName: trailingImageName,
+                isOpaque: isOpaque
             )
         )
     }
 
     func bigDoseAlert<Item: Identifiable & Equatable>(
         item: Binding<Item?>,
+        isOpaque: Bool = false,
         content: @escaping (Item) -> BigDoseAlertContent
     ) -> some View {
         modifier(
-            BigDoseAlertItemModifier(item: item, content: content)
+            BigDoseAlertItemModifier(
+                item: item,
+                isOpaque: isOpaque,
+                content: content
+            )
         )
     }
 }
@@ -151,6 +176,7 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
     var actions: [BigDoseAlertAction]
     var backdropOpacity: Double
     var trailingImageName: String?
+    var isOpaque: Bool
 
     func body(content: Content) -> some View {
         content.overlay {
@@ -160,7 +186,8 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
                     message: message,
                     actions: wrappedActions,
                     backdropOpacity: backdropOpacity,
-                    trailingImageName: trailingImageName
+                    trailingImageName: trailingImageName,
+                    isOpaque: isOpaque
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 .zIndex(999)
@@ -181,6 +208,7 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
 
 private struct BigDoseAlertItemModifier<Item: Identifiable & Equatable>: ViewModifier {
     @Binding var item: Item?
+    var isOpaque: Bool
     var content: (Item) -> BigDoseAlertContent
 
     func body(content view: Content) -> some View {
@@ -190,7 +218,8 @@ private struct BigDoseAlertItemModifier<Item: Identifiable & Equatable>: ViewMod
                 BigDoseAlertOverlay(
                     title: alertContent.title,
                     message: alertContent.message,
-                    actions: wrappedActions(for: alertContent.actions)
+                    actions: wrappedActions(for: alertContent.actions),
+                    isOpaque: isOpaque
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 .zIndex(999)
@@ -215,6 +244,7 @@ private struct BigDoseAlertOverlay: View {
     var actions: [BigDoseAlertAction]
     var backdropOpacity: Double = 0.35
     var trailingImageName: String?
+    var isOpaque = false
 
     var body: some View {
         ZStack {
@@ -225,7 +255,8 @@ private struct BigDoseAlertOverlay: View {
                 title: title,
                 message: message,
                 actions: actions,
-                trailingImageName: trailingImageName
+                trailingImageName: trailingImageName,
+                isOpaque: isOpaque
             )
         }
         .accessibilityAddTraits(.isModal)

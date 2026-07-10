@@ -87,15 +87,19 @@ struct NextDOpportunityBanner: View {
 
     private var todayGoalDialButton: some View {
         Button(action: onStartSunSession) {
-            SunSessionGoalDialView(
-                goalProgress: todayGoalProgress,
-                goalTimerInterval: nil,
-                isPaused: true,
-                diameter: goalDialDiameter,
-                lineWidth: 5,
-                progressCaption: "IU goal",
-                showsNoUsefulUV: showsNoUsefulUV
-            )
+            VStack(spacing: 7) {
+                SunSessionGoalDialView(
+                    goalProgress: todayGoalProgress,
+                    goalTimerInterval: nil,
+                    isPaused: true,
+                    diameter: goalDialDiameter,
+                    lineWidth: 5,
+                    progressCaption: "IU goal",
+                    showsNoUsefulUV: showsNoUsefulUV
+                )
+
+                DashboardStartNewCaption()
+            }
             .accessibilityHidden(true)
         }
         .buttonStyle(.plain)

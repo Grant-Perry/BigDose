@@ -9,7 +9,10 @@ struct ActiveSunSessionView: View {
     var onCancel: () -> Void
     var onComplete: (SunSessionResult) -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(AppAppearancePreference.storageKey)
+    private var appAppearanceRawValue = AppAppearancePreference.system.rawValue
     @State private var plan: SunSessionPlan
     @State private var elapsedSeconds: TimeInterval = 0
     @State private var isPaused = false
@@ -55,10 +58,6 @@ struct ActiveSunSessionView: View {
         plan.estimatedIU(at: elapsedSeconds)
     }
 
-    private var goalProgress: Double {
-        plan.goalProgress(at: elapsedSeconds)
-    }
-
     private var goalProgressUncapped: Double {
         plan.goalProgressUncapped(at: elapsedSeconds)
     }
@@ -89,32 +88,50 @@ struct ActiveSunSessionView: View {
 
     var body: some View {
         ZStack {
-            BigDoseGradientBackground()
+            ActiveSunSessionBackground()
 
             ScrollView {
-                VStack(spacing: 0) {
+                VStack(spacing: 12) {
                     header
-                        .padding(.bottom, 16)
 
                     if plan.isOutsideVitaminDWindow {
                         outsideWindowBanner
-                            .padding(.bottom, 14)
                     }
 
-                    heroDialSection
-                        .padding(.bottom, 20)
+                    ActiveSunSessionHeroCard(
+                        elapsedText: durationText(elapsedSeconds),
+                        estimatedIU: Int(estimatedIU.rounded()),
+                        targetIU: Int(plan.targetIU.rounded()),
+                        iuPerMinute: Int(plan.liveIUProductionRatePerMinute.rounded()),
+                        goalProgress: goalProgressUncapped,
+                        minutesToGoal: plan.minutesToGoal(at: elapsedSeconds),
+                        isTraceVitaminDConditions: plan.isTraceVitaminDConditions,
+                        isPaused: isPaused
+                    )
 
-                    sessionControls
-                        .padding(.bottom, 22)
+                    ActiveSunSessionMetricsGrid(
+                        medRemainingText: countdownText(plan.medRemainingSeconds(at: elapsedSeconds)),
+                        medUsedText: medUsedPercentText,
+                        medUsedColor: medUsedColor,
+                        showsOverBadge: medUsedPercent >= SunSessionSafetyThresholds.guidanceLimitPercent,
+                        turnOverText: hasPassedTurnOver
+                            ? countdownText(plan.medRemainingSeconds(at: elapsedSeconds))
+                            : countdownText(plan.turnOverRemainingSeconds(at: elapsedSeconds)),
+                        hasPassedTurnOver: hasPassedTurnOver
+                    )
 
                     modifiersCard
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 2)
-                .padding(.bottom, 32)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            sessionControls
+        }
+        .preferredColorScheme(appAppearance.colorScheme)
         .onReceive(timer) { _ in
             consumeLiveActivityCommands()
 
@@ -146,7 +163,10 @@ struct ActiveSunSessionView: View {
         .onChange(of: isPaused) { _, _ in
             persistSessionState()
             syncLiveActivity()
-            Task { await refreshActiveSessionReminder() }
+            Task {
+                await refreshSessionSafetyNotifications()
+                await refreshActiveSessionReminder()
+            }
         }
         .onChange(of: plan.exposedBodySurfaceArea) { _, _ in
             syncLiveActivity()
@@ -174,7 +194,7 @@ struct ActiveSunSessionView: View {
                 break
             }
         }
-        .bigDoseAlert(item: $activeAlert) { alert in
+        .bigDoseAlert(item: $activeAlert, isOpaque: true) { alert in
             switch alert {
             case .turnOver:
                 BigDoseAlertContent(
@@ -245,16 +265,18 @@ struct ActiveSunSessionView: View {
             actions: [
                 .destructive("Cancel Session") { cancel() },
                 .cancel("Keep Going")
-            ]
+            ],
+            isOpaque: true
         )
         .bigDoseAlert(
             "Stop sun session?",
             isPresented: $isShowingStopConfirmation,
-            message: "Save this session with \(Int(estimatedIU.rounded())) IU estimated so far?",
+            message: "Save session with \(Int(estimatedIU.rounded()).formatted()) IU estimated so far?",
             actions: [
                 .destructive("Stop & Save") { complete() },
                 .cancel("Keep Going")
-            ]
+            ],
+            isOpaque: true
         )
         .bigDoseAlert(
             "Still tracking sun",
@@ -263,7 +285,8 @@ struct ActiveSunSessionView: View {
             actions: [
                 .destructive("Stop & Save") { complete() },
                 .default("Keep Going")
-            ]
+            ],
+            isOpaque: true
         )
         .bigDoseAlert(
             "Resume sun session?",
@@ -273,7 +296,8 @@ struct ActiveSunSessionView: View {
                 .default("Still Outside") { resumeAfterInactivityRecovery() },
                 .destructive("Stop & Save") { complete() },
                 .cancel("Cancel Session") { cancel() }
-            ]
+            ],
+            isOpaque: true
         )
     }
 
@@ -285,56 +309,130 @@ struct ActiveSunSessionView: View {
         return ActiveSessionRecoveryService.recoveryMessage(for: record, plan: plan)
     }
 
-    private var outsideWindowBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "moon.stars.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.solarGold)
+    private var activePrimaryText: Color {
+        colorScheme == .dark
+            ? .white
+            : Color(red: 0.22, green: 0.13, blue: 0.07)
+    }
 
+    private var appAppearance: AppAppearancePreference {
+        AppAppearancePreference(rawValue: appAppearanceRawValue) ?? .system
+    }
+
+    private var activeAccent: Color {
+        colorScheme == .dark ? .solarGoldBright : .solarOrange
+    }
+
+    private var activeSurface: Color {
+        colorScheme == .dark
+            ? .black.opacity(0.28)
+            : .white.opacity(0.52)
+    }
+
+    private var outsideWindowBanner: some View {
+        Label {
             Text(plan.isTraceVitaminDConditions ? "Outside D window — trace vitamin D only" : "Outside D window")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.72))
+                .font(.subheadline)
+                .bold()
+                .foregroundStyle(activePrimaryText)
+        } icon: {
+            Image(systemName: "moon.stars.fill")
+                .font(.headline)
+                .foregroundStyle(activeAccent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .bigDoseGlass(cornerRadius: 16)
+        .padding(.vertical, 12)
+        .background(activeSurface, in: .rect(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(activeAccent.opacity(0.3), lineWidth: 1)
+        }
     }
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
                 Text(plan.locationName.uppercased())
                     .font(.bigDoseHeader(.title2))
                     .tracking(1.4)
-                    .foregroundStyle(.white)
-                    .padding(.top, 2)
+                    .foregroundStyle(activePrimaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
 
-                HStack(spacing: 6) {
-                    weatherChip("\(Int(plan.currentTemperatureFahrenheit.rounded()))°")
-                    weatherChip("UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1))))")
-                    weatherChip(plan.cloudCover.title)
+                Spacer(minLength: 12)
+
+                HStack(spacing: 8) {
+                    AppAppearanceToggleButton()
+                        .font(.headline)
+                        .foregroundStyle(activePrimaryText)
+                        .frame(width: 44, height: 44)
+                        .background(activeSurface, in: .circle)
+                        .overlay {
+                            Circle()
+                                .stroke(activePrimaryText.opacity(0.2), lineWidth: 1)
+                        }
+
+                    Button("Cancel", systemImage: "xmark", action: requestCancel)
+                        .font(.subheadline)
+                        .bold()
+                        .foregroundStyle(activePrimaryText)
+                        .frame(minHeight: 44)
+                        .padding(.horizontal, 12)
+                        .background(activeSurface, in: .capsule)
+                        .overlay {
+                            Capsule()
+                                .stroke(activePrimaryText.opacity(0.2), lineWidth: 1)
+                        }
+                        .buttonStyle(.plain)
                 }
-
-                BigDoseWeatherAttributionView(attribution: weatherAttribution)
-                    .padding(.top, 2)
             }
 
-            Spacer(minLength: 12)
+            HStack(spacing: 10) {
+                Image(systemName: "sun.max.fill")
+                    .font(.title3)
+                    .foregroundStyle(activeAccent)
 
-            Button("Cancel") {
-                isShowingCancelConfirmation = true
+                weatherChip("\(Int(plan.currentTemperatureFahrenheit.rounded()))°")
+
+                Spacer(minLength: 4)
+                weatherDivider
+                Spacer(minLength: 4)
+
+                weatherChip("UV \(plan.uvIndex.formatted(.number.precision(.fractionLength(1))))")
+
+                Spacer(minLength: 4)
+                weatherDivider
+                Spacer(minLength: 4)
+
+                weatherChip(plan.cloudCover.title)
             }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.white.opacity(0.48))
-            .padding(.top, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            BigDoseWeatherAttributionView(
+                attribution: weatherAttribution,
+                foregroundColor: activePrimaryText
+            )
         }
     }
 
     private func weatherChip(_ text: String) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.55))
+            .font(.subheadline)
+            .bold()
+            .foregroundStyle(activePrimaryText.opacity(0.78))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+    }
+
+    private var weatherDivider: some View {
+        Rectangle()
+            .fill(activePrimaryText.opacity(0.16))
+            .frame(width: 1, height: 18)
+    }
+
+    private func requestCancel() {
+        isShowingCancelConfirmation = true
     }
 
     private var heroDialSection: some View {
@@ -628,32 +726,60 @@ struct ActiveSunSessionView: View {
         case 75...:
             .solarOrange
         default:
-            .white.opacity(0.62)
+            activePrimaryText.opacity(0.72)
         }
     }
 
     private var sessionControls: some View {
-        HStack(spacing: 28) {
-            SessionControlButton(style: .pause(isPaused: isPaused)) {
-                withAnimation(.smooth) {
-                    isPaused.toggle()
-                }
-            }
+        HStack(spacing: 12) {
+            SessionControlButton(
+                style: .pause(isPaused: isPaused),
+                action: togglePause
+            )
 
-            SessionControlButton(style: .stop) {
-                isShowingStopConfirmation = true
-            }
+            SessionControlButton(
+                style: .stop,
+                action: requestStop
+            )
         }
-        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(controlDockSurface, in: .rect(cornerRadius: 32))
+        .overlay {
+            RoundedRectangle(cornerRadius: 32)
+                .stroke(activePrimaryText.opacity(0.14), lineWidth: 1)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(controlBarBackground)
+    }
+
+    private var controlDockSurface: Color {
+        colorScheme == .dark
+            ? .white.opacity(0.08)
+            : .white.opacity(0.72)
+    }
+
+    private var controlBarBackground: Color {
+        colorScheme == .dark
+            ? .deepSpace.opacity(0.94)
+            : Color(red: 0.98, green: 0.95, blue: 0.87).opacity(0.94)
+    }
+
+    private func togglePause() {
+        isPaused.toggle()
+    }
+
+    private func requestStop() {
+        isShowingStopConfirmation = true
     }
 
     private var modifiersCard: some View {
-        VStack(spacing: 0) {
+        HStack(spacing: 0) {
             Button {
                 isShowingSkinCoverage = true
             } label: {
-                sessionModifierRow(
-                    title: "Skin Coverage",
+                sessionModifierTile(
+                    title: "Skin",
                     value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
                     icon: "person.fill"
                 )
@@ -669,7 +795,7 @@ struct ActiveSunSessionView: View {
                     }
                 }
             } label: {
-                sessionModifierRow(
+                sessionModifierTile(
                     title: "Clouds",
                     value: plan.cloudCover.title,
                     icon: "cloud.sun.fill"
@@ -681,7 +807,7 @@ struct ActiveSunSessionView: View {
             Button {
                 isShowingGoalPicker = true
             } label: {
-                sessionModifierRow(
+                sessionModifierTile(
                     title: "Goal",
                     value: "\(Int(plan.targetIU.rounded())) IU",
                     icon: "target"
@@ -689,50 +815,38 @@ struct ActiveSunSessionView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 6)
-        .bigDoseGlass(cornerRadius: 24)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+        .background(activeSurface, in: .rect(cornerRadius: 24))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(activePrimaryText.opacity(0.1), lineWidth: 1)
+        }
     }
 
     private var modifierDivider: some View {
         Rectangle()
-            .fill(.white.opacity(0.08))
-            .frame(height: 1)
-            .padding(.horizontal, 18)
+            .fill(activePrimaryText.opacity(0.1))
+            .frame(width: 1, height: 48)
     }
 
-    private func sessionModifierRow(title: String, value: String, icon: String) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.07))
-                    .frame(width: 38, height: 38)
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.solarGold)
-            }
+    private func sessionModifierTile(title: String, value: String, icon: String) -> some View {
+        VStack(spacing: 5) {
+            Label(title.uppercased(), systemImage: icon)
+                .font(.caption)
+                .bold()
+                .tracking(0.8)
+                .foregroundStyle(activeAccent)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title.uppercased())
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.3)
-                    .foregroundStyle(.white.opacity(0.38))
-
-                Text(value)
-                    .font(.bigDoseHeader(.headline))
-                    .foregroundStyle(.white.opacity(0.88))
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.82)
-            }
-
-            Spacer(minLength: 8)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white.opacity(0.28))
+            Text(value)
+                .font(.subheadline)
+                .bold()
+                .foregroundStyle(activePrimaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.68)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .padding(.horizontal, 5)
         .contentShape(.rect)
     }
 
@@ -945,6 +1059,11 @@ struct ActiveSunSessionView: View {
     }
 
     private func refreshSessionSafetyNotifications() async {
+        guard !isPaused else {
+            SessionSafetyNotificationService.cancelSessionNotifications()
+            return
+        }
+
         await SessionSafetyNotificationService.schedule(
             for: plan,
             enabled: wantsSessionSafetyAlerts,

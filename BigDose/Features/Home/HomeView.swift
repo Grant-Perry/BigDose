@@ -49,6 +49,10 @@ struct HomeView: View {
                 ToolbarItem(placement: .principal) {
                     BigDoseNavigationWordmark()
                 }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    AppAppearanceToggleButton()
+                }
             }
             .task {
                 await refreshHome()
@@ -105,8 +109,12 @@ struct HomeView: View {
             now: now,
             isSunSessionStartEnabled: homeViewModel.hasLiveWeather,
             showsNoUsefulUV: showsNoUsefulUV(now: now),
-            onStartSunSession: { sessionRoute = .typePicker }
+            onStartSunSession: startSunSession
         )
+    }
+
+    private func startSunSession() {
+        sessionRoute = .sunPlanner
     }
 
     private func showsNoUsefulUV(now: Date) -> Bool {
@@ -459,10 +467,9 @@ struct HomeView: View {
                     StartSunSessionActionButton(
                         isEnabled: homeViewModel.hasLiveWeather,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
-                        size: .compact
-                    ) {
-                        sessionRoute = .typePicker
-                    }
+                        size: .compact,
+                        action: startSunSession
+                    )
 
                     if let weather = homeViewModel.weather {
                         BigDoseWeatherAttributionView(weather: weather)
@@ -596,10 +603,9 @@ struct HomeView: View {
                 StartSunSessionActionButton(
                     isEnabled: homeViewModel.hasLiveWeather,
                     showsNoUsefulUV: showsNoUsefulUV(now: now),
-                    size: .compact
-                ) {
-                    sessionRoute = .typePicker
-                }
+                    size: .compact,
+                    action: startSunSession
+                )
             }
         }
     }
@@ -617,10 +623,9 @@ struct HomeView: View {
                     StartSunSessionActionButton(
                         isEnabled: homeViewModel.hasLiveWeather,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
-                        size: .regular
-                    ) {
-                        sessionRoute = .typePicker
-                    }
+                        size: .regular,
+                        action: startSunSession
+                    )
 
                     SupplementLogActionButton(iu: activeProfile.defaultSupplementIU) {
                         logDefaultSupplement()
@@ -852,20 +857,6 @@ struct HomeView: View {
     @ViewBuilder
     private func sessionView(for route: SessionRoute) -> some View {
         switch route {
-        case .typePicker:
-            SessionTypePickerView { type in
-                switch type {
-                case .sun:
-                    sessionRoute = .sunPlanner
-                case .supplement:
-                    sessionRoute = .supplementDose
-                case .lamp, .scheduled:
-                    sessionRoute = .sunPlanner
-                }
-            } onCancel: {
-                sessionRoute = nil
-            }
-
         case .sunPlanner:
             if let weather = homeViewModel.weather, homeViewModel.hasLiveWeather, let plan = currentPlan {
                 SunSessionPlannerView(
@@ -874,7 +865,7 @@ struct HomeView: View {
                     latitude: plan.latitude,
                     longitude: plan.longitude,
                     isFirstLiveSunSession: isFirstLiveSunSession,
-                    onCancel: { sessionRoute = .typePicker },
+                    onCancel: { sessionRoute = nil },
                     onStart: { plan in sessionRoute = .activeSunSession(plan) }
                 )
             } else if homeViewModel.isShowingCachedWeather {
@@ -898,12 +889,6 @@ struct HomeView: View {
                     onClose: { sessionRoute = nil }
                 )
             }
-
-        case .supplementDose:
-            AddSupplementDoseView(
-                defaultIU: activeProfile.defaultSupplementIU,
-                profile: profile
-            )
 
         case .activeSunSession(let plan):
             ActiveSunSessionView(

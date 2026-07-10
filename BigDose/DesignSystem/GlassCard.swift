@@ -17,21 +17,29 @@ struct GlassCard<Content: View>: View {
 }
 
 extension View {
-    func bigDoseGlass(cornerRadius: CGFloat = 30) -> some View {
-        modifier(BigDoseGlassModifier(cornerRadius: cornerRadius))
+    func bigDoseGlass(cornerRadius: CGFloat = 30, opaqueColor: Color? = nil) -> some View {
+        modifier(
+            BigDoseGlassModifier(
+                cornerRadius: cornerRadius,
+                opaqueColor: opaqueColor
+            )
+        )
     }
 }
 
 private struct BigDoseGlassModifier: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     var cornerRadius: CGFloat
+    var opaqueColor: Color?
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 
         content
             .background {
-                if reduceTransparency {
+                if let opaqueColor {
+                    shape.fill(opaqueColor)
+                } else if reduceTransparency {
                     shape.fill(.black.opacity(0.82))
                 } else {
                     shape.fill(.ultraThinMaterial.opacity(0.74))
