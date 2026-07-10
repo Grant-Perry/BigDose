@@ -12,37 +12,56 @@ struct BigDoseRootView: View {
     }
 
     var body: some View {
-        Group {
-            if let profile {
-                TabView(selection: $appState.selectedTab) {
-                    Tab(AppTab.home.title, systemImage: AppTab.home.symbolName, value: .home) {
-                        HomeView(profile: profile)
-                    }
+        ZStack {
+            Group {
+                if let profile {
+                    TabView(selection: $appState.selectedTab) {
+                        Tab(AppTab.home.title, systemImage: AppTab.home.symbolName, value: .home) {
+                            HomeView(profile: profile)
+                        }
 
-                    Tab(AppTab.history.title, systemImage: AppTab.history.symbolName, value: .history) {
-                        HistoryView()
-                    }
+                        Tab(AppTab.history.title, systemImage: AppTab.history.symbolName, value: .history) {
+                            HistoryView()
+                        }
 
-                    Tab(AppTab.progress.title, systemImage: AppTab.progress.symbolName, value: .progress) {
-                        ProgressDashboardView(profile: profile)
-                    }
+                        Tab(AppTab.progress.title, systemImage: AppTab.progress.symbolName, value: .progress) {
+                            ProgressDashboardView(profile: profile)
+                        }
 
-                    Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
-                        ProfileView()
-                    }
+                        Tab(AppTab.profile.title, systemImage: AppTab.profile.symbolName, value: .profile) {
+                            ProfileView()
+                        }
 
-                    Tab(AppTab.settings.title, systemImage: AppTab.settings.symbolName, value: .settings) {
-                        SettingsTabView(profile: profile)
+                        Tab(AppTab.settings.title, systemImage: AppTab.settings.symbolName, value: .settings) {
+                            SettingsTabView(profile: profile)
+                        }
                     }
+                    .tint(.solarGold)
+                } else {
+                    BigDoseLaunchLoadingView()
                 }
-                .tint(.solarGold)
-            } else {
-                BigDoseLaunchLoadingView()
+            }
+            .environment(appState)
+
+            if appState.isShowingSplash {
+                BigDoseSplashScreenView {
+                    appState.isShowingSplash = false
+                }
+                .transition(.opacity)
+                .zIndex(1)
             }
         }
-        .environment(appState)
+        .animation(.easeInOut(duration: 0.28), value: appState.isShowingSplash)
         .task {
             await ensureProfileExists()
+            presentOnboardingIfNeeded()
+        }
+        .onChange(of: appState.isShowingSplash) { _, isShowing in
+            guard !isShowing else { return }
+            presentOnboardingIfNeeded()
+        }
+        .onChange(of: profile?.persistentModelID) { _, _ in
+            presentOnboardingIfNeeded()
         }
         .task(id: profile?.persistentModelID) {
             guard let profile else { return }
@@ -73,16 +92,18 @@ struct BigDoseRootView: View {
         appState.isShowingOnboarding = false
     }
 
+    private func presentOnboardingIfNeeded() {
+        guard !appState.isShowingSplash else { return }
+        guard let profile else { return }
+        appState.isShowingOnboarding = !profile.isOnboardingComplete
+    }
+
     private func ensureProfileExists() async {
-        guard profiles.isEmpty else {
-            appState.isShowingOnboarding = profiles.first?.isOnboardingComplete == false
-            return
-        }
+        guard profiles.isEmpty else { return }
 
         let profile = UserProfile()
         modelContext.insert(profile)
         try? modelContext.save()
-        appState.isShowingOnboarding = true
     }
 }
 

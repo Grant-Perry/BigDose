@@ -32,8 +32,12 @@ struct HomeView: View {
         @Bindable var homeViewModel = homeViewModel
 
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .top) {
                 BigDoseGradientBackground()
+
+                BigDoseSolarCrestView()
+                    .frame(height: 260)
+                    .ignoresSafeArea(edges: .top)
 
                 TimelineView(.periodic(from: .now, by: 60)) { timeline in
                     dashboardScrollContent(now: timeline.date)

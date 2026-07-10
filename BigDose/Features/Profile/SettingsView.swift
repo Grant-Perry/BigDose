@@ -25,6 +25,7 @@ struct SettingsView: View {
                     manageDataCard
                     medicalSourcesCard
                     medicalCard
+                    splashPreviewCard
                     onboardingControlsCard
                 }
                 .padding(.horizontal, 18)
@@ -90,6 +91,31 @@ struct SettingsView: View {
             Text("Control setup, education and safety framing.")
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
+        }
+    }
+
+    private var splashPreviewCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Launch", systemImage: "sun.max.fill")
+                    .font(.bigDoseHeader(.title3).weight(.semibold))
+                    .foregroundStyle(.solarGold)
+
+                Text("Replay the splash screen without restarting the app.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.68))
+
+                Button {
+                    appState.isShowingSplash = true
+                } label: {
+                    Label("Show Splash Screen", systemImage: "sparkles")
+                        .font(.bigDoseHeader(.headline).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.solarGold)
+            }
         }
     }
 
