@@ -213,7 +213,7 @@ function Header() {
   return (
     <header className="topbar">
       <a className="topbar__brand" href="#" aria-label="BigDose home">
-        <img src="/app-icon.png" alt="" width={42} height={42} />
+        <img src="/app-icon.png?v=2" alt="" width={42} height={42} />
         <span>BigDose</span>
       </a>
       <nav className="topbar__nav" aria-label="Primary">
@@ -583,7 +583,7 @@ function Closing() {
   return (
     <footer className="closing peek-host" id="closing">
       <div className="closing__panel" data-reveal>
-        <img className="closing__icon" src="/app-icon.png" alt="" width={92} height={92} />
+        <img className="closing__icon" src="/app-icon.png?v=2" alt="" width={92} height={92} />
         <span className="eyebrow">iPhone · Live Activity · Apple Health</span>
         <h2 className="display display-title">Get outside with both eyes open.</h2>
         <p className="type-lede">
@@ -605,6 +605,10 @@ function Closing() {
       <p className="closing__fine type-fine">
         Copyright © 2026 Cre8vPlanet Studios, LLC. Contact:{' '}
         <a href="mailto:info@cre8vplanet.com">info@cre8vplanet.com</a>
+        {' · '}
+        <a href="/support/">Support</a>
+        {' · '}
+        <a href="/privacy/">Privacy</a>
         <br />
         Apple, the Apple logo, iPhone and Apple Health are trademarks of Apple Inc., registered
         in the U.S. and other countries.
