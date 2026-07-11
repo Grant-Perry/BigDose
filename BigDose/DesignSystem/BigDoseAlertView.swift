@@ -3,25 +3,44 @@ import SwiftUI
 struct BigDoseAlertAction: Identifiable {
     let id = UUID()
     var title: String
+    var systemImage: String?
     var role: ButtonRole?
     var action: () -> Void
 
-    init(_ title: String, role: ButtonRole? = nil, action: @escaping () -> Void = {}) {
+    init(
+        _ title: String,
+        systemImage: String? = nil,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void = {}
+    ) {
         self.title = title
+        self.systemImage = systemImage
         self.role = role
         self.action = action
     }
 
-    static func `default`(_ title: String, action: @escaping () -> Void = {}) -> BigDoseAlertAction {
-        BigDoseAlertAction(title, action: action)
+    static func `default`(
+        _ title: String,
+        systemImage: String? = nil,
+        action: @escaping () -> Void = {}
+    ) -> BigDoseAlertAction {
+        BigDoseAlertAction(title, systemImage: systemImage, action: action)
     }
 
-    static func cancel(_ title: String, action: @escaping () -> Void = {}) -> BigDoseAlertAction {
-        BigDoseAlertAction(title, role: .cancel, action: action)
+    static func cancel(
+        _ title: String,
+        systemImage: String? = nil,
+        action: @escaping () -> Void = {}
+    ) -> BigDoseAlertAction {
+        BigDoseAlertAction(title, systemImage: systemImage, role: .cancel, action: action)
     }
 
-    static func destructive(_ title: String, action: @escaping () -> Void = {}) -> BigDoseAlertAction {
-        BigDoseAlertAction(title, role: .destructive, action: action)
+    static func destructive(
+        _ title: String,
+        systemImage: String? = nil,
+        action: @escaping () -> Void = {}
+    ) -> BigDoseAlertAction {
+        BigDoseAlertAction(title, systemImage: systemImage, role: .destructive, action: action)
     }
 }
 
@@ -32,8 +51,6 @@ struct BigDoseAlertContent {
 }
 
 struct BigDoseAlertView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     var title: String
     var message: String
     var actions: [BigDoseAlertAction]
@@ -58,24 +75,7 @@ struct BigDoseAlertView: View {
             }
             .padding(.trailing, 42)
 
-            VStack(spacing: 10) {
-                ForEach(actions) { action in
-                    Button {
-                        action.action()
-                    } label: {
-                        Text(action.title)
-                            .font(.bigDoseHeader(.headline).weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(foregroundColor(for: action.role))
-                            .background {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(backgroundColor(for: action.role))
-                            }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            actionsRow
         }
         .padding(20)
         .bigDoseGlass(
@@ -100,10 +100,62 @@ struct BigDoseAlertView: View {
         .accessibilityElement(children: .contain)
     }
 
+    @ViewBuilder
+    private var actionsRow: some View {
+        switch actions.count {
+        case 2:
+            HStack(spacing: 10) {
+                ForEach(actions) { action in
+                    actionButton(action)
+                }
+            }
+        case 3:
+            VStack(spacing: 10) {
+                actionButton(actions[0])
+                HStack(spacing: 10) {
+                    actionButton(actions[1])
+                    actionButton(actions[2])
+                }
+            }
+        default:
+            VStack(spacing: 10) {
+                ForEach(actions) { action in
+                    actionButton(action)
+                }
+            }
+        }
+    }
+
+    private func actionButton(_ action: BigDoseAlertAction) -> some View {
+        Button {
+            action.action()
+        } label: {
+            Group {
+                if let systemImage = action.systemImage {
+                    Label(action.title, systemImage: systemImage)
+                } else {
+                    Text(action.title)
+                }
+            }
+            .font(.bigDoseHeader(.subheadline).weight(.semibold))
+            .labelStyle(.titleAndIcon)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .padding(.horizontal, 10)
+            .foregroundStyle(foregroundColor(for: action.role))
+            .background {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(backgroundColor(for: action.role))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private func foregroundColor(for role: ButtonRole?) -> Color {
         switch role {
         case .destructive:
-            .red
+            isOpaque ? .black : .red
         default:
             primaryTextColor
         }
@@ -118,16 +170,12 @@ struct BigDoseAlertView: View {
         }
     }
 
-    private var usesLightOpaqueSurface: Bool {
-        isOpaque && colorScheme == .dark
-    }
-
     private var opaqueSurfaceColor: Color {
-        usesLightOpaqueSurface ? .white : .deepSpace
+        isOpaque ? .white : .deepSpace
     }
 
     private var primaryTextColor: Color {
-        usesLightOpaqueSurface ? .black : .white
+        isOpaque ? .black : .white
     }
 }
 
@@ -198,7 +246,7 @@ private struct BigDoseAlertPresentationModifier: ViewModifier {
 
     private var wrappedActions: [BigDoseAlertAction] {
         actions.map { action in
-            BigDoseAlertAction(action.title, role: action.role) {
+            BigDoseAlertAction(action.title, systemImage: action.systemImage, role: action.role) {
                 isPresented = false
                 action.action()
             }
@@ -230,7 +278,7 @@ private struct BigDoseAlertItemModifier<Item: Identifiable & Equatable>: ViewMod
 
     private func wrappedActions(for actions: [BigDoseAlertAction]) -> [BigDoseAlertAction] {
         actions.map { action in
-            BigDoseAlertAction(action.title, role: action.role) {
+            BigDoseAlertAction(action.title, systemImage: action.systemImage, role: action.role) {
                 item = nil
                 action.action()
             }

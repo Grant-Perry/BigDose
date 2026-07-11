@@ -5,6 +5,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
     var locationLabel: String
     var currentUVIndex: Double
     var peakUVIndex: Double
+    var isWeatherLive: Bool
+    var weatherObservedAt: Date?
     var windowQualityTitle: String
     var bestWindowStart: Date?
     var bestWindowEnd: Date?
@@ -37,6 +39,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         case locationLabel
         case currentUVIndex
         case peakUVIndex
+        case isWeatherLive
+        case weatherObservedAt
         case windowQualityTitle
         case bestWindowStart
         case bestWindowEnd
@@ -99,6 +103,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         locationLabel: String,
         currentUVIndex: Double,
         peakUVIndex: Double,
+        isWeatherLive: Bool,
+        weatherObservedAt: Date?,
         windowQualityTitle: String,
         bestWindowStart: Date?,
         bestWindowEnd: Date?,
@@ -121,6 +127,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         self.locationLabel = locationLabel
         self.currentUVIndex = currentUVIndex
         self.peakUVIndex = peakUVIndex
+        self.isWeatherLive = isWeatherLive
+        self.weatherObservedAt = weatherObservedAt
         self.windowQualityTitle = windowQualityTitle
         self.bestWindowStart = bestWindowStart
         self.bestWindowEnd = bestWindowEnd
@@ -146,6 +154,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         locationLabel = try container.decode(String.self, forKey: .locationLabel)
         currentUVIndex = try container.decode(Double.self, forKey: .currentUVIndex)
         peakUVIndex = try container.decode(Double.self, forKey: .peakUVIndex)
+        isWeatherLive = try container.decodeIfPresent(Bool.self, forKey: .isWeatherLive) ?? false
+        weatherObservedAt = try container.decodeIfPresent(Date.self, forKey: .weatherObservedAt)
         windowQualityTitle = try container.decode(String.self, forKey: .windowQualityTitle)
         bestWindowStart = try container.decodeIfPresent(Date.self, forKey: .bestWindowStart)
         bestWindowEnd = try container.decodeIfPresent(Date.self, forKey: .bestWindowEnd)
@@ -170,6 +180,8 @@ nonisolated struct BigDoseWidgetSnapshot: Codable, Sendable, Equatable {
         locationLabel: "BigDose",
         currentUVIndex: 0,
         peakUVIndex: 0,
+        isWeatherLive: false,
+        weatherObservedAt: nil,
         windowQualityTitle: "Open app",
         bestWindowStart: nil,
         bestWindowEnd: nil,

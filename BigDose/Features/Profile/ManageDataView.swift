@@ -197,7 +197,7 @@ struct ManageDataView: View {
                 }
             }
             let payload = try BigDoseDataExportService.decodePayload(from: url)
-            BigDoseDataExportService.restore(payload, into: modelContext)
+            try BigDoseDataExportService.restore(payload, into: modelContext)
             statusMessage = "Restored \(payload.sessions.count + payload.supplements.count + payload.labs.count) records from rescue file."
         } catch {
             statusMessage = "Restore failed: \(error.localizedDescription)"
@@ -205,15 +205,15 @@ struct ManageDataView: View {
     }
 
     private func clearAllData() {
-        for item in sessions { modelContext.delete(item) }
-        for item in supplements { modelContext.delete(item) }
-        for item in labs { modelContext.delete(item) }
-        for item in foods { modelContext.delete(item) }
-        for item in dailyPlans { modelContext.delete(item) }
-        for item in importBatches { modelContext.delete(item) }
-        for item in importItems { modelContext.delete(item) }
-        try? modelContext.save()
-        statusMessage = "Local activity, import, lab and supplement data was cleared."
+        do {
+            try BigDoseLocalDataReset.eraseAllRecords(in: modelContext)
+            SunSessionSessionCleanup.finishSession()
+            BigDoseWidgetSnapshotStore.clear()
+            try modelContext.save()
+            statusMessage = "Local activity, import, lab and supplement data was cleared."
+        } catch {
+            statusMessage = "Clear failed: \(error.localizedDescription)"
+        }
     }
 }
 

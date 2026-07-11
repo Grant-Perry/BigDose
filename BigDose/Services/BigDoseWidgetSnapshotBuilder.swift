@@ -14,6 +14,7 @@ enum BigDoseWidgetSnapshotBuilder {
         now: Date = .now,
         calendar: Calendar = .current
     ) -> BigDoseWidgetSnapshot {
+        let liveWeather = weather?.isLive == true ? weather : nil
         let displayWindow = plan.map { DailySunPlanService.vitaminDWindowDisplay(for: $0, now: now) }
         let vitaminDWindowStart = displayWindow?.snapshot.windowStart
         let vitaminDWindowEnd = displayWindow?.snapshot.windowEnd
@@ -30,8 +31,10 @@ enum BigDoseWidgetSnapshotBuilder {
         return BigDoseWidgetSnapshot(
             generatedAt: now,
             locationLabel: plan?.locationLabel ?? "Current Location",
-            currentUVIndex: weather?.uvIndex ?? plan?.peakUVIndex ?? 0,
-            peakUVIndex: plan?.peakUVIndex ?? weather?.uvIndex ?? 0,
+            currentUVIndex: liveWeather?.uvIndex ?? 0,
+            peakUVIndex: liveWeather.map { max(plan?.peakUVIndex ?? $0.uvIndex, $0.uvIndex) } ?? 0,
+            isWeatherLive: liveWeather != nil,
+            weatherObservedAt: liveWeather?.observedAt,
             windowQualityTitle: plan?.quality.title ?? "Open app",
             bestWindowStart: plan?.bestWindowStart,
             bestWindowEnd: plan?.bestWindowEnd,

@@ -2,10 +2,10 @@ import SwiftData
 import SwiftUI
 
 struct ProfileView: View {
-    @Query private var profiles: [UserProfile]
+    @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
 
     var body: some View {
-        if let profile = profiles.first {
+        if let profile = UserProfile.canonical(from: profiles) {
             ProfileContent(profile: profile)
         } else {
             NavigationStack {

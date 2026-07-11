@@ -7,6 +7,7 @@ struct BigDoseApp: App {
     private var appAppearanceRawValue = AppAppearancePreference.system.rawValue
 
     let modelContainer: ModelContainer
+    let storeStartupError: String?
 
     init() {
         SunSessionLiveActivityCoordinator.registerDefaultPreferences()
@@ -15,16 +16,28 @@ struct BigDoseApp: App {
 
         do {
             modelContainer = try BigDoseModelContainerFactory.make()
+            storeStartupError = nil
         } catch {
-            fatalError("Failed to create BigDose model container: \(error)")
+            storeStartupError = error.localizedDescription
+            do {
+                modelContainer = try BigDoseModelContainerFactory.make(inMemory: true)
+            } catch {
+                fatalError("Failed to create BigDose recovery container: \(error)")
+            }
         }
     }
 
     var body: some Scene {
         WindowGroup {
-            BigDoseRootView()
-                .onOpenURL(perform: handleIncomingURL)
-                .preferredColorScheme(appAppearance.colorScheme)
+            Group {
+                if let storeStartupError {
+                    BigDoseStoreRecoveryView(message: storeStartupError)
+                } else {
+                    BigDoseRootView()
+                        .onOpenURL(perform: handleIncomingURL)
+                }
+            }
+            .preferredColorScheme(appAppearance.colorScheme)
         }
         .modelContainer(modelContainer)
     }
@@ -39,6 +52,37 @@ struct BigDoseApp: App {
                 name: .bigDoseOpenSessionFromLiveActivity,
                 object: sessionID
             )
+        }
+    }
+}
+
+private struct BigDoseStoreRecoveryView: View {
+    var message: String
+
+    var body: some View {
+        ZStack {
+            BigDoseGradientBackground()
+
+            VStack(spacing: 18) {
+                Image(systemName: "externaldrive.badge.exclamationmark")
+                    .font(.system(size: 54, weight: .semibold))
+                    .foregroundStyle(.solarGold)
+
+                Text("Data Recovery Needed")
+                    .font(.bigDoseHeader(.title2).weight(.black))
+                    .foregroundStyle(.white)
+
+                Text(message)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .multilineTextAlignment(.center)
+
+                Text("BigDose did not reset the database. Update to the latest build or contact support before making further changes.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.56))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(28)
         }
     }
 }

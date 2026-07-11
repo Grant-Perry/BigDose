@@ -31,9 +31,11 @@ enum BigDoseModelContainerFactory {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             guard isMigrationFailure(error) else { throw error }
-            try backupStoreFiles(at: configuration.url)
-            try removeStoreFiles(at: configuration.url)
-            return try ModelContainer(for: schema, configurations: [configuration])
+            let backupDirectory = try backupStoreFiles(at: configuration.url)
+            throw BigDoseModelContainerError.migrationFailed(
+                backupDirectory: backupDirectory,
+                underlyingError: error
+            )
         }
     }
 
@@ -63,12 +65,16 @@ enum BigDoseModelContainerFactory {
         return false
     }
 
-    private static func backupStoreFiles(at url: URL) throws {
+    private static func backupStoreFiles(at url: URL) throws -> URL {
         let fileManager = FileManager.default
         let backupDirectory = url.deletingLastPathComponent().appending(
-            path: "migration-backup-\(Int(Date.now.timeIntervalSince1970))",
+            path: "migration-backup-preserved",
             directoryHint: .isDirectory
         )
+
+        if fileManager.fileExists(atPath: backupDirectory.path) {
+            return backupDirectory
+        }
 
         try fileManager.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
 
@@ -79,17 +85,17 @@ enum BigDoseModelContainerFactory {
             let destination = backupDirectory.appending(path: fileURL.lastPathComponent)
             try fileManager.copyItem(at: fileURL, to: destination)
         }
+        return backupDirectory
     }
+}
 
-    private static func removeStoreFiles(at url: URL) throws {
-        let fileManager = FileManager.default
-        let basePath = url.path
+enum BigDoseModelContainerError: LocalizedError {
+    case migrationFailed(backupDirectory: URL, underlyingError: Error)
 
-        for suffix in ["", "-shm", "-wal"] {
-            let fileURL = URL(fileURLWithPath: basePath + suffix)
-            if fileManager.fileExists(atPath: fileURL.path) {
-                try fileManager.removeItem(at: fileURL)
-            }
+    var errorDescription: String? {
+        switch self {
+        case .migrationFailed:
+            "BigDose could not safely upgrade the local database. Your existing data was preserved."
         }
     }
 }

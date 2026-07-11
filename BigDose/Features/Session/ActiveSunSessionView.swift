@@ -135,13 +135,15 @@ struct ActiveSunSessionView: View {
         .onReceive(timer) { _ in
             consumeLiveActivityCommands()
 
-            if Int(elapsedSeconds) % 5 == 0 {
-                persistSessionState()
-            }
-
             guard !isPaused, !sessionEnded else { return }
             elapsedSeconds += 1
-            BigDoseWidgetReloader.reloadHomeWidget()
+
+            // App Group checkpoint only — widget ticks from runningSince / .timer
+            // and Live Activity owns its own timeline. Avoid WidgetCenter reloads.
+            if Int(elapsedSeconds) % 5 == 0 {
+                checkpointSessionState()
+            }
+
             evaluateSessionAlerts()
         }
         .task {
@@ -169,14 +171,17 @@ struct ActiveSunSessionView: View {
             }
         }
         .onChange(of: plan.exposedBodySurfaceArea) { _, _ in
+            persistSessionState()
             syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
         }
         .onChange(of: plan.cloudCover) { _, _ in
+            persistSessionState()
             syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
         }
         .onChange(of: plan.targetIU) { _, _ in
+            persistSessionState()
             syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
         }
@@ -200,13 +205,13 @@ struct ActiveSunSessionView: View {
                 BigDoseAlertContent(
                     title: "Turn over",
                     message: plan.safetyAlertMessage(for: .turnOver, elapsedSeconds: elapsedSeconds),
-                    actions: [.default("Got it")]
+                    actions: [.default("Got it", systemImage: "checkmark")]
                 )
             case .medWarning:
                 BigDoseAlertContent(
                     title: "Approaching exposure limit",
                     message: plan.safetyAlertMessage(for: .medWarning, elapsedSeconds: elapsedSeconds),
-                    actions: [.default("OK")]
+                    actions: [.default("OK", systemImage: "checkmark")]
                 )
             case .overLimit(let percent):
                 if percent == SunSessionSafetyThresholds.fullMEDPercent {
@@ -214,22 +219,22 @@ struct ActiveSunSessionView: View {
                         title: overLimitAlertTitle(for: percent),
                         message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
                         actions: [
-                            .destructive("Stop Session") { complete() },
-                            .default("I'm Still Out Here")
+                            .destructive("Stop Session", systemImage: "stop.fill") { complete() },
+                            .default("I'm Still Out Here", systemImage: "play.fill")
                         ]
                     )
                 } else {
                     BigDoseAlertContent(
                         title: overLimitAlertTitle(for: percent),
                         message: plan.safetyAlertMessage(for: .overLimit(percent: percent), elapsedSeconds: elapsedSeconds),
-                        actions: [.default("I'm Still Out Here")]
+                        actions: [.default("I'm Still Out Here", systemImage: "play.fill")]
                     )
                 }
             case .goalReached:
                 BigDoseAlertContent(
                     title: "Goal reached",
                     message: plan.safetyAlertMessage(for: .goalReached, elapsedSeconds: elapsedSeconds),
-                    actions: [.default("Got it")]
+                    actions: [.default("Got it", systemImage: "checkmark")]
                 )
             }
         }
@@ -263,8 +268,8 @@ struct ActiveSunSessionView: View {
             isPresented: $isShowingCancelConfirmation,
             message: "Are you certain? This won't record this sun session if you cancel.",
             actions: [
-                .destructive("Cancel Session") { cancel() },
-                .cancel("Keep Going")
+                .destructive("Cancel Session", systemImage: "xmark") { cancel() },
+                .cancel("Keep Going", systemImage: "play.fill")
             ],
             isOpaque: true
         )
@@ -273,8 +278,8 @@ struct ActiveSunSessionView: View {
             isPresented: $isShowingStopConfirmation,
             message: "Save session with \(Int(estimatedIU.rounded()).formatted()) IU estimated so far?",
             actions: [
-                .destructive("Stop & Save") { complete() },
-                .cancel("Keep Going")
+                .destructive("Stop & Save", systemImage: "stop.fill") { complete() },
+                .cancel("Keep Going", systemImage: "play.fill")
             ],
             isOpaque: true
         )
@@ -283,8 +288,8 @@ struct ActiveSunSessionView: View {
             isPresented: $isShowingStaleSessionAlert,
             message: ActiveSessionReminderService.staleSessionMessage(for: plan, elapsedSeconds: elapsedSeconds),
             actions: [
-                .destructive("Stop & Save") { complete() },
-                .default("Keep Going")
+                .destructive("Stop & Save", systemImage: "stop.fill") { complete() },
+                .default("Keep Going", systemImage: "play.fill")
             ],
             isOpaque: true
         )
@@ -293,9 +298,9 @@ struct ActiveSunSessionView: View {
             isPresented: $isShowingInactivityRecoveryAlert,
             message: inactivityRecoveryMessage,
             actions: [
-                .default("Still Outside") { resumeAfterInactivityRecovery() },
-                .destructive("Stop & Save") { complete() },
-                .cancel("Cancel Session") { cancel() }
+                .default("Still Outside", systemImage: "sun.max.fill") { resumeAfterInactivityRecovery() },
+                .destructive("Stop & Save", systemImage: "stop.fill") { complete() },
+                .cancel("Cancel Session", systemImage: "xmark") { cancel() }
             ],
             isOpaque: true
         )
@@ -775,32 +780,19 @@ struct ActiveSunSessionView: View {
 
     private var modifiersCard: some View {
         HStack(spacing: 0) {
-            Button {
-                isShowingSkinCoverage = true
-            } label: {
-                sessionModifierTile(
-                    title: "Skin",
-                    value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
-                    icon: "person.fill"
-                )
-            }
-            .buttonStyle(.plain)
+            sessionModifierTile(
+                title: "Skin",
+                value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
+                icon: "person.fill"
+            )
 
             modifierDivider
 
-            Menu {
-                ForEach(CloudCoverPreset.allCases) { preset in
-                    Button(preset.title) {
-                        plan.cloudCover = preset
-                    }
-                }
-            } label: {
-                sessionModifierTile(
-                    title: "Clouds",
-                    value: plan.cloudCover.title,
-                    icon: "cloud.sun.fill"
-                )
-            }
+            sessionModifierTile(
+                title: "Clouds",
+                value: plan.cloudCover.title,
+                icon: "cloud.sun.fill"
+            )
 
             modifierDivider
 
@@ -907,13 +899,19 @@ struct ActiveSunSessionView: View {
         evaluateStaleSessionAlert()
     }
 
-    private func persistSessionState() {
+    /// Crash-recovery write only. Does not wake WidgetKit.
+    private func checkpointSessionState() {
         ActiveSunSessionPersistence.persist(
             plan: plan,
             elapsedSeconds: elapsedSeconds,
             isPaused: isPaused,
             acknowledgedSafetyAlertIDs: currentAcknowledgedSafetyAlertIDs()
         )
+    }
+
+    /// Full persist for meaningful session changes — App Group + home widget + reminder.
+    private func persistSessionState() {
+        checkpointSessionState()
         BigDoseWidgetActiveSessionUpdater.publish(
             plan: plan,
             elapsedSeconds: elapsedSeconds,

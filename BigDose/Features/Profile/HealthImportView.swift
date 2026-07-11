@@ -5,6 +5,7 @@ struct HealthImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \HealthImportItem.startedAt, order: .reverse) private var importedItems: [HealthImportItem]
     @Query(sort: \HealthImportBatch.importedAt, order: .reverse) private var importBatches: [HealthImportBatch]
+    @Query(sort: \ExposureSession.startedAt, order: .reverse) private var exposureSessions: [ExposureSession]
     @State private var service = HealthKitImportService()
     @State private var candidates: [HealthWorkoutImportCandidate] = []
     @State private var daylightPreview: DaylightImportPreview?
@@ -209,7 +210,11 @@ struct HealthImportView: View {
         do {
             try await service.requestAuthorization()
             profile?.healthKitImportStatus = .authorized
-            let existingIDs = Set(importedItems.map(\.externalIdentifier))
+            let existingIDs = Set(importedItems.map(\.externalIdentifier)).union(
+                exposureSessions
+                    .filter { $0.source == .healthKit }
+                    .compactMap(\.externalIdentifier)
+            )
             candidates = try await service.fetchWorkoutCandidates(existingIDs: existingIDs)
 
             if let profile {

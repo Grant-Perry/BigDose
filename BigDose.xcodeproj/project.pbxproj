@@ -390,7 +390,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.28.3;
+				MARKETING_VERSION = 1.28.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.grantperry.BigDose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -448,7 +448,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.28.3;
+				MARKETING_VERSION = 1.28.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.grantperry.BigDose;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -482,7 +482,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.28.3;
+				MARKETING_VERSION = 1.28.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.grantperry.BigDose.BigDoseLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -511,7 +511,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.28.3;
+				MARKETING_VERSION = 1.28.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.grantperry.BigDose.BigDoseLiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

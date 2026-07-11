@@ -160,6 +160,23 @@ final class UserProfile {
 }
 
 extension UserProfile {
+    static func canonical(from profiles: [UserProfile]) -> UserProfile? {
+        let completedProfiles = profiles.filter(\.isOnboardingComplete)
+        if let mostRecentlyUpdated = completedProfiles.max(by: { $0.updatedAt < $1.updatedAt }) {
+            return mostRecentlyUpdated
+        }
+        return profiles.min(by: { $0.createdAt < $1.createdAt })
+    }
+
+    func isEmptyBootstrapProfile() -> Bool {
+        !isOnboardingComplete
+            && displayName.isEmpty
+            && avatarImageData == nil
+            && dateOfBirth == nil
+            && heightCentimeters == nil
+            && weightKilograms == nil
+    }
+
     static let prepareExitLeadPercentRange = 5...50
 
     static func clampedPrepareExitLeadPercent(_ value: Int) -> Int {

@@ -100,8 +100,8 @@ final class HomeViewModel {
                 weather: weather,
                 location: resolved.location
             )
+            isUsingApproximateLocation = resolved.isApproximate
             if resolved.isApproximate {
-                isUsingApproximateLocation = true
                 if weatherFailure == nil {
                     statusMessage = "Showing weather near you while we refine your exact location. Pull to refresh anytime."
                 }
@@ -127,6 +127,10 @@ final class HomeViewModel {
     /// Live WeatherKit snapshot only. Cached fallback must not enable sessions or plan generation.
     var hasLiveWeather: Bool {
         weather != nil && !isShowingCachedWeather
+    }
+
+    var canStartSunSession: Bool {
+        hasLiveWeather && !isUsingApproximateLocation
     }
 
     var showsWeatherStatusBanner: Bool {

@@ -3,12 +3,12 @@ import SwiftUI
 
 struct BigDoseRootView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var profiles: [UserProfile]
+    @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
     @State private var appState = BigDoseAppState()
     @State private var healthKitImportService = HealthKitImportService()
 
     private var profile: UserProfile? {
-        profiles.first
+        UserProfile.canonical(from: profiles)
     }
 
     var body: some View {
@@ -54,6 +54,7 @@ struct BigDoseRootView: View {
         .animation(.easeInOut(duration: 0.28), value: appState.isShowingSplash)
         .task {
             await ensureProfileExists()
+            removeRedundantBootstrapProfiles()
             presentOnboardingIfNeeded()
         }
         .onChange(of: appState.isShowingSplash) { _, isShowing in
@@ -62,6 +63,9 @@ struct BigDoseRootView: View {
         }
         .onChange(of: profile?.persistentModelID) { _, _ in
             presentOnboardingIfNeeded()
+        }
+        .onChange(of: profiles.count) { _, _ in
+            removeRedundantBootstrapProfiles()
         }
         .task(id: profile?.persistentModelID) {
             guard let profile else { return }
@@ -103,6 +107,20 @@ struct BigDoseRootView: View {
 
         let profile = UserProfile()
         modelContext.insert(profile)
+        try? modelContext.save()
+    }
+
+    private func removeRedundantBootstrapProfiles() {
+        guard let canonical = UserProfile.canonical(from: profiles), canonical.isOnboardingComplete else { return }
+
+        let redundant = profiles.filter {
+            $0.persistentModelID != canonical.persistentModelID && $0.isEmptyBootstrapProfile()
+        }
+        guard !redundant.isEmpty else { return }
+
+        for profile in redundant {
+            modelContext.delete(profile)
+        }
         try? modelContext.save()
     }
 }

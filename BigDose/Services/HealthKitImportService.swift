@@ -349,6 +349,10 @@ final class HealthKitImportService {
                 takenAt: dose.takenAt
             )
             dose.externalIdentifier = sampleID.uuidString
+            if Task.isCancelled {
+                try? await deleteSupplementDose(externalIdentifier: sampleID.uuidString)
+                dose.externalIdentifier = nil
+            }
         } catch {
             return
         }
@@ -448,7 +452,12 @@ final class HealthKitImportService {
                 .compactMap(\.externalIdentifier)
         )
         let candidates = try await fetchWorkoutCandidates(days: days, existingIDs: existingIDs)
-        let accepted = candidates.filter(\.shouldImport)
+        let currentIDs = Set(
+            fetchExposureSessions(modelContext: modelContext)
+                .filter { $0.source == .healthKit }
+                .compactMap(\.externalIdentifier)
+        )
+        let accepted = candidates.filter { $0.shouldImport && !currentIDs.contains($0.id) }
 
         for candidate in accepted {
             insertWorkoutExposure(
@@ -563,7 +572,13 @@ final class HealthKitImportService {
         modelContext: ModelContext
     ) async -> HealthImportResult {
         let now = Date()
-        let accepted = candidates.filter(\.shouldImport)
+        let existingIDs = Set(
+            fetchExposureSessions(modelContext: modelContext)
+                .filter { $0.source == .healthKit }
+                .compactMap(\.externalIdentifier)
+        )
+        let accepted = candidates.filter { $0.shouldImport && !existingIDs.contains($0.id) }
+        let acceptedIDs = Set(accepted.map(\.id))
         let skipped = candidates.count - accepted.count
         let start = candidates.map(\.startedAt).min() ?? now
         let end = candidates.map(\.endedAt).max() ?? now
@@ -579,6 +594,7 @@ final class HealthKitImportService {
         modelContext.insert(batch)
 
         for candidate in candidates {
+            let wasAccepted = acceptedIDs.contains(candidate.id)
             modelContext.insert(
                 HealthImportItem(
                     externalIdentifier: candidate.id,
@@ -587,13 +603,15 @@ final class HealthKitImportService {
                     endedAt: candidate.endedAt,
                     activityName: candidate.activityName,
                     durationSeconds: candidate.durationSeconds,
-                    wasAcceptedForExposure: candidate.shouldImport,
+                    wasAcceptedForExposure: wasAccepted,
                     confidence: candidate.confidence,
-                    note: candidate.note
+                    note: candidate.shouldImport && !wasAccepted
+                        ? "Already imported."
+                        : candidate.note
                 )
             )
 
-            guard candidate.shouldImport else { continue }
+            guard wasAccepted else { continue }
 
             insertWorkoutExposure(
                 from: candidate,

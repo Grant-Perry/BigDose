@@ -3,7 +3,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var profiles: [UserProfile]
+    @Query(sort: \UserProfile.createdAt) private var profiles: [UserProfile]
     @Query(sort: \ExposureSession.startedAt, order: .reverse) private var sessions: [ExposureSession]
     @Query(sort: \SupplementDose.takenAt, order: .reverse) private var supplements: [SupplementDose]
     @Query(sort: \FoodVitaminDEntry.loggedAt, order: .reverse) private var foods: [FoodVitaminDEntry]
@@ -18,7 +18,7 @@ struct HistoryView: View {
     @State private var isRefreshingAppleHealth = false
 
     private var calendar: Calendar { .current }
-    private var profile: UserProfile? { profiles.first }
+    private var profile: UserProfile? { UserProfile.canonical(from: profiles) }
 
     var body: some View {
         NavigationStack {

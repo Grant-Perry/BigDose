@@ -25,4 +25,10 @@ nonisolated enum BigDoseWidgetSnapshotStore {
 
         defaults.set(data, forKey: BigDoseAppGroup.widgetSnapshotKey)
     }
+
+    nonisolated static func clear() {
+        UserDefaults(suiteName: BigDoseAppGroup.identifier)?.removeObject(
+            forKey: BigDoseAppGroup.widgetSnapshotKey
+        )
+    }
 }

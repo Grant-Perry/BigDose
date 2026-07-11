@@ -194,7 +194,7 @@ struct BigDoseHomeWidgetEntryView: View {
     private var windowSmallView: some View {
         VStack(alignment: .leading, spacing: 8) {
             BigDoseWordmarkHeader(
-                trailingText: "UV \(entry.snapshot.currentUVIndex.formatted(.number.precision(.fractionLength(0))))"
+                trailingText: currentUVText
             )
 
             Text(windowHeadline)
@@ -262,7 +262,7 @@ struct BigDoseHomeWidgetEntryView: View {
                         progressCaption: "IU goal"
                     )
 
-                    Text("Peak UV \(entry.snapshot.peakUVIndex.formatted(.number.precision(.fractionLength(1))))")
+                    Text(peakUVText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
@@ -352,6 +352,16 @@ struct BigDoseHomeWidgetEntryView: View {
         }
 
         return snapshot.nextWindowTitle
+    }
+
+    private var currentUVText: String {
+        guard entry.snapshot.isWeatherLive else { return "UV --" }
+        return "UV \(entry.snapshot.currentUVIndex.formatted(.number.precision(.fractionLength(0))))"
+    }
+
+    private var peakUVText: String {
+        guard entry.snapshot.isWeatherLive else { return "Peak UV --" }
+        return "Peak UV \(entry.snapshot.peakUVIndex.formatted(.number.precision(.fractionLength(1))))"
     }
 
     private var windowDetail: String? {

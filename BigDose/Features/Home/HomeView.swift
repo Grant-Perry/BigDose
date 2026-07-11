@@ -14,6 +14,7 @@ struct HomeView: View {
     @State private var sessionRoute: SessionRoute?
     @State private var undoSupplementDose: SupplementDose?
     @State private var healthKitImportService = HealthKitImportService()
+    @State private var supplementSyncTasks: [PersistentIdentifier: Task<Void, Never>] = [:]
 
     private var activeProfile: UserProfile {
         profile ?? UserProfile.preview
@@ -107,7 +108,7 @@ struct HomeView: View {
             targetIU: activeProfile.preferredDailyIU,
             vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
             now: now,
-            isSunSessionStartEnabled: homeViewModel.hasLiveWeather,
+            isSunSessionStartEnabled: homeViewModel.canStartSunSession,
             showsNoUsefulUV: showsNoUsefulUV(now: now),
             onStartSunSession: startSunSession
         )
@@ -465,7 +466,7 @@ struct HomeView: View {
                     }
 
                     StartSunSessionActionButton(
-                        isEnabled: homeViewModel.hasLiveWeather,
+                        isEnabled: homeViewModel.canStartSunSession,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
                         size: .compact,
                         action: startSunSession
@@ -601,7 +602,7 @@ struct HomeView: View {
                 )
 
                 StartSunSessionActionButton(
-                    isEnabled: homeViewModel.hasLiveWeather,
+                    isEnabled: homeViewModel.canStartSunSession,
                     showsNoUsefulUV: showsNoUsefulUV(now: now),
                     size: .compact,
                     action: startSunSession
@@ -621,7 +622,7 @@ struct HomeView: View {
 
                 VStack(spacing: 12) {
                     StartSunSessionActionButton(
-                        isEnabled: homeViewModel.hasLiveWeather,
+                        isEnabled: homeViewModel.canStartSunSession,
                         showsNoUsefulUV: showsNoUsefulUV(now: now),
                         size: .regular,
                         action: startSunSession
@@ -858,7 +859,7 @@ struct HomeView: View {
     private func sessionView(for route: SessionRoute) -> some View {
         switch route {
         case .sunPlanner:
-            if let weather = homeViewModel.weather, homeViewModel.hasLiveWeather, let plan = currentPlan {
+            if let weather = homeViewModel.weather, homeViewModel.canStartSunSession, let plan = currentPlan {
                 SunSessionPlannerView(
                     profile: activeProfile,
                     weather: weather,
@@ -878,8 +879,10 @@ struct HomeView: View {
                 )
             } else if homeViewModel.weather != nil {
                 HomeUnavailableSheet(
-                    title: "Solar Guidance Required",
-                    message: "BigDose needs today's solar plan before starting a sun session. Pull to refresh on Home.",
+                    title: homeViewModel.isUsingApproximateLocation ? "Exact Location Required" : "Solar Guidance Required",
+                    message: homeViewModel.isUsingApproximateLocation
+                        ? "BigDose is showing approximate-area weather. Refresh after your exact location is available before starting a sun session."
+                        : "BigDose needs today's solar plan before starting a sun session. Pull to refresh on Home.",
                     onClose: { sessionRoute = nil }
                 )
             } else {
@@ -898,14 +901,16 @@ struct HomeView: View {
                 wantsActiveSessionReminders: activeProfile.wantsActiveSessionReminders,
                 wantsNannyMode: activeProfile.wantsNannyMode,
                 onCancel: { sessionRoute = nil },
-                onComplete: { result in sessionRoute = .completion(result) }
+                onComplete: { result in
+                    save(result)
+                    sessionRoute = .completion(result)
+                    Task { await refreshHome() }
+                }
             )
 
         case .completion(let result):
             SunSessionCompleteView(result: result) {
-                save(result)
                 sessionRoute = nil
-                Task { await refreshHome() }
             }
         }
     }
@@ -987,6 +992,7 @@ struct HomeView: View {
                 estimatedIU: plan.estimatedIU(at: elapsed)
             )
             SunSessionSessionCleanup.finishSession(clearPendingCommandFor: record.sessionID)
+            save(result)
             sessionRoute = .completion(result)
             return
         }
@@ -1057,7 +1063,8 @@ struct HomeView: View {
         publishWidgetSnapshot()
 
         if let profile {
-            Task {
+            let doseID = dose.persistentModelID
+            supplementSyncTasks[doseID] = Task {
                 await healthKitImportService.syncSupplementDoseToHealth(dose, profile: profile)
                 try? modelContext.save()
             }
@@ -1065,7 +1072,10 @@ struct HomeView: View {
     }
 
     private func undoSupplementLog(_ dose: SupplementDose) {
+        let syncTask = supplementSyncTasks.removeValue(forKey: dose.persistentModelID)
         Task {
+            syncTask?.cancel()
+            await syncTask?.value
             await healthKitImportService.removeSupplementDoseFromHealth(dose)
             modelContext.delete(dose)
             undoSupplementDose = nil
@@ -1202,4 +1212,3 @@ private struct SupplementLogActionButton: View {
         .accessibilityLabel("Log \(iu) IU supplement")
     }
 }
-

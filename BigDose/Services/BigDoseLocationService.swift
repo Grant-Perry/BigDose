@@ -34,7 +34,10 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
         do {
             let location = try await requestCurrentLocation()
             BigDoseLocationCache.save(location)
-            return BigDoseResolvedLocation(location: location, isApproximate: false)
+            return BigDoseResolvedLocation(
+                location: location,
+                isApproximate: !Self.isFreshSessionLocation(location)
+            )
         } catch BigDoseLocationError.denied {
             throw BigDoseLocationError.denied
         } catch {
@@ -76,6 +79,12 @@ final class BigDoseLocationService: NSObject, CLLocationManagerDelegate {
             verticalAccuracy: -1,
             timestamp: .now
         )
+    }
+
+    private static func isFreshSessionLocation(_ location: CLLocation, now: Date = .now) -> Bool {
+        location.horizontalAccuracy >= 0
+            && location.horizontalAccuracy <= 1_000
+            && abs(now.timeIntervalSince(location.timestamp)) <= 5 * 60
     }
 
     func requestCurrentLocation() async throws -> CLLocation {
