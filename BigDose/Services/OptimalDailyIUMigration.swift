@@ -11,7 +11,11 @@ enum OptimalDailyIUMigration {
 
         profile.preferredDailyIU = OptimalDailyIUService.recommend(for: profile).sunSessionTargetIU
         profile.updatedAt = .now
-        try? modelContext.save()
-        UserDefaults.standard.set(true, forKey: didMigrateKey)
+        do {
+            try modelContext.save()
+            UserDefaults.standard.set(true, forKey: didMigrateKey)
+        } catch {
+            // Leave the migration flag unset so a later launch can retry.
+        }
     }
 }

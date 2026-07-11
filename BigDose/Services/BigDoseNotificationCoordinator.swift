@@ -10,6 +10,7 @@ enum BigDoseNotificationCoordinator {
         let labs = fetchAll(LabResult.self, modelContext: modelContext)
         let dailyPlans = fetchAll(DailySunPlan.self, modelContext: modelContext)
         let todayPlan = dailyPlans.first { Calendar.current.isDateInToday($0.date) }
+        let latestLabMeasuredAt = labs.map(\.measuredAt).max()
 
         let progress = ProgressAggregationService.snapshot(
             profile: profile,
@@ -22,7 +23,8 @@ enum BigDoseNotificationCoordinator {
         await BigDoseAlertScheduler.reschedule(
             profile: profile,
             dailyPlan: todayPlan,
-            progress: progress
+            progress: progress,
+            latestLabMeasuredAt: latestLabMeasuredAt
         )
     }
 

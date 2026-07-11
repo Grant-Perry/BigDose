@@ -56,6 +56,8 @@ final class SunSessionLiveActivityCoordinator {
 
     func endIfNeeded() async {
         cancelPendingUpdate()
+        reconcileTask?.cancel()
+        reconcileTask = nil
 
         for activity in Activity<SunSessionActivityAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
@@ -124,9 +126,11 @@ final class SunSessionLiveActivityCoordinator {
         pendingUpdateTask = Task { @MainActor [weak self] in
             defer { self?.pendingUpdateTask = nil }
             guard let self else { return }
+            guard !Task.isCancelled else { return }
 
-            self.lastPushedContentState = mergedState
             await activity.update(ActivityContent(state: mergedState, staleDate: nil))
+            guard !Task.isCancelled else { return }
+            self.lastPushedContentState = mergedState
         }
     }
 
@@ -135,6 +139,12 @@ final class SunSessionLiveActivityCoordinator {
         state: SunSessionActivityAttributes.ContentState
     ) async {
         cancelPendingUpdate()
+
+        // Don't resurrect a Live Activity after cleanup cleared the App Group store.
+        guard let record = ActiveSunSessionStore.load(),
+              record.sessionID == attributes.sessionID else {
+            return
+        }
 
         let content = ActivityContent(state: state, staleDate: nil)
 

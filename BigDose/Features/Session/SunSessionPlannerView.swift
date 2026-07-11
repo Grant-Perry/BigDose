@@ -5,6 +5,7 @@ struct SunSessionPlannerView: View {
     var weather: BigDoseWeatherSnapshot
     var latitude: Double
     var longitude: Double
+    var todaySunIU: Double = 0
     var isFirstLiveSunSession: Bool = false
     var onCancel: () -> Void
     var onStart: (SunSessionPlan) -> Void
@@ -15,11 +16,16 @@ struct SunSessionPlannerView: View {
     @State private var isShowingSkinExposure = false
     @State private var pendingOutsideWindowStart = false
 
+    private var sessionTargetIU: Double {
+        max(Double(profile.preferredDailyIU) - todaySunIU, 100)
+    }
+
     init(
         profile: UserProfile,
         weather: BigDoseWeatherSnapshot,
         latitude: Double,
         longitude: Double,
+        todaySunIU: Double = 0,
         isFirstLiveSunSession: Bool = false,
         onCancel: @escaping () -> Void,
         onStart: @escaping (SunSessionPlan) -> Void
@@ -28,11 +34,13 @@ struct SunSessionPlannerView: View {
         self.weather = weather
         self.latitude = latitude
         self.longitude = longitude
+        self.todaySunIU = todaySunIU
         self.isFirstLiveSunSession = isFirstLiveSunSession
         self.onCancel = onCancel
         self.onStart = onStart
         _exposedBodySurfaceArea = State(initialValue: profile.typicalExposedBodySurfaceArea)
 
+        let remainingTarget = max(Double(profile.preferredDailyIU) - todaySunIU, 100)
         let bootstrapPlan = SunSessionPlan(
             startedAt: .now,
             durationSeconds: 15 * 60,
@@ -43,7 +51,7 @@ struct SunSessionPlannerView: View {
             currentTemperatureFahrenheit: weather.temperatureFahrenheit,
             skinType: profile.skinType,
             locationName: weather.locationName,
-            targetIU: Double(profile.preferredDailyIU),
+            targetIU: remainingTarget,
             exitLeadFraction: profile.prepareExitLeadFraction,
             latitude: latitude,
             longitude: longitude
@@ -62,7 +70,7 @@ struct SunSessionPlannerView: View {
             currentTemperatureFahrenheit: weather.temperatureFahrenheit,
             skinType: profile.skinType,
             locationName: weather.locationName,
-            targetIU: Double(profile.preferredDailyIU),
+            targetIU: sessionTargetIU,
             exitLeadFraction: profile.prepareExitLeadFraction,
             latitude: latitude,
             longitude: longitude

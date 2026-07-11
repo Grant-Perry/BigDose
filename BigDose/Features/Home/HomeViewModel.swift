@@ -23,6 +23,7 @@ final class HomeViewModel {
     private let locationService = BigDoseLocationService()
     private var locationRetryCount = 0
     private let maxLocationRetries = 3
+    private var refreshGeneration = 0
 
     init() {
         if let cached = BigDoseWeatherCache.load() {
@@ -33,23 +34,32 @@ final class HomeViewModel {
     }
 
     func refresh() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
         isLoading = true
         weatherFailure = nil
-        defer { isLoading = false }
+        defer {
+            if generation == refreshGeneration {
+                isLoading = false
+            }
+        }
 
         let resolved: BigDoseResolvedLocation
 
         do {
             resolved = try await resolveLocationWithRetries()
         } catch {
+            guard generation == refreshGeneration else { return }
             applyWeatherFailure(for: error)
             return
         }
 
+        guard generation == refreshGeneration else { return }
         isUsingApproximateLocation = resolved.isApproximate
 
         do {
             let snapshot = try await BigDoseWeatherService.weather(for: resolved.location)
+            guard generation == refreshGeneration else { return }
             weather = snapshot
             dailyPlan = nil
             isShowingCachedWeather = false
@@ -61,6 +71,7 @@ final class HomeViewModel {
             BigDoseWeatherCache.save(snapshot)
             BigDoseLocationCache.save(resolved.location)
         } catch {
+            guard generation == refreshGeneration else { return }
             applyWeatherFailure(for: error)
         }
     }
@@ -89,12 +100,14 @@ final class HomeViewModel {
 
     func refresh(profile: UserProfile) async {
         await refresh()
+        let planGeneration = refreshGeneration
 
         // Cached weather is display-only — never drive plans, UV math or sessions.
         guard let weather, hasLiveWeather else { return }
 
         do {
             let resolved = try await locationService.resolveLocationForWeather()
+            guard planGeneration == refreshGeneration else { return }
             dailyPlan = DailySunPlanService.makePlan(
                 profile: profile,
                 weather: weather,
@@ -107,6 +120,7 @@ final class HomeViewModel {
                 }
             }
         } catch {
+            guard planGeneration == refreshGeneration else { return }
             // Still try plan generation from any cached coordinate so solar guidance is not blank.
             if let cachedLocation = BigDoseLocationCache.load() {
                 dailyPlan = DailySunPlanService.makePlan(

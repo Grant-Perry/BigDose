@@ -86,7 +86,11 @@ struct DailySupplementLedgerSheet: View {
 
     private func deleteSupplementDose(_ dose: SupplementDose) {
         Task {
-            await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            do {
+                try await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            } catch {
+                return
+            }
             modelContext.delete(dose)
             try? modelContext.save()
         }

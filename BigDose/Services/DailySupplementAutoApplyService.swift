@@ -13,10 +13,10 @@ enum DailySupplementAutoApplyService {
         guard profile.autoApplyDailySupplementIU, profile.defaultSupplementIU > 0 else { return }
 
         let calendar = Calendar.current
-        let alreadyAppliedToday = supplements.contains {
-            calendar.isDateInToday($0.takenAt) && $0.note == autoAppliedNote
-        }
-        guard !alreadyAppliedToday else { return }
+        // Prefer a live fetch so overlapping refreshHome calls share one source of truth.
+        let existingToday = (try? modelContext.fetch(FetchDescriptor<SupplementDose>())) ?? supplements
+        let alreadyLoggedToday = existingToday.contains { calendar.isDateInToday($0.takenAt) }
+        guard !alreadyLoggedToday else { return }
 
         let dose = SupplementDose(
             takenAt: calendar.startOfDay(for: .now),

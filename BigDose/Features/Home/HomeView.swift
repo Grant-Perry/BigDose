@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var undoSupplementDose: SupplementDose?
     @State private var healthKitImportService = HealthKitImportService()
     @State private var supplementSyncTasks: [PersistentIdentifier: Task<Void, Never>] = [:]
+    @State private var homeRefreshTask: Task<Void, Never>?
 
     private var activeProfile: UserProfile {
         profile ?? UserProfile.preview
@@ -62,6 +63,11 @@ struct HomeView: View {
             .refreshable {
                 await refreshHome()
             }
+            .onChange(of: supplements.map(\.persistentModelID)) { _, ids in
+                if let undo = undoSupplementDose, !ids.contains(undo.persistentModelID) {
+                    undoSupplementDose = nil
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .bigDoseOpenSessionFromLiveActivity)) { notification in
                 restoreActiveSessionIfNeeded(expectedSessionID: notification.object as? String)
             }
@@ -106,7 +112,9 @@ struct HomeView: View {
             todayGoalProgress: todayDailyGoalProgress,
             todaySunIU: todayIUIntake.sunIU,
             targetIU: activeProfile.preferredDailyIU,
-            vitaminDWindowDisplay: currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) },
+            vitaminDWindowDisplay: homeViewModel.hasLiveWeather
+                ? currentPlan.flatMap { vitaminDWindowDisplay(for: $0, now: now) }
+                : nil,
             now: now,
             isSunSessionStartEnabled: homeViewModel.canStartSunSession,
             showsNoUsefulUV: showsNoUsefulUV(now: now),
@@ -771,16 +779,21 @@ struct HomeView: View {
 
     private var remainingSunIUForToday: Double {
         todayIUIntake.remainingSunIUForGoal(
-            dailyTargetIU: Double(activeProfile.preferredDailyIU)
+            sunTargetIU: Double(activeProfile.preferredDailyIU),
+            totalDailyTargetIU: Double(dailyIURecommendation.totalDailyIU),
+            includesSupplements: activeProfile.includesSupplementsInDailyProgress
         )
     }
 
     private var remainingSunMinutesForToday: Int {
         guard remainingSunIUForToday > 0 else { return 0 }
 
+        let rawUV = homeViewModel.weather?.uvIndex ?? 0
+        let effectiveUV = rawUV * (activeProfile.usuallyUsesSunscreen ? 0.35 : 1)
+
         return Int(ceil(VitaminDCalculator.targetDurationSeconds(
             targetIU: remainingSunIUForToday,
-            uvIndex: homeViewModel.weather?.uvIndex ?? 0,
+            uvIndex: effectiveUV,
             exposedBodySurfaceArea: activeProfile.typicalExposedBodySurfaceArea,
             skinType: activeProfile.skinType
         ) / 60))
@@ -865,6 +878,7 @@ struct HomeView: View {
                     weather: weather,
                     latitude: plan.latitude,
                     longitude: plan.longitude,
+                    todaySunIU: todayIUIntake.sunIU,
                     isFirstLiveSunSession: isFirstLiveSunSession,
                     onCancel: { sessionRoute = nil },
                     onStart: { plan in sessionRoute = .activeSunSession(plan) }
@@ -916,29 +930,49 @@ struct HomeView: View {
     }
 
     private func save(_ result: SunSessionResult) {
-        let session = ExposureSession(
+        let segments = ExposureSessionDaySplit.segments(
             startedAt: result.plan.startedAt,
             endedAt: result.endedAt,
             durationSeconds: result.elapsedSeconds,
-            averageUVIndex: result.plan.input.effectiveUVIndex,
-            maxUVIndex: result.plan.uvIndex,
             estimatedIU: result.estimatedIU,
             peakMedUsedPercent: result.medUsedPercent,
-            medOverLimitPercent: result.medOverLimitPercent,
-            cloudCoverRaw: result.plan.cloudCover.rawValue,
-            skinTypeRaw: result.plan.skinType.rawValue,
-            exposedBodySurfaceArea: result.plan.exposedBodySurfaceArea,
-            sunscreenFactor: result.plan.sunscreenTransmission,
-            source: .liveTracked,
-            quality: result.plan.estimate.quality,
-            locationLabel: result.plan.locationName,
-            latitude: result.plan.latitude,
-            longitude: result.plan.longitude,
-            sessionTargetIU: result.plan.targetIU
+            medOverLimitPercent: result.medOverLimitPercent
         )
-        modelContext.insert(session)
-        try? modelContext.save()
-        SunSessionSessionCleanup.finishSession(clearPendingCommandFor: result.plan.liveActivitySessionID)
+
+        var inserted: [ExposureSession] = []
+        for segment in segments {
+            let session = ExposureSession(
+                startedAt: segment.startedAt,
+                endedAt: segment.endedAt,
+                durationSeconds: segment.durationSeconds,
+                averageUVIndex: result.plan.input.effectiveUVIndex,
+                maxUVIndex: result.plan.uvIndex,
+                estimatedIU: segment.estimatedIU,
+                peakMedUsedPercent: segment.peakMedUsedPercent,
+                medOverLimitPercent: segment.medOverLimitPercent,
+                cloudCoverRaw: result.plan.cloudCover.rawValue,
+                skinTypeRaw: result.plan.skinType.rawValue,
+                exposedBodySurfaceArea: result.plan.exposedBodySurfaceArea,
+                sunscreenFactor: result.plan.sunscreenTransmission,
+                source: .liveTracked,
+                quality: result.plan.estimate.quality,
+                locationLabel: result.plan.locationName,
+                latitude: result.plan.latitude,
+                longitude: result.plan.longitude,
+                sessionTargetIU: result.plan.targetIU
+            )
+            modelContext.insert(session)
+            inserted.append(session)
+        }
+
+        do {
+            try modelContext.save()
+            SunSessionSessionCleanup.finishSession(clearPendingCommandFor: result.plan.liveActivitySessionID)
+        } catch {
+            for session in inserted {
+                modelContext.delete(session)
+            }
+        }
     }
 
     private var isFirstLiveSunSession: Bool {
@@ -950,18 +984,26 @@ struct HomeView: View {
     }
 
     private func refreshHome() async {
-        DailySupplementAutoApplyService.applyIfNeeded(
-            profile: activeProfile,
-            supplements: supplements,
-            modelContext: modelContext
-        )
-        await homeViewModel.refresh(profile: activeProfile)
-        persistDailyPlanIfNeeded()
-        publishWidgetSnapshot()
-        await BigDoseNotificationCoordinator.refreshManagedAlerts(
-            profile: activeProfile,
-            modelContext: modelContext
-        )
+        let previous = homeRefreshTask
+        let task = Task { @MainActor in
+            _ = await previous?.value
+            guard !Task.isCancelled else { return }
+            DailySupplementAutoApplyService.applyIfNeeded(
+                profile: activeProfile,
+                supplements: supplements,
+                modelContext: modelContext
+            )
+            await homeViewModel.refresh(profile: activeProfile)
+            guard !Task.isCancelled else { return }
+            persistDailyPlanIfNeeded()
+            publishWidgetSnapshot()
+            await BigDoseNotificationCoordinator.refreshManagedAlerts(
+                profile: activeProfile,
+                modelContext: modelContext
+            )
+        }
+        homeRefreshTask = task
+        await task.value
     }
 
     private func publishWidgetSnapshot() {
@@ -984,14 +1026,14 @@ struct HomeView: View {
 
         if SunSessionLiveActivityCommandStore.hasPendingEnd(for: record.sessionID) {
             _ = SunSessionLiveActivityCommandStore.consume(for: record.sessionID)
-            let elapsed = record.currentElapsed()
+            // End intent freezes elapsed into the store; do not re-extrapolate.
+            let elapsed = record.isPaused ? record.elapsedSeconds : record.currentElapsed()
             let result = SunSessionResult(
                 plan: plan,
-                endedAt: .now,
+                endedAt: record.updatedAt,
                 elapsedSeconds: max(elapsed, 1),
                 estimatedIU: plan.estimatedIU(at: elapsed)
             )
-            SunSessionSessionCleanup.finishSession(clearPendingCommandFor: record.sessionID)
             save(result)
             sessionRoute = .completion(result)
             return
@@ -1003,7 +1045,11 @@ struct HomeView: View {
     private func persistDailyPlanIfNeeded() {
         guard let plan = homeViewModel.dailyPlan else { return }
 
-        if let existing = dailyPlans.first(where: { Calendar.current.isDate($0.date, inSameDayAs: plan.date) }) {
+        let existing = dailyPlans.first(where: { Calendar.current.isDate($0.date, inSameDayAs: plan.date) })
+            ?? ((try? modelContext.fetch(FetchDescriptor<DailySunPlan>())) ?? [])
+                .first(where: { Calendar.current.isDate($0.date, inSameDayAs: plan.date) })
+
+        if let existing {
             existing.generatedAt = plan.generatedAt
             existing.latitude = plan.latitude
             existing.longitude = plan.longitude
@@ -1076,7 +1122,12 @@ struct HomeView: View {
         Task {
             syncTask?.cancel()
             await syncTask?.value
-            await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            do {
+                try await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            } catch {
+                // Keep the local dose if HealthKit still owns the sample.
+                return
+            }
             modelContext.delete(dose)
             undoSupplementDose = nil
             try? modelContext.save()

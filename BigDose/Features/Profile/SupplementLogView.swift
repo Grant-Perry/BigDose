@@ -111,7 +111,11 @@ struct SupplementLogView: View {
         .buttonStyle(.plain)
         .bigDoseDeletable {
             Task {
-                await healthKitImportService.removeSupplementDoseFromHealth(dose)
+                do {
+                    try await healthKitImportService.removeSupplementDoseFromHealth(dose)
+                } catch {
+                    return
+                }
                 modelContext.delete(dose)
                 try? modelContext.save()
             }
@@ -174,7 +178,11 @@ struct AddSupplementDoseView: View {
 
         if let dose {
             Task {
-                await healthKitImportService.removeSupplementDoseFromHealth(dose)
+                do {
+                    try await healthKitImportService.removeSupplementDoseFromHealth(dose)
+                } catch {
+                    return
+                }
                 dose.takenAt = takenAt
                 dose.internationalUnits = iu
                 dose.note = note
@@ -208,7 +216,11 @@ struct AddSupplementDoseView: View {
         guard let dose else { return }
 
         Task {
-            await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            do {
+                try await healthKitImportService.removeSupplementDoseFromHealth(dose)
+            } catch {
+                return
+            }
             modelContext.delete(dose)
             try? modelContext.save()
             dismiss()

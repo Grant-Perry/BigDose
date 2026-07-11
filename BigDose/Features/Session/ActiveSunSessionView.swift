@@ -24,6 +24,7 @@ struct ActiveSunSessionView: View {
     @State private var didShowFullMEDAlert = false
     @State private var didShowGoalReachedAlert = false
     @State private var isShowingSkinCoverage = false
+    @State private var isShowingCloudCover = false
     @State private var isShowingGoalPicker = false
     @State private var isShowingCancelConfirmation = false
     @State private var isShowingStopConfirmation = false
@@ -188,8 +189,9 @@ struct ActiveSunSessionView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                reconcileElapsedFromPersistedState()
+                // Commands first: LA pause/resume/end already froze App Group elapsed.
                 consumeLiveActivityCommands()
+                reconcileElapsedFromPersistedState()
                 syncLiveActivity()
                 evaluateStaleSessionAlert()
             case .inactive, .background:
@@ -258,6 +260,14 @@ struct ActiveSunSessionView: View {
         .sheet(isPresented: $isShowingSkinCoverage) {
             SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
                 .presentationDetents([.medium, .large])
+        }
+        .confirmationDialog("Clouds", isPresented: $isShowingCloudCover, titleVisibility: .visible) {
+            ForEach(CloudCoverPreset.allCases) { preset in
+                Button(preset.title) {
+                    plan.cloudCover = preset
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .sheet(isPresented: $isShowingGoalPicker) {
             SessionGoalPickerView(targetIU: $plan.targetIU)
@@ -780,19 +790,29 @@ struct ActiveSunSessionView: View {
 
     private var modifiersCard: some View {
         HStack(spacing: 0) {
-            sessionModifierTile(
-                title: "Skin",
-                value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
-                icon: "person.fill"
-            )
+            Button {
+                isShowingSkinCoverage = true
+            } label: {
+                sessionModifierTile(
+                    title: "Skin",
+                    value: SkinExposurePreset.coverageLabel(for: plan.exposedBodySurfaceArea),
+                    icon: "person.fill"
+                )
+            }
+            .buttonStyle(.plain)
 
             modifierDivider
 
-            sessionModifierTile(
-                title: "Clouds",
-                value: plan.cloudCover.title,
-                icon: "cloud.sun.fill"
-            )
+            Button {
+                isShowingCloudCover = true
+            } label: {
+                sessionModifierTile(
+                    title: "Clouds",
+                    value: plan.cloudCover.title,
+                    icon: "cloud.sun.fill"
+                )
+            }
+            .buttonStyle(.plain)
 
             modifierDivider
 
@@ -1012,20 +1032,33 @@ struct ActiveSunSessionView: View {
 
         switch command {
         case .pause:
+            applyPersistedElapsedIfAvailable()
             if !isPaused {
                 isPaused = true
                 persistSessionState()
                 syncLiveActivity()
             }
         case .resume:
+            applyPersistedElapsedIfAvailable()
             if isPaused {
                 isPaused = false
                 persistSessionState()
                 syncLiveActivity()
             }
         case .end:
+            applyPersistedElapsedIfAvailable()
             complete()
         }
+    }
+
+    private func applyPersistedElapsedIfAvailable() {
+        guard let record = ActiveSunSessionStore.load(),
+              record.sessionID == plan.liveActivitySessionID else {
+            return
+        }
+        // Prefer frozen store elapsed from LA controls; do not re-extrapolate.
+        elapsedSeconds = record.isPaused ? record.elapsedSeconds : record.currentElapsed()
+        isPaused = record.isPaused
     }
 
     private func complete() {
@@ -1042,7 +1075,7 @@ struct ActiveSunSessionView: View {
             estimatedIU: estimatedIU
         )
 
-        SunSessionSessionCleanup.finishSession(clearPendingCommandFor: plan.liveActivitySessionID)
+        // Persist first via onComplete → save; cleanup only after SwiftData succeeds.
         onComplete(result)
     }
 

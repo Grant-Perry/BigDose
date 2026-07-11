@@ -4,6 +4,7 @@ import UserNotifications
 enum BigDoseAlertScheduler {
     private static let managedPrefix = "bigdose.alert."
     private static let eventOffset: TimeInterval = 15 * 60
+    @MainActor private static var rescheduleGeneration = 0
 
     static func authorizationStatus() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
@@ -17,7 +18,15 @@ enum BigDoseAlertScheduler {
         }
     }
 
-    static func reschedule(profile: UserProfile, dailyPlan: DailySunPlan?, progress: BigDoseProgressSnapshot?) async {
+    static func reschedule(
+        profile: UserProfile,
+        dailyPlan: DailySunPlan?,
+        progress: BigDoseProgressSnapshot?,
+        latestLabMeasuredAt: Date? = nil
+    ) async {
+        await MainActor.run { rescheduleGeneration += 1 }
+        let generation = await MainActor.run { rescheduleGeneration }
+
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
         let managedIDs = pending.map(\.identifier).filter { $0.hasPrefix(managedPrefix) }
@@ -26,6 +35,7 @@ enum BigDoseAlertScheduler {
         guard await requestAuthorization() else {
             return
         }
+        guard await MainActor.run(body: { generation == rescheduleGeneration }) else { return }
 
         if let dailyPlan {
             await scheduleSolarEventAlerts(profile: profile, dailyPlan: dailyPlan)
@@ -42,7 +52,16 @@ enum BigDoseAlertScheduler {
         }
 
         if profile.wantsLabReminders {
-            let date = Calendar.current.date(byAdding: .day, value: profile.labReminderIntervalDays, to: .now) ?? .now
+            let anchor = latestLabMeasuredAt ?? profile.updatedAt
+            let candidate = Calendar.current.date(
+                byAdding: .day,
+                value: profile.labReminderIntervalDays,
+                to: anchor
+            ) ?? .now
+            // If the cadence is already overdue, nudge tomorrow instead of forever postponing.
+            let date = candidate > .now
+                ? candidate
+                : (Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now.addingTimeInterval(86_400))
             await scheduleCalendar(
                 id: "labReminder",
                 title: "Consider a vitamin D lab check",
@@ -50,6 +69,8 @@ enum BigDoseAlertScheduler {
                 date: date
             )
         }
+
+        guard await MainActor.run(body: { generation == rescheduleGeneration }) else { return }
 
         if profile.wantsWeeklyProgressAlerts {
             await scheduleWeeklyProgress()

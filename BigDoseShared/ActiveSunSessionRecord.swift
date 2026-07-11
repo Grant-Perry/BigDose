@@ -122,6 +122,16 @@ nonisolated struct ActiveSunSessionRecord: Codable, Sendable, Equatable {
         return elapsedSeconds + now.timeIntervalSince(updatedAt)
     }
 
+    /// Freezes wall-clock extrapolation at `now` so Live Activity controls and
+    /// app restore share one elapsed source of truth.
+    func freezingElapsed(at now: Date = .now, isPaused: Bool) -> ActiveSunSessionRecord {
+        var copy = self
+        copy.elapsedSeconds = currentElapsed(now: now)
+        copy.isPaused = isPaused
+        copy.updatedAt = now
+        return copy
+    }
+
     var liveActivityContentState: SunSessionActivityAttributes.ContentState {
         let elapsed = currentElapsed()
         let estimatedIU = SunSessionLiveActivityMetrics.estimatedIU(
@@ -194,5 +204,35 @@ nonisolated enum ActiveSunSessionStore {
 
     nonisolated static func clear() {
         UserDefaults(suiteName: BigDoseAppGroup.identifier)?.removeObject(forKey: storageKey)
+    }
+
+    /// Called from Live Activity intents so App Group state matches the control
+    /// timestamp before the app process reconciles.
+    nonisolated static func applyLiveActivityControl(
+        _ command: SunSessionLiveActivityCommand,
+        sessionID: String,
+        elapsedSeconds: TimeInterval? = nil,
+        now: Date = .now
+    ) {
+        guard var record = load(), record.sessionID == sessionID else { return }
+
+        switch command {
+        case .pause:
+            let frozen = elapsedSeconds ?? record.currentElapsed(now: now)
+            record.elapsedSeconds = frozen
+            record.isPaused = true
+            record.updatedAt = now
+        case .resume:
+            record.elapsedSeconds = elapsedSeconds ?? record.elapsedSeconds
+            record.isPaused = false
+            record.updatedAt = now
+        case .end:
+            let frozen = elapsedSeconds ?? record.currentElapsed(now: now)
+            record.elapsedSeconds = frozen
+            record.isPaused = true
+            record.updatedAt = now
+        }
+
+        save(record)
     }
 }

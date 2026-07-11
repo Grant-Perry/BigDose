@@ -10,6 +10,7 @@ struct ProfileAvatarEditorView: View {
 
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var sourceImage: UIImage?
+    @State private var didRemoveExistingPhoto = false
     @State private var scale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var lastScale: CGFloat = 1
@@ -18,6 +19,9 @@ struct ProfileAvatarEditorView: View {
 
     private let cropDiameter: CGFloat = 280
 
+    private var canSave: Bool {
+        sourceImage != nil || didRemoveExistingPhoto
+    }
     var body: some View {
         NavigationStack {
             ZStack {
@@ -63,7 +67,7 @@ struct ProfileAvatarEditorView: View {
                     Button("Save") {
                         saveAvatar()
                     }
-                    .disabled(sourceImage == nil)
+                    .disabled(!canSave)
                 }
             }
             .fileImporter(isPresented: $isShowingFileImporter, allowedContentTypes: [.image]) { result in
@@ -169,7 +173,7 @@ struct ProfileAvatarEditorView: View {
                 .buttonStyle(.bordered)
                 .tint(.solarGold)
 
-                if sourceImage != nil {
+                if sourceImage != nil || (existingImageData != nil && !didRemoveExistingPhoto) {
                     Button(role: .destructive) {
                         resetSelection()
                     } label: {
@@ -239,6 +243,7 @@ struct ProfileAvatarEditorView: View {
 
     private func applySourceImage(_ image: UIImage) {
         sourceImage = image
+        didRemoveExistingPhoto = false
         scale = 1
         offset = .zero
         lastScale = 1
@@ -248,6 +253,7 @@ struct ProfileAvatarEditorView: View {
     private func resetSelection() {
         sourceImage = nil
         selectedPhotoItem = nil
+        didRemoveExistingPhoto = existingImageData != nil
         scale = 1
         offset = .zero
         lastScale = 1

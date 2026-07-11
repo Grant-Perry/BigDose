@@ -57,10 +57,12 @@ enum SunExposureAggregation {
 
         guard !todayLive.isEmpty else { return .empty }
 
+        let peakMed = todayLive.map(\.peakMedUsedPercent).max() ?? 0
         return TodaySunRiskSummary(
             liveSessionCount: todayLive.count,
-            totalMedUsedPercent: todayLive.map(\.peakMedUsedPercent).max() ?? 0,
-            totalMedOverLimitPercent: todayLive.reduce(0) { $0 + $1.medOverLimitPercent }
+            totalMedUsedPercent: peakMed,
+            // Match peak semantics — sum of per-session overages misreports burn risk.
+            totalMedOverLimitPercent: SunSessionSafetyThresholds.medOverLimitPercent(for: peakMed)
         )
     }
 }

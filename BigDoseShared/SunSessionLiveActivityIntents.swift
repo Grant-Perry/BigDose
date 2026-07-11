@@ -22,7 +22,12 @@ struct PauseSunSessionLiveActivityIntent: LiveActivityIntent {
             sessionID: sessionID,
             control: .pause
         ) { sessionID in
-            await SunSessionLiveActivityIntentSupport.pause(sessionID: sessionID)
+            let elapsed = await SunSessionLiveActivityIntentSupport.pause(sessionID: sessionID)
+            ActiveSunSessionStore.applyLiveActivityControl(
+                .pause,
+                sessionID: sessionID,
+                elapsedSeconds: elapsed
+            )
             SunSessionLiveActivityCommandStore.request(.pause, sessionID: sessionID)
         }
         return .result()
@@ -46,7 +51,12 @@ struct ResumeSunSessionLiveActivityIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         await SunSessionLiveActivityIntentSupport.clearPending(sessionID: sessionID)
-        await SunSessionLiveActivityIntentSupport.resume(sessionID: sessionID)
+        let elapsed = await SunSessionLiveActivityIntentSupport.resume(sessionID: sessionID)
+        ActiveSunSessionStore.applyLiveActivityControl(
+            .resume,
+            sessionID: sessionID,
+            elapsedSeconds: elapsed
+        )
         SunSessionLiveActivityCommandStore.request(.resume, sessionID: sessionID)
         return .result()
     }
@@ -72,6 +82,12 @@ struct EndSunSessionLiveActivityIntent: LiveActivityIntent {
             sessionID: sessionID,
             control: .end
         ) { sessionID in
+            let elapsed = await SunSessionLiveActivityIntentSupport.frozenElapsed(sessionID: sessionID)
+            ActiveSunSessionStore.applyLiveActivityControl(
+                .end,
+                sessionID: sessionID,
+                elapsedSeconds: elapsed
+            )
             SunSessionLiveActivityCommandStore.request(.end, sessionID: sessionID)
             await SunSessionLiveActivityIntentSupport.end(sessionID: sessionID)
             SunSessionSharedWidgetCleanup.clearActiveSessionAndReload()
@@ -112,12 +128,18 @@ enum SunSessionLiveActivityIntentSupport {
         }
     }
 
-    static func pause(sessionID: String) async {
+    @discardableResult
+    static func pause(sessionID: String) async -> TimeInterval? {
+        var frozenElapsed: TimeInterval?
         await update(sessionID: sessionID) { activity in
             var state = activity.content.state
-            guard !state.isPaused else { return state }
+            guard !state.isPaused else {
+                frozenElapsed = state.elapsedOffsetSeconds
+                return state
+            }
 
             let elapsed = SunSessionLiveActivityMetrics.elapsedSeconds(state: state)
+            frozenElapsed = elapsed
             let metrics = metricsSnapshot(
                 attributes: activity.attributes,
                 elapsedSeconds: elapsed
@@ -130,13 +152,20 @@ enum SunSessionLiveActivityIntentSupport {
             state.goalProgress = metrics.goalProgress
             return state
         }
+        return frozenElapsed
     }
 
-    static func resume(sessionID: String) async {
+    @discardableResult
+    static func resume(sessionID: String) async -> TimeInterval? {
+        var frozenElapsed: TimeInterval?
         await update(sessionID: sessionID) { activity in
             var state = activity.content.state
-            guard state.isPaused else { return state }
+            guard state.isPaused else {
+                frozenElapsed = SunSessionLiveActivityMetrics.elapsedSeconds(state: state)
+                return state
+            }
 
+            frozenElapsed = state.elapsedOffsetSeconds
             let metrics = metricsSnapshot(
                 attributes: activity.attributes,
                 elapsedSeconds: state.elapsedOffsetSeconds
@@ -148,6 +177,14 @@ enum SunSessionLiveActivityIntentSupport {
             state.goalProgress = metrics.goalProgress
             return state
         }
+        return frozenElapsed
+    }
+
+    static func frozenElapsed(sessionID: String) async -> TimeInterval? {
+        for activity in Activity<SunSessionActivityAttributes>.activities where activity.attributes.sessionID == sessionID {
+            return SunSessionLiveActivityMetrics.elapsedSeconds(state: activity.content.state)
+        }
+        return ActiveSunSessionStore.load()?.currentElapsed()
     }
 
     static func end(sessionID: String) async {

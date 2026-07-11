@@ -3,7 +3,12 @@ import UIKit
 import UserNotifications
 
 final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
-    nonisolated func userNotificationCenter(
+    // Main-actor isolated so UIKit's completion (which drives snapshot/state
+    // restoration) resumes on the main thread. Completing these async delegate
+    // methods on a background executor crashes in
+    // -[UIApplication _performBlockAfterCATransactionCommitSynchronizes:].
+    @MainActor
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
@@ -12,13 +17,12 @@ final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCente
         }
 
         let kind = Self.feedbackKind(for: notification.request.identifier)
-        await MainActor.run {
-            BigDoseAlertFeedback.present(kind: kind)
-        }
+        BigDoseAlertFeedback.present(kind: kind)
         return [.banner, .list, .sound, .badge]
     }
 
-    nonisolated func userNotificationCenter(
+    @MainActor
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
@@ -29,18 +33,14 @@ final class BigDoseNotificationCenterDelegate: NSObject, UNUserNotificationCente
         let identifier = response.notification.request.identifier
         if identifier == ActiveSessionReminderService.identifier,
            let record = ActiveSunSessionStore.load() {
-            await MainActor.run {
-                NotificationCenter.default.post(
-                    name: .bigDoseOpenSessionFromLiveActivity,
-                    object: record.sessionID
-                )
-            }
+            NotificationCenter.default.post(
+                name: .bigDoseOpenSessionFromLiveActivity,
+                object: record.sessionID
+            )
         }
 
         let kind = Self.feedbackKind(for: identifier)
-        await MainActor.run {
-            BigDoseAlertFeedback.present(kind: kind)
-        }
+        BigDoseAlertFeedback.present(kind: kind)
     }
 
     nonisolated private static func shouldDeliver(_ identifier: String) -> Bool {

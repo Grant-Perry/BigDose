@@ -23,7 +23,7 @@ struct DailyIUIntakeSummary: Equatable, Sendable {
         sunIU + supplementIU + foodIU
     }
 
-    /// Progress toward the daily IU target from sun exposure only — excludes supplements and food.
+    /// Progress toward the daily IU target from sun (+ food) — excludes supplements.
     func sunGoalProgress(dailyTargetIU: Double) -> Double {
         dailyGoalProgress(
             sunTargetIU: dailyTargetIU,
@@ -33,19 +33,29 @@ struct DailyIUIntakeSummary: Equatable, Sendable {
     }
 
     /// Progress toward the daily IU target. Optionally counts logged supplement IU against the recommended total.
+    /// Food IU always counts toward the same numerator used for Today totals.
     func dailyGoalProgress(
         sunTargetIU: Double,
         totalDailyTargetIU: Double,
         includesSupplements: Bool
     ) -> Double {
-        let numerator = includesSupplements ? sunIU + supplementIU : sunIU
+        let base = includesSupplements ? sunIU + supplementIU : sunIU
+        let numerator = base + foodIU
         let denominator = includesSupplements ? totalDailyTargetIU : sunTargetIU
         guard denominator > 0 else { return 0 }
         return min(max(numerator / denominator, 0), 1)
     }
 
-    func remainingSunIUForGoal(dailyTargetIU: Double) -> Double {
-        max(dailyTargetIU - sunIU, 0)
+    /// Remaining IU still needed from sun to finish the daily goal.
+    func remainingSunIUForGoal(
+        sunTargetIU: Double,
+        totalDailyTargetIU: Double,
+        includesSupplements: Bool
+    ) -> Double {
+        if includesSupplements {
+            return max(totalDailyTargetIU - sunIU - supplementIU - foodIU, 0)
+        }
+        return max(sunTargetIU - sunIU - foodIU, 0)
     }
 }
 
@@ -54,10 +64,10 @@ enum DailyIUIntakeAggregation {
         sessions: [ExposureSession],
         supplements: [SupplementDose],
         foods: [FoodVitaminDEntry],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        now: Date = .now
     ) -> DailyIUIntakeSummary {
-        let todaySessions = sessions.filter { calendar.isDateInToday($0.startedAt) }
-        let sunBreakdown = todaySunBreakdown(from: todaySessions)
+        let sunBreakdown = todaySunBreakdown(from: sessions, calendar: calendar, now: now)
         let medExcessSeconds = SunExposureAggregation.todayMedExcessSeconds(
             from: sessions,
             calendar: calendar
@@ -80,10 +90,10 @@ enum DailyIUIntakeAggregation {
 
     static func todaySunBreakdown(
         from sessions: [ExposureSession],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        now: Date = .now
     ) -> TodaySunBreakdown {
-        let todaySessions = sessions.filter { calendar.isDateInToday($0.startedAt) }
-        return sunBreakdown(from: todaySessions)
+        sunBreakdown(from: sessions, on: now, calendar: calendar)
     }
 
     static func sunBreakdown(from sessions: [ExposureSession]) -> TodaySunBreakdown {
@@ -99,6 +109,37 @@ enum DailyIUIntakeAggregation {
                 importedIU += session.estimatedIU
             case .liveTracked, .manual, .planned, .rescueFile:
                 trackedIU += session.estimatedIU
+            }
+        }
+
+        return TodaySunBreakdown(
+            trackedIU: trackedIU,
+            incidentalIU: incidentalIU,
+            importedIU: importedIU
+        )
+    }
+
+    /// Attributes IU to a calendar day by wall-clock overlap (handles midnight straddles).
+    static func sunBreakdown(
+        from sessions: [ExposureSession],
+        on day: Date,
+        calendar: Calendar = .current
+    ) -> TodaySunBreakdown {
+        var trackedIU = 0.0
+        var incidentalIU = 0.0
+        var importedIU = 0.0
+
+        for session in sessions {
+            let iu = ExposureSessionDaySplit.attributedIU(for: session, on: day, calendar: calendar)
+            guard iu > 0 else { continue }
+
+            switch session.source {
+            case .healthKitDaylight:
+                incidentalIU += iu
+            case .healthKit:
+                importedIU += iu
+            case .liveTracked, .manual, .planned, .rescueFile:
+                trackedIU += iu
             }
         }
 

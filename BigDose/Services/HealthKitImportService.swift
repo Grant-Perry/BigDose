@@ -97,6 +97,7 @@ enum HealthKitImportError: LocalizedError {
 @MainActor
 final class HealthKitImportService {
     private let healthStore = HKHealthStore()
+    private var silentRefreshTask: Task<Void, Never>?
 
     var isAvailable: Bool {
         HKHealthStore.isHealthDataAvailable()
@@ -358,15 +359,10 @@ final class HealthKitImportService {
         }
     }
 
-    func removeSupplementDoseFromHealth(_ dose: SupplementDose) async {
+    func removeSupplementDoseFromHealth(_ dose: SupplementDose) async throws {
         guard let externalIdentifier = dose.externalIdentifier else { return }
-
-        do {
-            try await deleteSupplementDose(externalIdentifier: externalIdentifier)
-            dose.externalIdentifier = nil
-        } catch {
-            return
-        }
+        try await deleteSupplementDose(externalIdentifier: externalIdentifier)
+        dose.externalIdentifier = nil
     }
 
     func fetchWorkoutCandidates(days: Int = 90, existingIDs: Set<String> = []) async throws -> [HealthWorkoutImportCandidate] {
@@ -418,24 +414,36 @@ final class HealthKitImportService {
             return
         }
 
-        do {
-            try await requestOnboardingAuthorization()
-            _ = try await syncDaylightIncidental(
-                profile: profile,
-                modelContext: modelContext,
-                days: Self.autoSyncLookbackDays
-            )
-            _ = try await syncWorkoutsSilently(
-                profile: profile,
-                modelContext: modelContext,
-                days: Self.autoSyncLookbackDays
-            )
-            profile.lastHealthKitAutoSyncAt = .now
-            profile.lastHealthKitImportAt = .now
-            profile.healthKitImportStatus = .imported
-            try? modelContext.save()
-        } catch {
-            return
+        if let inFlight = silentRefreshTask {
+            await inFlight.value
+            if !force { return }
+        }
+
+        let task = Task { @MainActor in
+            do {
+                try await requestOnboardingAuthorization()
+                _ = try await syncDaylightIncidental(
+                    profile: profile,
+                    modelContext: modelContext,
+                    days: Self.autoSyncLookbackDays
+                )
+                _ = try await syncWorkoutsSilently(
+                    profile: profile,
+                    modelContext: modelContext,
+                    days: Self.autoSyncLookbackDays
+                )
+                profile.lastHealthKitAutoSyncAt = .now
+                profile.lastHealthKitImportAt = .now
+                profile.healthKitImportStatus = .imported
+                try? modelContext.save()
+            } catch {
+                return
+            }
+        }
+        silentRefreshTask = task
+        await task.value
+        if silentRefreshTask == task {
+            silentRefreshTask = nil
         }
     }
 
@@ -446,18 +454,23 @@ final class HealthKitImportService {
     ) async throws -> Int {
         guard isAvailable else { throw HealthKitImportError.unavailable }
 
+        let existingSessions = fetchExposureSessions(modelContext: modelContext)
         let existingIDs = Set(
-            fetchExposureSessions(modelContext: modelContext)
+            existingSessions
                 .filter { $0.source == .healthKit }
                 .compactMap(\.externalIdentifier)
         )
+        let liveTracked = existingSessions.filter { $0.source == .liveTracked }
         let candidates = try await fetchWorkoutCandidates(days: days, existingIDs: existingIDs)
         let currentIDs = Set(
             fetchExposureSessions(modelContext: modelContext)
                 .filter { $0.source == .healthKit }
                 .compactMap(\.externalIdentifier)
         )
-        let accepted = candidates.filter { $0.shouldImport && !currentIDs.contains($0.id) }
+        let accepted = candidates.filter { candidate in
+            guard candidate.shouldImport, !currentIDs.contains(candidate.id) else { return false }
+            return !overlapsLiveTrackedSession(candidate, liveTracked: liveTracked)
+        }
 
         for candidate in accepted {
             insertWorkoutExposure(
@@ -572,12 +585,17 @@ final class HealthKitImportService {
         modelContext: ModelContext
     ) async -> HealthImportResult {
         let now = Date()
+        let existingSessions = fetchExposureSessions(modelContext: modelContext)
         let existingIDs = Set(
-            fetchExposureSessions(modelContext: modelContext)
+            existingSessions
                 .filter { $0.source == .healthKit }
                 .compactMap(\.externalIdentifier)
         )
-        let accepted = candidates.filter { $0.shouldImport && !existingIDs.contains($0.id) }
+        let liveTracked = existingSessions.filter { $0.source == .liveTracked }
+        let accepted = candidates.filter { candidate in
+            guard candidate.shouldImport, !existingIDs.contains(candidate.id) else { return false }
+            return !overlapsLiveTrackedSession(candidate, liveTracked: liveTracked)
+        }
         let acceptedIDs = Set(accepted.map(\.id))
         let skipped = candidates.count - accepted.count
         let start = candidates.map(\.startedAt).min() ?? now
@@ -595,6 +613,9 @@ final class HealthKitImportService {
 
         for candidate in candidates {
             let wasAccepted = acceptedIDs.contains(candidate.id)
+            let skippedForLiveOverlap = candidate.shouldImport
+                && !existingIDs.contains(candidate.id)
+                && overlapsLiveTrackedSession(candidate, liveTracked: liveTracked)
             modelContext.insert(
                 HealthImportItem(
                     externalIdentifier: candidate.id,
@@ -605,7 +626,9 @@ final class HealthKitImportService {
                     durationSeconds: candidate.durationSeconds,
                     wasAcceptedForExposure: wasAccepted,
                     confidence: candidate.confidence,
-                    note: candidate.shouldImport && !wasAccepted
+                    note: skippedForLiveOverlap
+                        ? "Skipped — overlaps a tracked BigDose sun session."
+                        : candidate.shouldImport && !wasAccepted
                         ? "Already imported."
                         : candidate.note
                 )
@@ -918,6 +941,15 @@ final class HealthKitImportService {
                 note: candidate.note
             )
         )
+    }
+
+    private func overlapsLiveTrackedSession(
+        _ candidate: HealthWorkoutImportCandidate,
+        liveTracked: [ExposureSession]
+    ) -> Bool {
+        liveTracked.contains { session in
+            candidate.startedAt < session.endedAt && candidate.endedAt > session.startedAt
+        }
     }
 
     private func fetchExposureSessions(modelContext: ModelContext) -> [ExposureSession] {

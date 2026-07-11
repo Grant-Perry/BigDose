@@ -1078,7 +1078,6 @@ struct OnboardingView: View {
         activeProfile.wantsHealthKitSync = wantsHealthKitSync
         activeProfile.skinType = selectedSkinType
         activeProfile.hasAcceptedWellnessDisclaimer = true
-        activeProfile.isOnboardingComplete = true
         activeProfile.updatedAt = .now
         activeProfile.syncLegacySolarAlertPreferences()
     }
@@ -1125,6 +1124,10 @@ struct OnboardingView: View {
 
     private func finishOnboarding(profile: UserProfile) {
         isFinishingOnboarding = false
+
+        profile.isOnboardingComplete = true
+        profile.updatedAt = .now
+        try? modelContext.save()
 
         DailySupplementAutoApplyService.applyIfNeeded(
             profile: profile,

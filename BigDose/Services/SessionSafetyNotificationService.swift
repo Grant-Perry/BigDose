@@ -6,6 +6,8 @@ enum SessionSafetyNotificationService {
     static let medWarningIdentifier = "bigdose.session.medWarning"
     static let prepareExitIdentifier = "bigdose.session.prepareExit"
 
+    @MainActor private static var scheduleGeneration = 0
+
     private static func overLimitIdentifier(for percent: Int) -> String {
         "bigdose.session.overLimit.\(percent)"
     }
@@ -30,6 +32,11 @@ enum SessionSafetyNotificationService {
         wantsNannyMode: Bool = true,
         elapsedSeconds: TimeInterval = 0
     ) async {
+        let generation = await MainActor.run { () -> Int in
+            scheduleGeneration += 1
+            return scheduleGeneration
+        }
+
         guard enabled else {
             cancelSessionNotifications()
             return
@@ -40,6 +47,7 @@ enum SessionSafetyNotificationService {
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             guard granted else { return }
+            guard await MainActor.run(body: { generation == scheduleGeneration }) else { return }
 
             center.removePendingNotificationRequests(withIdentifiers: sessionIdentifiers)
 
@@ -61,6 +69,8 @@ enum SessionSafetyNotificationService {
                 )
             }
 
+            guard await MainActor.run(body: { generation == scheduleGeneration }) else { return }
+
             await schedule(
                 identifier: overLimitIdentifier(for: SunSessionSafetyThresholds.fullMEDPercent),
                 title: overLimitNotificationTitle(for: SunSessionSafetyThresholds.fullMEDPercent),
@@ -73,6 +83,7 @@ enum SessionSafetyNotificationService {
 
             if wantsNannyMode {
                 for percent in nannyOverLimitPercents {
+                    guard await MainActor.run(body: { generation == scheduleGeneration }) else { return }
                     await schedule(
                         identifier: overLimitIdentifier(for: percent),
                         title: overLimitNotificationTitle(for: percent),

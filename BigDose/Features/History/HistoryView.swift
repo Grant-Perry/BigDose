@@ -20,6 +20,27 @@ struct HistoryView: View {
     private var calendar: Calendar { .current }
     private var profile: UserProfile? { UserProfile.canonical(from: profiles) }
 
+    private var ninetyDayCutoff: Date {
+        let raw = calendar.date(byAdding: .day, value: -90, to: .now) ?? .now.addingTimeInterval(-90 * 86_400)
+        return calendar.startOfDay(for: raw)
+    }
+
+    private var recentSessions: [ExposureSession] {
+        sessions.filter { $0.startedAt >= ninetyDayCutoff || $0.endedAt >= ninetyDayCutoff }
+    }
+
+    private var recentSupplements: [SupplementDose] {
+        supplements.filter { $0.takenAt >= ninetyDayCutoff }
+    }
+
+    private var recentFoods: [FoodVitaminDEntry] {
+        foods.filter { $0.loggedAt >= ninetyDayCutoff }
+    }
+
+    private var recentLabs: [LabResult] {
+        labs.filter { $0.measuredAt >= ninetyDayCutoff }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -428,7 +449,7 @@ struct HistoryView: View {
                     .layoutPriority(1)
                 }
 
-                Text("\(sessions.count) sun sessions • \(supplements.count) supplement doses • \(foods.count) food entries • \(labs.count) labs")
+                Text("\(recentSessions.count) sun sessions • \(recentSupplements.count) supplement doses • \(recentFoods.count) food entries • \(recentLabs.count) labs")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.62))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -457,9 +478,9 @@ struct HistoryView: View {
     }
 
     private var totalIU: Double {
-        sessions.reduce(0) { $0 + $1.estimatedIU }
-            + supplements.reduce(0) { $0 + Double($1.internationalUnits) }
-            + foods.reduce(0) { $0 + Double($1.estimatedIU) }
+        recentSessions.reduce(0) { $0 + $1.estimatedIU }
+            + recentSupplements.reduce(0) { $0 + Double($1.internationalUnits) }
+            + recentFoods.reduce(0) { $0 + Double($1.estimatedIU) }
     }
 
     private var todayIUIntake: DailyIUIntakeSummary {

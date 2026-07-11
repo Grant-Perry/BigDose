@@ -29,6 +29,13 @@ enum BigDoseLocalDataReset {
         return profile
     }
 
+    static func resetHealthKitMetadata(on profile: UserProfile) {
+        profile.lastHealthKitImportAt = nil
+        profile.lastHealthKitAutoSyncAt = nil
+        profile.healthKitImportStatus = .neverImported
+        profile.updatedAt = .now
+    }
+
     private static func deleteAll<T: PersistentModel>(_ type: T.Type, in modelContext: ModelContext) throws {
         let descriptor = FetchDescriptor<T>()
         let items = try modelContext.fetch(descriptor)

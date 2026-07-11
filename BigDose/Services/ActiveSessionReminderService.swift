@@ -6,12 +6,19 @@ enum ActiveSessionReminderService {
     static let gracePeriodSeconds: TimeInterval = 15 * 60
     static let followUpIntervalSeconds: TimeInterval = 30 * 60
 
+    @MainActor private static var scheduleGeneration = 0
+
     static func schedule(
         for plan: SunSessionPlan,
         elapsedSeconds: TimeInterval,
         isPaused: Bool,
         enabled: Bool
     ) async {
+        let generation = await MainActor.run { () -> Int in
+            scheduleGeneration += 1
+            return scheduleGeneration
+        }
+
         guard enabled else {
             cancel()
             return
@@ -27,6 +34,7 @@ enum ActiveSessionReminderService {
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             guard granted else { return }
+            guard await MainActor.run(body: { generation == scheduleGeneration }) else { return }
 
             center.removePendingNotificationRequests(withIdentifiers: [identifier])
 

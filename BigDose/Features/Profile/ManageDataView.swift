@@ -207,6 +207,9 @@ struct ManageDataView: View {
     private func clearAllData() {
         do {
             try BigDoseLocalDataReset.eraseAllRecords(in: modelContext)
+            if let profile {
+                BigDoseLocalDataReset.resetHealthKitMetadata(on: profile)
+            }
             SunSessionSessionCleanup.finishSession()
             BigDoseWidgetSnapshotStore.clear()
             try modelContext.save()
