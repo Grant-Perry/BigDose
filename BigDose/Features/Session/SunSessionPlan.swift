@@ -280,6 +280,21 @@ struct SunSessionPlan: Equatable {
         let secondsPart = total % 60
         return "\(minutes):\(String(format: "%02d", secondsPart))"
     }
+
+    static let sessionGoalMinimumIU: Double = 100
+    static let sessionGoalSliderStep: Double = 100
+
+    /// Maximum vitamin D reachable before BigDose's 95% MED (burn risk) guidance limit at current settings.
+    var safeGoalIUAtCurrentSettings: Double {
+        guard liveIUProductionRatePerMinute > 0, safeMaxDurationSeconds > 0 else { return 5_000 }
+        return liveIUProductionRatePerMinute * (safeMaxDurationSeconds / 60)
+    }
+
+    /// Upper bound for the mid-session goal slider — headroom beyond safe guidance, never below 5,000 IU.
+    var sessionGoalPickerMaximumIU: Double {
+        let roundedSafe = ceil(safeGoalIUAtCurrentSettings / Self.sessionGoalSliderStep) * Self.sessionGoalSliderStep
+        return max(5_000, roundedSafe * 1.5)
+    }
 }
 
 enum TurnOverAlertBasis: Equatable {

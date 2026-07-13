@@ -11,6 +11,7 @@ struct ActiveSunSessionHeroCard: View {
     var minutesToGoal: Int?
     var isTraceVitaminDConditions: Bool
     var isPaused: Bool
+    var onGoalTap: (() -> Void)?
 
     private var clampedGoalProgress: Double {
         min(max(goalProgress, 0), 1)
@@ -39,9 +40,26 @@ struct ActiveSunSessionHeroCard: View {
                 isPaused: isPaused
             )
 
-            goalSummary
+            goalSummaryButton
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var goalSummaryButton: some View {
+        let summary = goalSummary
+            .contentShape(.rect)
+
+        if let onGoalTap {
+            Button(action: onGoalTap) {
+                summary
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Session goal, \(targetIU.formatted()) IU")
+            .accessibilityHint("Opens goal editor")
+        } else {
+            summary
+        }
     }
 
     private var goalSummary: some View {

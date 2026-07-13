@@ -162,7 +162,7 @@ enum BigDoseInfoTopic: String, Identifiable, Sendable {
             """
             **What it does:** Shows how close this sun session is to your **daily sun IU goal** — the ring and **% of goal** fill as estimated vitamin D from this session accumulates.
 
-            **How to use:** You can **change the goal** during the session. At **100%**, BigDose can **end the session automatically**. This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
+            **How to use:** Tap **Goal** during the session to open a slider and adjust your target IU without stopping. At **100%**, BigDose shows a **goal reached** alert — **only you stop the session**. Goals past burn guidance show a caution while **MED (burn risk) Used** keeps tracking separately. This tracks **sun IU for today**, not supplements, food or your **ng/mL** blood goal on Progress.
 
             **Good to know:** Goal progress and **MED (burn risk) Used** measure different things — vitamin D gained vs. burn risk consumed.
             """

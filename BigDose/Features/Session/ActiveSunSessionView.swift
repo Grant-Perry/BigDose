@@ -23,14 +23,12 @@ struct ActiveSunSessionView: View {
     @State private var didShowNannyReminderAlert = false
     @State private var didShowFullMEDAlert = false
     @State private var didShowGoalReachedAlert = false
-    @State private var isShowingSkinCoverage = false
     @State private var isShowingCloudCover = false
-    @State private var isShowingGoalPicker = false
+    @State private var presentedSheet: ActiveSunSessionSheet?
     @State private var isShowingCancelConfirmation = false
     @State private var isShowingStopConfirmation = false
     @State private var isShowingStaleSessionAlert = false
     @State private var isShowingInactivityRecoveryAlert = false
-    @State private var isShowingFirstSessionGuide = false
     @State private var sessionEnded = false
 
     @AppStorage("hasSeenFirstSunSessionGuide") private var hasSeenFirstSunSessionGuide = false
@@ -107,7 +105,8 @@ struct ActiveSunSessionView: View {
                         goalProgress: goalProgressUncapped,
                         minutesToGoal: plan.minutesToGoal(at: elapsedSeconds),
                         isTraceVitaminDConditions: plan.isTraceVitaminDConditions,
-                        isPaused: isPaused
+                        isPaused: isPaused,
+                        onGoalTap: presentGoalPicker
                     )
 
                     ActiveSunSessionMetricsGrid(
@@ -122,10 +121,11 @@ struct ActiveSunSessionView: View {
                     )
 
                     modifiersCard
+                        .zIndex(1)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
-                .padding(.bottom, 24)
+                .padding(.bottom, 36)
             }
             .scrollIndicators(.hidden)
         }
@@ -160,7 +160,7 @@ struct ActiveSunSessionView: View {
             evaluateStaleSessionAlert()
 
             if !hasSeenFirstSunSessionGuide {
-                isShowingFirstSessionGuide = true
+                presentedSheet = .firstSessionGuide
             }
         }
         .onChange(of: isPaused) { _, _ in
@@ -182,9 +182,11 @@ struct ActiveSunSessionView: View {
             Task { await refreshSessionSafetyNotifications() }
         }
         .onChange(of: plan.targetIU) { _, _ in
+            clearGoalReachedAlertIfNeeded()
             persistSessionState()
             syncLiveActivity()
             Task { await refreshSessionSafetyNotifications() }
+            evaluateGoalAlert()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -249,17 +251,26 @@ struct ActiveSunSessionView: View {
                 evaluateSessionAlerts()
             }
         }
-        .sheet(isPresented: $isShowingFirstSessionGuide) {
-            FirstSunSessionGuideView {
-                hasSeenFirstSunSessionGuide = true
-                isShowingFirstSessionGuide = false
-                evaluateSessionAlerts()
-            }
-            .interactiveDismissDisabled()
-        }
-        .sheet(isPresented: $isShowingSkinCoverage) {
-            SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
+        .sheet(item: $presentedSheet) { sheet in
+            switch sheet {
+            case .firstSessionGuide:
+                FirstSunSessionGuideView {
+                    hasSeenFirstSunSessionGuide = true
+                    presentedSheet = nil
+                    evaluateSessionAlerts()
+                }
+                .interactiveDismissDisabled()
+            case .skinCoverage:
+                SkinExposurePickerView(exposedBodySurfaceArea: $plan.exposedBodySurfaceArea)
+                    .presentationDetents([.medium, .large])
+            case .goalPicker:
+                SessionGoalPickerView(
+                    targetIU: $plan.targetIU,
+                    plan: plan,
+                    elapsedSeconds: elapsedSeconds
+                )
                 .presentationDetents([.medium, .large])
+            }
         }
         .confirmationDialog("Clouds", isPresented: $isShowingCloudCover, titleVisibility: .visible) {
             ForEach(CloudCoverPreset.allCases) { preset in
@@ -268,10 +279,6 @@ struct ActiveSunSessionView: View {
                 }
             }
             Button("Cancel", role: .cancel) {}
-        }
-        .sheet(isPresented: $isShowingGoalPicker) {
-            SessionGoalPickerView(targetIU: $plan.targetIU)
-                .presentationDetents([.medium])
         }
         .bigDoseAlert(
             "Cancel sun session?",
@@ -780,6 +787,20 @@ struct ActiveSunSessionView: View {
             : Color(red: 0.98, green: 0.95, blue: 0.87).opacity(0.94)
     }
 
+    private func presentGoalPicker() {
+        clampTargetIUForGoalPicker()
+        presentedSheet = .goalPicker
+    }
+
+    private func clampTargetIUForGoalPicker() {
+        let minimum = SunSessionPlan.sessionGoalMinimumIU
+        let maximum = max(
+            plan.sessionGoalPickerMaximumIU,
+            ceil(plan.targetIU / SunSessionPlan.sessionGoalSliderStep) * SunSessionPlan.sessionGoalSliderStep
+        )
+        plan.targetIU = min(max(plan.targetIU, minimum), maximum)
+    }
+
     private func togglePause() {
         isPaused.toggle()
     }
@@ -791,7 +812,7 @@ struct ActiveSunSessionView: View {
     private var modifiersCard: some View {
         HStack(spacing: 0) {
             Button {
-                isShowingSkinCoverage = true
+                presentedSheet = .skinCoverage
             } label: {
                 sessionModifierTile(
                     title: "Skin",
@@ -799,7 +820,8 @@ struct ActiveSunSessionView: View {
                     icon: "person.fill"
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity)
 
             modifierDivider
 
@@ -812,12 +834,13 @@ struct ActiveSunSessionView: View {
                     icon: "cloud.sun.fill"
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity)
 
             modifierDivider
 
             Button {
-                isShowingGoalPicker = true
+                presentGoalPicker()
             } label: {
                 sessionModifierTile(
                     title: "Goal",
@@ -825,7 +848,8 @@ struct ActiveSunSessionView: View {
                     icon: "target"
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
@@ -1013,6 +1037,16 @@ struct ActiveSunSessionView: View {
         persistSessionState()
     }
 
+    private func clearGoalReachedAlertIfNeeded() {
+        guard didShowGoalReachedAlert else { return }
+        guard !plan.hasReachedGoal(at: elapsedSeconds) else { return }
+
+        var ids = Set(currentAcknowledgedSafetyAlertIDs())
+        ids.remove(ActiveSunSessionSafetyAlertID.goalReached)
+        applyAcknowledgedSafetyAlertIDs(ids)
+        persistSessionState()
+    }
+
     private func syncLiveActivity() {
         guard !sessionEnded else { return }
         guard !SunSessionLiveActivityCommandStore.hasPendingEnd(for: plan.liveActivitySessionID) else { return }
@@ -1113,7 +1147,7 @@ struct ActiveSunSessionView: View {
     }
 
     private func evaluateStaleSessionAlert() {
-        guard !sessionEnded, !isShowingFirstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
+        guard !sessionEnded, presentedSheet != .firstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
         guard activeAlert == nil, !isShowingStopConfirmation else { return }
         guard ActiveSessionReminderService.isStale(
             for: plan,
@@ -1125,7 +1159,7 @@ struct ActiveSunSessionView: View {
     }
 
     private func evaluateSessionAlerts() {
-        guard !isShowingFirstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
+        guard presentedSheet != .firstSessionGuide, !isShowingInactivityRecoveryAlert else { return }
         guard activeAlert == nil else { return }
         evaluateGoalAlert()
         guard activeAlert == nil else { return }
@@ -1244,4 +1278,12 @@ private enum SunSessionSafetyAlert: Identifiable, Equatable {
             .critical
         }
     }
+}
+
+private enum ActiveSunSessionSheet: String, Identifiable {
+    case firstSessionGuide
+    case skinCoverage
+    case goalPicker
+
+    var id: String { rawValue }
 }
