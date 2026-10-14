@@ -6,9 +6,7 @@ struct SkinExposurePickerView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                BigDoseGradientBackground()
-
+            ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .firstTextBaseline) {
                         Text("\(Int(exposedBodySurfaceArea * 100))")
@@ -18,9 +16,11 @@ struct SkinExposurePickerView: View {
                             .font(.bigDoseHeader(.title3).weight(.semibold))
                             .foregroundStyle(.white.opacity(0.68))
                     }
+                    .accessibilityElement(children: .combine)
 
                     Slider(value: $exposedBodySurfaceArea, in: 0.05...0.85, step: 0.05)
                         .tint(.solarGold)
+                        .accessibilityLabel("Exposed skin")
 
                     VStack(spacing: 10) {
                         ForEach(SkinExposurePreset.allCases) { preset in
@@ -56,10 +56,13 @@ struct SkinExposurePickerView: View {
                     }
                     .padding(18)
                     .bigDoseGlass(cornerRadius: 28)
-
-                    Spacer()
                 }
                 .padding(22)
+            }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .background {
+                BigDoseGradientBackground()
             }
             .navigationTitle("Skin Exposure")
             .toolbarTitleDisplayMode(.inline)
@@ -80,6 +83,7 @@ struct SkinExposurePickerView: View {
                 }
             }
         }
+        .presentationContentInteraction(.scrolls)
     }
 }
 

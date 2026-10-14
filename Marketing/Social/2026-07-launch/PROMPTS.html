@@ -1,0 +1,250 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BigDose Social — Copy Prompts</title>
+<style>
+:root{--bg:#0d1016;--panel:#161b24;--panel2:#1c2430;--border:#2a3444;--text:#e7edf7;--muted:#93a0b5;--accent:#6aa8ff;--good:#3dd68c;--gold:#ffc857}
+*{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:radial-gradient(1200px 600px at 10% -10%,#2a1f0e 0%,var(--bg) 55%);color:var(--text);line-height:1.45}
+header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:rgba(13,16,22,.88);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:16px;font-weight:650}header p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{color:var(--text);text-decoration:none;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:var(--panel)}
+.nav a:hover{border-color:var(--accent)}main{max-width:980px;margin:0 auto;padding:20px}
+.howto,.block{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin:0 0 18px}
+.howto h2,.block h2{margin:0 0 10px;font-size:18px}.howto ol{margin:0 0 14px;padding-left:20px;color:#d7e0ef}.howto li{margin:0 0 10px}
+.howto code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;background:#243044;padding:1px 6px;border-radius:6px}
+.meta{color:var(--muted);font-size:12px;margin-bottom:12px}.note{color:var(--muted);font-size:13px;margin:0}
+.prompt{background:var(--panel2);border:1px solid var(--border);border-radius:12px;margin:10px 0;overflow:hidden}
+.prompt-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.prompt.still .prompt-head span{color:#8ec5ff}.prompt.motion .prompt-head span{color:#9be7c4}.prompt.caption .prompt-head span{color:#e0c08a}.prompt.style .prompt-head span{color:#c9b6ff}.prompt.refs .prompt-head span{color:var(--gold)}
+.tip{margin:0;padding:8px 12px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.12)}
+button.copy{appearance:none;border:1px solid var(--border);background:#243044;color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:650;cursor:pointer}
+button.copy:hover{border-color:var(--accent)}button.copy.copied{background:rgba(61,214,140,.15);border-color:var(--good);color:var(--good)}
+pre{margin:0;padding:12px 14px 14px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;color:#d7e0ef}
+.toast{position:fixed;right:18px;bottom:18px;background:#173528;border:1px solid var(--good);color:var(--good);padding:10px 14px;border-radius:10px;font-size:13px;font-weight:650;opacity:0;transform:translateY(8px);transition:.18s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+</style></head><body>
+<header><div><h1>BigDose Social — one-click prompt copy</h1><p>NBP stills · Kling 3.0 motion · web Unlimited only · Avoid baked into Still/Motion</p></div>
+<div class="nav"><a href="#howto">How to use</a><a href="#style">Style key</a><a href="#a">A Hero</a><a href="#b">B Ring</a><a href="#c">C Outside</a><a href="#d">D Blue sky</a><a href="#e">E Beach</a><a href="#composite">Composite</a><a href="#crops">Crops</a><a href="#launch">Launch plates</a><a href="#f">F Stream</a><a href="#g">G Park</a><a href="#story">Storyboard</a><a href="#video">Video</a><a href="#caps">Captions</a></div></header><main>
+
+<section class="howto" id="howto"><h2>How to use</h2>
+<ol>
+<li><strong>Still:</strong> Nano Banana Pro → set aspect in UI → paste <code>Still</code> → attach refs → confirm button says <strong>Generate — Unlimited</strong>.</li>
+<li>Run Concept A at <code>4:5</code> first. If it works, re-run the same Still at <code>9:16</code>, <code>1:1</code> and <code>16:9</code> (only change the ratio in the UI).</li>
+<li><strong>Storyboard:</strong> one Still at <code>16:9</code> (6-panel sheet). Inspect before Kling.</li>
+<li><strong>Motion:</strong> Kling 3.0 image-to-video → drag approved still as start frame → paste <code>Motion</code> → Unlimited. For beach + goal ring: use the <a href="#composite">Composite path</a> (blank screen plate → Kling → overlay static UI in CapCut). Circular rings will spin in Kling no matter what.</li>
+<li>No Negative field. Avoid lists are already inside Still and Motion.</li>
+<li>Do <strong>not</strong> run these through MCP — that spends credits. Web Unlimited only.</li>
+</ol>
+<p class="note">CTA: Free on the App Store → https://apps.apple.com/us/app/bigdose/id6781472633 · Inspect every still before motion.</p>
+</section>
+
+<section class="block" id="refs"><h2>Reference uploads</h2>
+<div class="prompt refs"><div class="prompt-head"><span>Paths</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Upload these in Higgsfield before generating.</p>
+<pre class="copy-text">App icon: BigDose/Assets.xcassets/AppIcon.appiconset/AppIcon2.png
+App logo: BigDose/Assets.xcassets/AppLogo.imageset/AppLogo.png
+App Store badge: bigdose-site/public/app-store-badge.png
+Live session UI: bigdose-site/public/screenshots/active-session.png
+Home dashboard: bigdose-site/public/screenshots/home-dashboard.png
+Session planner: bigdose-site/public/screenshots/session-planner.png
+Optional ASC hero: Marketing/ASC/1284x2778/01-hero-dose-your-d-defend-your-skin.png</pre></div>
+</section>
+
+<section class="block" id="style"><h2>Approved style key</h2>
+<div class="prompt style"><div class="prompt-head"><span>Style key</span><button type="button" class="copy">Copy</button></div>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app advertisement still, ONE continuous frame only, not a collage, not a grid, not a triptych. Golden hour outdoor light: sun low on the horizon, warm amber rim light, soft anamorphic lens flare, deep charcoal atmosphere (#1a1d21) with solar gold (#ffc857) and solar orange (#ff661f) accents. Hero is a titanium iPhone showing the real BigDose app UI from reference screenshots — glowing gold vitamin D goal ring and MED burn-risk cards when relevant. Silhouette or hand only — no readable face, no celebrity likeness. Official App Store badge and Free on iPhone CTA when the concept calls for it. Sharp premium typography zones. Photoreal device materials, emotionally warm, scientifically grounded. Avoid: collage, multi-panel layout unless explicitly requested as storyboard, cartoon, CGI plastic skin, medical claims, blood-test promises, readable stranger faces, malformed hands, extra fingers, fake store buttons, wrong app UI, purple sci-fi glow, cosmic nebula, mystical aura, watermarks, excessive overblown flare.</pre></div>
+</section>
+
+<!-- ========== CONCEPT A ========== -->
+<section class="block" id="a"><h2>Concept A — Hero CTA</h2>
+<div class="meta">Dose your D… / Defend your Skin! · Free on iPhone · Generate at 4:5 first, then 9:16 / 1:1 / 16:9</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · A</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Nano Banana Pro. Attach active-session + AppLogo + app-store-badge. Set aspect in UI.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Outdoor golden hour at sunset, warm amber rim light, soft anamorphic lens flare across the frame, deep charcoal sky with solar gold and orange glow. Centered titanium iPhone held by a silhouetted hand — no face, no identity. Phone screen shows the real BigDose live sun session UI from the reference: glowing gold goal ring, IU progress, MED Used card, faithful UI not reinvented. Clean headline zone above or overlaid with sharp premium type: Dose your D… and Defend your Skin! in warm gold italic accent. Subline: Free on iPhone. Official Apple App Store badge bottom-right with a small FREE kicker. Brand palette only. Cinematic, premium, scroll-stopping. Avoid: faces, celebrity likeness, collage, multi-panel, cartoon, CGI plastic, medical claims, blood-test promises, fake App Store buttons, wrong app UI, purple sci-fi glow, cosmic nebula, watermarks, malformed hands, extra fingers, unreadable mush text, excessive overblown flare.</pre></div>
+</section>
+
+<!-- ========== CONCEPT B ========== -->
+<section class="block" id="b"><h2>Concept B — Differentiator</h2>
+<div class="meta">One ring. Both stories. · Generate at 4:5 first, then other ratios</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · B</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Attach active-session + home-dashboard + AppLogo + badge.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Golden hour close-in on a titanium iPhone screen showing BigDose dual tracking from the reference: glowing vitamin D goal ring AND MED burn-risk cards on the same live session screen. Soft anamorphic flare, warm rim light, deep charcoal atmosphere. Device is the hero — silhouette hand optional, no face. Sharp premium headline: One ring. Both stories. Subline: Vitamin D progress and burn risk in every live session. Kicker: Free on the App Store. Official App Store badge. Faithful UI from reference. Avoid: faces, collage, multi-panel, cartoon, CGI plastic, medical claims, inventing UI chrome, fake store buttons, purple sci-fi glow, cosmic imagery, watermarks, malformed hands, unreadable text, excessive flare.</pre></div>
+</section>
+
+<!-- ========== CONCEPT C ========== -->
+<section class="block" id="c"><h2>Concept C — Outcome</h2>
+<div class="meta">Get outside without guessing. · Generate at 4:5 first, then other ratios</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · C</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Attach home-dashboard + session-planner + AppLogo + badge.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Emotional golden hour outdoor scene, wide warm sky, strong but controlled anamorphic flare. iPhone in the lower half showing BigDose home dashboard / vitamin D window from the reference. Distant silhouette of a person from behind looking toward the sun — no face, no identity. Feeling: confident, calm, ready to go outside. Sharp premium headline: Get outside without guessing. Subline: Your body, your sky, your limits. Kicker: Free on iPhone · App Store. Official App Store badge. Brand palette solar gold, orange, deep charcoal. Avoid: readable faces, collage, cartoon, CGI plastic, medical claims, generic stock-sun clichés, fake store buttons, purple glow, cosmic nebula, watermarks, malformed anatomy, unreadable text, excessive overblown flare.</pre></div>
+</section>
+
+<!-- ========== FULL SUN SET ========== -->
+<section class="block" id="d"><h2>Concept D — Blue sky full sun</h2>
+<div class="meta">Hard midday sun · clear blue sky · live session outdoors · 4:5 first, then other ratios</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · D</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Nano Banana Pro. Attach active-session + AppLogo + badge. Bright full sun — not golden hour.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Bright midday full sun under a clear deep blue sky — hard sunlight, crisp shadows, high UV feel, sparkling air. Outdoors on a sunny terrace or open path. Titanium iPhone held up in a silhouetted or anonymous hand — no face. Phone screen shows the real BigDose live sun session UI from the reference: glowing gold goal ring, IU progress, MED Used card, faithful UI. Strong sun flare and specular highlights on the phone glass, but keep the UI sharp and readable. Headline: Dose your D… Defend your Skin! Subline: Free on iPhone. Official App Store badge. Energetic, outdoors, full-sun vitamin D moment. Avoid: golden-hour orange sky, dusk, cloudy gloom, faces, celebrity likeness, collage, cartoon, CGI plastic, medical claims, fake store buttons, wrong app UI, purple sci-fi glow, cosmic nebula, watermarks, malformed hands, unreadable mush text, blown-out white sky with no blue.</pre></div>
+</section>
+
+<section class="block" id="e"><h2>Concept E — Beach chair POV (approved)</h2>
+<div class="meta">First-person low beach chair · white sand · blue-green water · phone in left hand · Dose your D. Defend your Skin! on one line</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · E</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Nano Banana Pro. Attach the BigDose live-session screen reference. Set aspect to match your campaign (4:5 / 9:16 / 1:1 / 16:9).</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only, not a collage. First-person POV looking down from a low beach chair near the waterline: light beach-chair armrests in the lower corners, tanned legs extended toward the shoreline, anonymous left hand holding a titanium iPhone 17 Pro Max upright in the center foreground — no face, no head, no identity. Sunny beach at full daylight: white sand, beautiful blue-green water rolling gently onto wet sand, puffy white clouds over a clear blue sky, bright hard sun with soft overhead lens flare and sparkling highlights. Phone screen shows the exact BigDose live-session UI from the provided reference image — gold goal ring, 1,138 IU, timer and cards faithful to the reference, UI sharp and fully readable in bright sun, frozen static screenshot look. Warm natural skin tones on the hand and legs only. Exact burned-in ad copy, sharp white premium sans-serif, top center: ONE single headline line reading Dose your D. Defend your Skin! Directly under it on the next line: Vitamin D tracking and burn risk - FREE on the iPhone. Exactly one official Download on the App Store badge, small, bottom-right corner only. Fresh, coastal, full-sun outdoors. Avoid: One ring. Both stories., Protect your Skin, Free for a limited time, splitting Dose your D. Defend your Skin! onto two lines, second App Store badge, badge on the left, large oversized badge, faces, celebrity likeness, hand resting on sand, phone on a towel, sexualized poses, collage, cartoon, CGI plastic, medical claims, fake store buttons, wrong app UI, stormy sky, golden-hour dusk only, purple glow, watermarks, malformed hands, extra fingers, unreadable or garbled text, overexposed white void.</pre></div>
+</section>
+
+<!-- ========== COMPOSITE PATH (anti-spin) ========== -->
+<section class="block" id="composite"><h2>Composite path — stop the spinning ring</h2>
+<div class="meta">Kling cannot leave circular UI alone. Blank the screen → animate beach → overlay static UI in CapCut.</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · E-blank (NBP plate)</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Same beach POV as Still E, but phone screen is solid black / off — NO UI, NO gold ring, NO numbers. Match the aspect of your final ad.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only, not a collage. First-person POV looking down from a low beach chair near the waterline: light beach-chair armrests in the lower corners, tanned legs extended toward the shoreline, anonymous left hand holding a titanium iPhone 17 Pro Max upright in the center foreground — no face, no head, no identity. Sunny beach at full daylight: white sand, beautiful blue-green water rolling gently onto wet sand, puffy white clouds over a clear blue sky, bright hard sun with soft overhead lens flare and sparkling highlights. CRITICAL phone screen content: the display is fully OFF — solid flat black glass only, like a powered-down iPhone. No app UI, no BigDose interface, no gold goal ring, no dial, no numbers, no icons, no wallpaper, no reflection of a UI. Only subtle real glass specular from the sun on the black screen. Warm natural skin tones on the hand and legs only. Exact burned-in ad copy, sharp white premium sans-serif, top center: ONE single headline line reading Dose your D. Defend your Skin! Directly under it on the next line: Vitamin D tracking and burn risk - FREE on the iPhone. Exactly one official Download on the App Store badge, small, bottom-right corner only. Fresh, coastal, full-sun outdoors. Avoid: any UI on the phone, gold ring, yellow dial, progress circle, numbers on screen, BigDose interface, glowing screen content, One ring. Both stories., faces, celebrity likeness, hand on sand, phone on towel, collage, cartoon, CGI plastic, fake store buttons, stormy sky, purple glow, watermarks, malformed hands, extra fingers, garbled text, overexposed white void.</pre></div>
+
+<div class="prompt motion"><div class="prompt-head"><span>Motion · E-blank (Kling)</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Start frame = blank-screen plate. Low motion. Nothing should appear on the phone glass.</p>
+<pre class="copy-text">Slow restrained first-person beach lounging motion from the exact input still. Keep the same POV: beach-chair arms, tanned legs toward the shoreline, left hand holding the titanium iPhone. The phone screen stays solid flat black and powered off for the entire shot — no UI, no gold ring, no dial, no numbers, no icons, no wallpaper ever appears on the glass. Soft continuous motion only in the real world: gentle blue-green waves rolling up the white sand, sparkling sun highlights on wet sand and water, subtle natural breath in the hand and legs, tiny phone micro-settle, soft overhead sun flare breathing, faint moving specular on the black glass only. No birds. No animals. Camera almost locked — tiny slow push or settle only. Preserve burned-in headline Dose your D. Defend your Skin! on one line, subline Vitamin D tracking and burn risk - FREE on the iPhone, and the App Store badge exactly where they are. One single continuous shot, no cuts. Preserve the approved cinematic style of the input image exactly. Ambient beach sound only, no voices. Avoid: any UI on the phone, gold ring, yellow dial, spinning circle, numbers on screen, app interface appearing, screen turning on, cuts or second shots, new people, face appearing, phone leaving frame, birds, pelicans, text rewriting, garbled letters, logos moving, watermarks, malformed anatomy, style drift, sudden zoom, shaky handheld chaos.</pre></div>
+
+<div class="prompt caption"><div class="prompt-head"><span>CapCut checklist</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Do this after Kling. Ring never moves because it never went through Kling.</p>
+<pre class="copy-text">1) Assets
+   - Plate video: Kling output from Still E-blank (black phone screen)
+   - UI still: your approved Still E with correct BigDose UI + copy
+     OR crop just the phone screen from that still / from active-session.png
+
+2) Timeline
+   - CapCut (or Final Cut): new project, same aspect as the plate
+   - Put Kling plate on V1 full duration
+   - Put UI still (or screen crop) on V2 above it
+
+3) Fit the screen
+   - Scale / position the UI layer so it sits exactly inside the phone glass
+   - Soften edges slightly if needed (tiny feather / mask)
+   - CapCut: Animation → Tracking on the UI layer if the hand drifts; pin to phone screen
+   - If tracking fights you: keep camera lock strong in Kling and hand-keyframe 2–3 positions
+
+4) Export
+   - Confirm: waves move, hand breathes, gold ring NEVER spins, numbers NEVER change
+   - Export 1080 (or 4K) · same aspect · ready for IG / FB / X</pre></div>
+</section>
+
+<!-- ========== PLATFORM CROPS / OUTPAINT ========== -->
+<section class="block" id="crops"><h2>Platform crops — from approved 16:9 beach still</h2>
+<div class="meta">Attach the approved BigDose_Banner still as reference. Set the target ratio in NBP. Preserve phone UI + copy exactly — only extend sky and sand.</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · Outpaint 4:5</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">NBP · aspect <code>4:5</code> · 1080×1350 · Instagram Feed. Reference = your approved 16:9 beach still.</p>
+<pre class="copy-text">Outpaint and reframe the exact provided reference image into a 4:5 vertical canvas for Instagram Feed. Keep the first-person beach POV composition intact: beach-chair arms, tanned legs, left hand holding the titanium iPhone, turquoise water and white sand. CRITICAL: preserve the phone screen UI exactly as in the reference — same gold goal ring, same numbers, same cards, frozen static screenshot, no redesign. Preserve the burned-in ad copy exactly: one headline line Dose your D. Defend your Skin! and subline Vitamin D tracking and burn risk - FREE on the iPhone. Keep the App Store badge, small, bottom-right. Extend the canvas mostly upward into more blue sky with soft puffy clouds and soft sun flare, and slightly downward into more white sand and gentle shoreline — do not stretch or warp the phone or hand. Same full daylight lighting and coastal look. Avoid: changing the UI, spinning or redrawing the dial, rewriting text, garbled letters, moving the badge to the left, faces, collage, cartoon, style drift from the reference, cropping off the phone, overexposed white void.</pre></div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · Outpaint 9:16</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">NBP · aspect <code>9:16</code> · 1080×1920 · Stories / Reels. Reference = same approved 16:9 still. Needs more sky + sand than 4:5.</p>
+<pre class="copy-text">Outpaint and reframe the exact provided reference image into a tall 9:16 vertical canvas for Instagram Stories and Reels. Keep the first-person beach POV composition centered and intact: beach-chair arms, tanned legs toward the water, left hand holding the titanium iPhone with the BigDose live-session UI. CRITICAL: preserve the phone screen UI exactly as in the reference — identical gold goal ring, numbers, cards and buttons, frozen static screenshot, no redesign and no animation look. Preserve burned-in copy exactly: one headline line Dose your D. Defend your Skin! and next line Vitamin D tracking and burn risk - FREE on the iPhone. Keep exactly one small App Store badge; place it bottom-right but raised slightly so Stories UI chrome will not cover it. Extend heavily upward with more clear blue sky, puffy clouds and soft overhead sun flare, and downward with more white sand and gentle blue-green waves — seamless continuation of the reference beach, same full daylight. Do not stretch or warp the phone, hand or legs. Avoid: changing or inventing UI, spinning dial, rewriting text, garbled letters, second badge, faces, collage, cartoon, style drift, cutting off the phone, packing text into unsafe top/bottom edges, overexposed white void.</pre></div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · Outpaint 1:1</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">NBP · aspect <code>1:1</code> · 1080×1080 · Facebook / IG square. Reference = approved 16:9 still.</p>
+<pre class="copy-text">Outpaint and reframe the exact provided reference image into a 1:1 square canvas for Facebook and Instagram. Keep the first-person beach POV centered: beach chair, legs, hand, titanium iPhone with exact BigDose UI from the reference — gold ring and numbers unchanged, frozen static. Preserve copy exactly on one headline line: Dose your D. Defend your Skin! Subline: Vitamin D tracking and burn risk - FREE on the iPhone. One small App Store badge bottom-right. Add a little sky above and sand below as needed to fill the square without stretching the phone. Same sunny beach lighting. Avoid: UI redesign, text rewrite, garbled letters, faces, collage, style drift, cropping the phone out of frame.</pre></div>
+</section>
+
+<!-- ========== LAUNCH PLATES — JUST RELEASED + APP ICON ========== -->
+<section class="block" id="launch"><h2>Launch plates — JUST RELEASED + BigDose + App Icon</h2>
+<div class="meta">Left-justified type · sun rays top-right · warmer golden hour · closer shore · feminine POV + island drink · Bebas BigDose + App Icon</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · IG 4:5 Launch</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">NBP · <code>4:5</code> · Refs: AppIcon2.png + approved beach still + app-store-badge.png</p>
+<pre class="copy-text">Edit and regenerate the provided beach reference into a polished 4:5 Instagram Feed ad with warmer near-golden-hour daylight — soft warm amber sun from the top-right casting visible sun rays and gentle lens flare into open sky on the right side of the frame. First-person POV of a young woman lounging in a low beach chair: feminine hands, arms and smooth legs only — no face, no head, no hair visible anywhere. Left hand holds a titanium iPhone 17 Pro Max upright with the exact BigDose live-session UI from the reference — gold goal ring and numbers frozen static, no redesign. Right hand holds a tropical island drink (clear glass, fruit garnish, condensation) clearly visible in frame near the chair arm — natural grip, not cropped weirdly; if the full hand is not shown, show enough of the drink and wrist that the composition feels complete. Shoreline much closer to the camera with lively blue-green waves rolling onto white sand. More soft puffy white clouds across a warm late-afternoon sky. ALL on-screen ad text is left-justified in a clean left column so the top-right stays open for sun rays: small uppercase JUST RELEASED, then a row with the real BigDose app icon from the reference beside BigDose in bold condensed Bebas Neue, then Dose your D. Defend your Skin! on one line, then Vitamin D tracking and burn risk - FREE on the iPhone. Exactly one small Download on the App Store badge, bottom-left under the text column (not bottom-right — leave right side open for light). Warm coastal premium wellness ad. Avoid: faces, hair, scalp, male arms, missing right-hand drink with empty awkward space, UI redesign, spinning dial, garbled BigDose lettering, Inter for the wordmark, centered or right-aligned headlines, second App Store badge, collage, cartoon, watermarks, cold blue midday light only, flat calm lake water, distant shoreline pushed far away.</pre></div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · FB 1:1 Launch</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">NBP · <code>1:1</code> · Same refs. Compact left text column for the square.</p>
+<pre class="copy-text">Edit and regenerate the provided beach reference into a polished 1:1 Facebook / Instagram square ad with warmer near-golden-hour daylight — warm sun and soft rays entering from the top-right into open sky. First-person POV of a young woman in a low beach chair: feminine hands, arms and smooth legs only — no face, no head, no hair. Left hand holds the titanium iPhone with exact BigDose UI from the reference, frozen static. Right hand holds a tropical island drink clearly in frame (glass + garnish), natural and complete — not a weird cropped stump. Closer shoreline with more lively waves on white sand. Extra puffy clouds. ALL text left-justified in a left column: JUST RELEASED, BigDose app icon from reference + BigDose in Bebas Neue, Dose your D. Defend your Skin!, Vitamin D tracking and burn risk - FREE on the iPhone. One small App Store badge bottom-left under the text. Keep phone large and readable. Avoid: faces, hair, male anatomy, empty missing right hand, UI redesign, spinning dial, centered text blocking the sun rays, second badge, cold midday light, distant flat water, garbled wordmark, style drift.</pre></div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · X 16:9 Launch</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Optional · NBP · <code>16:9</code> · Same refs · left text, sun rays right</p>
+<pre class="copy-text">Edit the provided beach reference into a 16:9 landscape ad. Warmer near-golden-hour light with sun rays from top-right. Feminine POV only — hands, arms, legs, no face, no hair. Left hand: iPhone with exact frozen BigDose UI. Right hand: tropical island drink clearly visible. Closer shoreline, livelier waves, more puffy clouds. All copy left-justified: JUST RELEASED, app icon + BigDose in Bebas Neue, Dose your D. Defend your Skin!, Vitamin D tracking and burn risk - FREE on the iPhone. One small App Store badge bottom-left. Avoid: faces, hair, missing drink hand, UI redesign, spinning dial, centered text, cold midday light, garbled lettering.</pre></div>
+</section>
+
+<section class="block" id="f"><h2>Concept F — Stream and green grass</h2>
+<div class="meta">Creek, grass, dappled full sun · nature session</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · F</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Attach active-session + session-planner + AppLogo + badge.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Sunny riverside or stream: clear shallow water, smooth stones, lush green grass on the bank, bright blue sky above, full daylight sun with crisp leaf shadows. Anonymous hand or silhouette sitting on the grass holding a titanium iPhone — no face. Screen shows real BigDose session planner or live session UI from the reference, gold goal ring and limits readable. Specular sun on water, fresh green palette mixed with solar gold accents. Headline: Get outside without guessing. Subline: Your body, your sky, your limits · Free on the App Store. Official App Store badge. Calm, nature, full sun. Avoid: faces, camping clutter, logos on clothing, collage, cartoon, CGI plastic, medical claims, fake store buttons, wrong app UI, foggy overcast, purple sci-fi glow, cosmic nebula, watermarks, malformed hands, muddy unreadable UI, excessive HDR crunch.</pre></div>
+</section>
+
+<section class="block" id="g"><h2>Concept G — Park lawn full sun</h2>
+<div class="meta">Open grass, blue sky, phone propped or in hand · everyday sun session</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · G</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Attach home-dashboard + active-session + AppLogo + badge.</p>
+<pre class="copy-text">Single continuous ultra-realistic cinematic premium wellness app ad still, ONE continuous frame only. Bright sunny city park or open lawn: vivid green grass, clear blue sky, hard midday sun, distant soft trees out of focus. Titanium iPhone resting on a picnic blanket or held low in an anonymous hand — no face. Screen shows real BigDose home dashboard with vitamin D window open from the reference, or live goal ring mid-session. Strong sun reflections on glass, UI stays sharp. Headline: Your day. Your sky. Your dose. Subline: Free on iPhone · App Store. Official App Store badge. Everyday outdoor energy, full sun. Avoid: faces, crowds as heroes, collage, cartoon, CGI plastic, medical claims, fake store buttons, wrong app UI, golden-hour orange wash only, purple glow, watermarks, malformed hands, unreadable text, blown highlights that erase the sky.</pre></div>
+</section>
+
+<!-- ========== STORYBOARD ========== -->
+<section class="block" id="story"><h2>Storyboard sheet</h2>
+<div class="meta">Nano Banana Pro · aspect 16:9 · one image, six panels · before Kling</div>
+
+<div class="prompt still"><div class="prompt-head"><span>Still · Storyboard</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Attach active-session + home-dashboard + session-planner + AppLogo + badge.</p>
+<pre class="copy-text">Single 16:9 storyboard sheet image with exactly six equal panels in a clean 2×3 grid, thin dark borders between panels, each panel labeled Frame 1 through Frame 6 in small corner type. Consistent golden hour lighting, solar gold / orange / charcoal palette, soft anamorphic flare throughout. No faces. Phone UI must match BigDose reference screenshots. Frame 1 OPEN: golden hour skyline, sun low, flare blooms, caption Golden hour. Frame 2 HOME: hand lifts iPhone showing BigDose home dashboard with IU window open, caption Your window. Frame 3 PLAN: session planner on screen with turn-over and safe max, caption Know your limits. Frame 4 LIVE: live session gold goal ring filling with MED Used card visible, caption Both stories. Frame 5 LOCK: lock screen Live Activity glance with elapsed time and IU, caption Follows you. Frame 6 LOCKUP: BigDose wordmark plus App Store badge plus Free on iPhone, caption Download free. Classic cinematic motion-design storyboard, elegant typography zones, premium wellness app promo. Avoid: faces, celebrity likeness, random seventh panel, collage unrelated to the six frames, cartoon, CGI plastic, medical claims, wrong app UI, purple sci-fi glow, watermarks, malformed hands, messy unreadable labels.</pre></div>
+</section>
+
+<!-- ========== VIDEO ========== -->
+<section class="block" id="video"><h2>Promo video — Kling 3.0</h2>
+<div class="meta">10 seconds · start from approved still · confirm Generate — Unlimited</div>
+
+<div class="prompt motion"><div class="prompt-head"><span>Motion · Beach POV</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Image-to-video from the approved beach POV still. 9:16 or match the still. ~10s. Attach still as start frame.</p>
+<pre class="copy-text">Slow restrained first-person beach lounging motion from the exact input still. Keep the same POV: looking down past the beach-chair arms, tanned legs toward the shoreline, left hand holding the titanium iPhone. CRITICAL: the phone screen is a frozen still photograph of the BigDose UI — treat it like a locked screenshot painted on glass. The yellow gold goal ring must stay completely static: no spin, no rotate, no sweep, no pulse, no fill animation, no tick, no progress. Numbers, cards, buttons and every other UI element stay identical to the input frame for the entire duration. Soft continuous motion only in the real world around the phone: gentle blue-green waves rolling up the white sand, sparkling sun highlights shifting on wet sand and water, a subtle natural breath in the hand and legs, tiny phone micro-settle that does not disturb the screen content, soft overhead sun flare breathing. No birds. No pelicans. No animals. Camera almost locked — tiny slow push or settle only, no whip pans. REPLACE the burned-in ad copy for the full shot with this exact text, sharp and readable: Header on ONE single line — Dose your D. Defend your Skin! Next line directly under — Vitamin D tracking and burn risk - FREE on the iPhone. Keep exactly one App Store badge where it is. Do not keep One ring. Both stories. One single continuous shot, no cuts. Preserve the approved cinematic style of the input image exactly. Ambient beach sound only, no voices. Avoid: spinning yellow ring, rotating dial, animated progress ring, sweeping arc, pulsing glow on the ring, changing IU numbers, updating timer, UI motion of any kind, screen refresh, One ring. Both stories., Protect your Skin, Free for a limited time, birds, pelicans, wildlife, cuts or second shots, new people, face appearing, hand putting the phone down, phone leaving frame, garbled letters, split headline onto two lines, logos moving, watermarks, mystical cosmic imagery, malformed anatomy, extra fingers, style drift from the input image, sudden zoom, shaky handheld chaos.</pre></div>
+
+<div class="prompt motion"><div class="prompt-head"><span>Motion · 9:16 classic</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Older generic promo path if needed. Prefer Beach POV above for this still.</p>
+<pre class="copy-text">Slow elegant cinematic promo for BigDose. Golden hour light, warm soft anamorphic lens flare, deep charcoal and solar gold palette. Smooth classic motion design — gentle pushes only, no hyper cuts. Silhouette and phone UI only, no faces. Shot flow: sky and flare breathe, hand lifts iPhone with BigDose home, match to session planner, then live session goal ring fills with MED card visible, then settle into brand lockup with Free on the App Store and badge for the final two seconds as a static hold. Preserve the approved cinematic style of the input image exactly. Ambient sound only, no voices. One single continuous shot feel with elegant transitions, not a chaotic montage. Avoid: cuts that invent a second location mid-shot, new objects or people, readable faces, burned-in captions beyond the intended lockup, logos other than BigDose and App Store badge, watermarks, mystical cosmic imagery, malformed anatomy, purple sci-fi glow, style drift from the input image, medical claims.</pre></div>
+
+<div class="prompt motion"><div class="prompt-head"><span>Motion · 16:9</span><button type="button" class="copy">Copy</button></div>
+<p class="tip">Optional second Kling pass for X / Facebook feed. Same still, aspect 16:9.</p>
+<pre class="copy-text">Same 10-second BigDose promo reframed for 16:9 landscape. Cinematic golden hour, soft anamorphic flare, phone UI hero on the right, text-safe open sky on the left. Slow elegant pushes only. No faces. Final two seconds static brand lock: BigDose, Free on the App Store, official badge. Preserve the approved cinematic style of the input image exactly. Ambient sound only, no voices. Avoid: cuts or second shots, new objects or people, burned-in captions beyond lockup, watermarks, mystical cosmic imagery, malformed anatomy, purple sci-fi glow, style drift from the input image.</pre></div>
+</section>
+
+<!-- ========== CAPTIONS ========== -->
+<section class="block" id="caps"><h2>Post captions</h2>
+<div class="meta">Paste when you publish — not for image generation</div>
+
+<div class="prompt caption"><div class="prompt-head"><span>Caption · IG / FB</span><button type="button" class="copy">Copy</button></div>
+<pre class="copy-text">Hey — it's time to get real vitamin D from the sun.
+
+BigDose watches your dose and your burn risk in the same live session so you can get outside without guessing. It keeps your sun history in one place and rewards progress with badges along the way — and it keeps burn risk in view while you chase your D. We guide. You decide.
+
+Limited time: FREE on the Apple App Store.
+Full details → https://bigdose.web.app
+Link in bio.
+
+Dose your D. Defend your Skin!
+
+BigDose is informational wellness guidance — not medical advice.
+
+#BigDose #VitaminD #SkinSafety #AppStore #JustReleased #GetOutside</pre></div>
+
+<div class="prompt caption"><div class="prompt-head"><span>Caption · X</span><button type="button" class="copy">Copy</button></div>
+<pre class="copy-text">Dose your D. Defend your Skin.
+
+Vitamin D progress + burn risk in one live session.
+Free on the App Store → https://apps.apple.com/us/app/bigdose/id6781472633</pre></div>
+</section>
+
+</main><div class="toast" id="toast">Copied</div>
+<script>
+const toast=document.getElementById('toast');
+function flash(btn){btn.classList.add('copied');btn.textContent='Copied';toast.classList.add('show');setTimeout(()=>{btn.classList.remove('copied');btn.textContent='Copy';toast.classList.remove('show');},900);}
+document.querySelectorAll('button.copy').forEach(btn=>{
+  btn.addEventListener('click',async()=>{
+    const pre=btn.closest('.prompt').querySelector('pre.copy-text');
+    const text=pre.innerText;
+    try{await navigator.clipboard.writeText(text);flash(btn);}catch(e){
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();flash(btn);
+    }
+  });
+});
+</script></body></html>
